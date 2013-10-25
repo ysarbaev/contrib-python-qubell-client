@@ -1,0 +1,13 @@
+application:
+  interfaces:
+    return:
+        foo: bind(constanta#int.pin)
+  components:
+    constanta:
+      type: cobalt.common.Constants
+      interfaces:
+        int:
+          pin: publish-signal(int)
+      configuration:
+        configuration.values:
+          int.pin: 42
