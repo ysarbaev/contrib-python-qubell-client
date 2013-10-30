@@ -32,6 +32,52 @@ password = os.environ['QUBELL_PASSWORD']
 api = os.environ['QUBELL_API']
 org = os.environ['QUBELL_ORG']
 
+context = Context(user=user, password=password, api=api)
+
+
+if os.environ.has_key('PROVIDER'):
+    provider = os.environ['PROVIDER']
+else:
+    provider = 'aws-ec2'
+if os.environ.has_key('REGION'):
+    region = os.environ['REGION']
+else:
+    region = 'us-east-1'
+if os.environ.has_key('JCLOUDS_IDENTITY'):
+    identity = os.environ['JCLOUDS_IDENTITY']
+if os.environ.has_key('JCLOUDS_CREDENTIALS'):
+    credentials = os.environ['JCLOUDS_CREDENTIALS']
+
+cloud_access = {
+      "provider": provider,
+      "usedEnvironments": [],
+      "ec2SecurityGroup": "default",
+      "providerCopy": provider,
+      "name": "generated-provider-for-tests",
+      "jcloudsIdentity": identity,
+      "jcloudsCredential": credentials,
+      "jcloudsRegions": region
+    }
+
+
+def create_env(org):
+
+    # Add services
+    key_service = org.service(type='builtin:cobalt_secure_store', name='Keystore')
+    wf_service = org.service(type='builtin:workflow_service', name='Workflow', parameters='{}')
+
+    # Add services to environment
+    env = org.environment(name = 'default')
+    env.serviceAdd(key_service)
+    env.serviceAdd(wf_service)
+    env.policyAdd(
+        {"action": "provisionVms",
+         "parameter": "publicKeyId",
+         "value": key_service.regenerate()['id']})
+
+    prov = org.provider(cloud_access)
+    env.providerAdd(prov)
+
 
 def attr(*args, **kwargs):
     """A decorator which applies the nose and testtools attr decorator
@@ -52,7 +98,7 @@ class BaseTestCasePrivate(testtools.TestCase):
 
         # Here defined test app via public api
         cls.manifest = Manifest(file=os.path.join(os.path.dirname(__file__), 'default.yml'), name='BaseTestManifest')
-        cls.context = Context(user=user, password=password, api=api)
+        cls.context = context
 
         cls.platform = QubellPlatform(context=cls.context)
         assert cls.platform.authenticate()
@@ -61,6 +107,7 @@ class BaseTestCasePrivate(testtools.TestCase):
 #        cls.application = cls.organization.application(id='52557751e4b03292d197d05e', manifest=cls.manifest, name='BaseTestApp')
 
         cls.environment = cls.organization.environment()
+        #create_env(cls.organization) # TODO: find proper place for this operation
 
     @classmethod
     def tearDownClass(cls):
@@ -74,3 +121,4 @@ class BaseTestCasePrivate(testtools.TestCase):
     def tearDown(self):
         super(BaseTestCasePrivate, self).tearDown()
         pass
+

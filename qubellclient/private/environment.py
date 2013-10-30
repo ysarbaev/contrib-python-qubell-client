@@ -97,6 +97,72 @@ class Environment(Organization):
         else:
             return False
 
+
+    def markerAdd(self, marker):
+        data = self.json()
+        data['markers'].append({'name': marker})
+
+        url = self.context.api+'/organizations/'+self.context.organizationId+'/environments/'+self.environmentId+'.json'
+        payload = json.dumps(data)
+        headers = {'Content-Type': 'application/json'}
+        resp = requests.put(url, cookies=self.context.cookies, data=payload, verify=False, headers=headers)
+        log.debug(resp.text)
+        self.rawRespose = resp
+        if resp.status_code == 200:
+            return resp.json()
+        else:
+            return False
+
+    def markerRemove(self, marker):
+        data = self.json()
+        data['markers'].remove({'name': marker})
+
+        url = self.context.api+'/organizations/'+self.context.organizationId+'/environments/'+self.environmentId+'.json'
+        payload = json.dumps(data)
+        headers = {'Content-Type': 'application/json'}
+        resp = requests.put(url, cookies=self.context.cookies, data=payload, verify=False, headers=headers)
+        log.debug(resp.text)
+        self.rawRespose = resp
+        if resp.status_code == 200:
+            return resp.json()
+        else:
+            return False
+
+
+    def propertyAdd(self, name, type, value):
+        data = self.json()
+        data['properties'].append({'name': name, 'type': type, 'value': value})
+
+        url = self.context.api+'/organizations/'+self.context.organizationId+'/environments/'+self.environmentId+'.json'
+        payload = json.dumps(data)
+        headers = {'Content-Type': 'application/json'}
+        resp = requests.put(url, cookies=self.context.cookies, data=payload, verify=False, headers=headers)
+        log.debug(resp.text)
+        self.rawRespose = resp
+        if resp.status_code == 200:
+            return resp.json()
+        else:
+            return False
+
+    def propertyRemove(self, name):
+        data = self.json()
+        property = [p for p in data['properties'] if p['name'] == name]
+        if len(property)<1:
+            log.error('Unable to remove property %s. Not found.' % name)
+        data['properties'].remove(property[0])
+
+        url = self.context.api+'/organizations/'+self.context.organizationId+'/environments/'+self.environmentId+'.json'
+        payload = json.dumps(data)
+        headers = {'Content-Type': 'application/json'}
+        resp = requests.put(url, cookies=self.context.cookies, data=payload, verify=False, headers=headers)
+        log.debug(resp.text)
+        self.rawRespose = resp
+        if resp.status_code == 200:
+            return resp.json()
+        else:
+            return False
+
+
     def clean(self):
         data = self.json()
         data['serviceIds'] = []

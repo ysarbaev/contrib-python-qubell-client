@@ -60,6 +60,7 @@ class HierappReconfiguration(base.BaseTestCasePrivate):
     def tearDownClass(cls):
         super(HierappReconfiguration, cls).tearDownClass()
         cls.environment.serviceRemove(cls.child_service)
+        cls.child_service.delete()
         cls.child_rev.delete()
 
         cls.parent_app.clean()
