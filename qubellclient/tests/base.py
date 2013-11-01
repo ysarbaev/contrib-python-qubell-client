@@ -24,59 +24,18 @@ import nose.plugins.attrib
 from qubellclient.private.platform import QubellPlatform, Context
 from qubellclient.private.manifest import Manifest
 import os
+from qubellclient.tools import rand
+import logging as log
 
 
+user = os.environ.get('QUBELL_USER')
+password = os.environ.get('QUBELL_PASSWORD')
+api = os.environ.get('QUBELL_API')
+org = os.environ.get('QUBELL_ORG')
 
-user = os.environ['QUBELL_USER']
-password = os.environ['QUBELL_PASSWORD']
-api = os.environ['QUBELL_API']
-org = os.environ['QUBELL_ORG']
-
-context = Context(user=user, password=password, api=api)
-
-
-if os.environ.has_key('PROVIDER'):
-    provider = os.environ['PROVIDER']
-else:
-    provider = 'aws-ec2'
-if os.environ.has_key('REGION'):
-    region = os.environ['REGION']
-else:
-    region = 'us-east-1'
-if os.environ.has_key('JCLOUDS_IDENTITY'):
-    identity = os.environ['JCLOUDS_IDENTITY']
-if os.environ.has_key('JCLOUDS_CREDENTIALS'):
-    credentials = os.environ['JCLOUDS_CREDENTIALS']
-
-cloud_access = {
-      "provider": provider,
-      "usedEnvironments": [],
-      "ec2SecurityGroup": "default",
-      "providerCopy": provider,
-      "name": "generated-provider-for-tests",
-      "jcloudsIdentity": identity,
-      "jcloudsCredential": credentials,
-      "jcloudsRegions": region
-    }
-
-
-def create_env(org):
-
-    # Add services
-    key_service = org.service(type='builtin:cobalt_secure_store', name='Keystore')
-    wf_service = org.service(type='builtin:workflow_service', name='Workflow', parameters='{}')
-
-    # Add services to environment
-    env = org.environment(name = 'default')
-    env.serviceAdd(key_service)
-    env.serviceAdd(wf_service)
-    env.policyAdd(
-        {"action": "provisionVms",
-         "parameter": "publicKeyId",
-         "value": key_service.regenerate()['id']})
-
-    prov = org.provider(cloud_access)
-    env.providerAdd(prov)
+if not user: log.error('No username provided. Set QUBELL_USER env')
+if not password: log.error('No password provided. Set QUBELL_PASSWORD env')
+if not api: log.error('No api url provided. Set QUBELL_API env')
 
 
 def attr(*args, **kwargs):
@@ -93,32 +52,39 @@ class BaseTestCasePrivate(testtools.TestCase):
     ## TODO: Main preparation should be here
     """ Here we prepare global env. (load config, etc)
     """
+
     @classmethod
     def setUpClass(cls):
+        cls.prefix = rand()
+        cls.context = Context(user=user, password=password, api=api)
 
-        # Here defined test app via public api
-        cls.manifest = Manifest(file=os.path.join(os.path.dirname(__file__), 'default.yml'), name='BaseTestManifest')
-        cls.context = context
-
+    # Initialize platform and check access
         cls.platform = QubellPlatform(context=cls.context)
         assert cls.platform.authenticate()
 
-        cls.organization = cls.platform.organization(id=org)
-#        cls.application = cls.organization.application(id='52557751e4b03292d197d05e', manifest=cls.manifest, name='BaseTestApp')
+    # Set default manifest for app creation
+        cls.manifest = Manifest(file=os.path.join(os.path.dirname(__file__), 'default.yml'), name='BaseTestManifest')
 
-        cls.environment = cls.organization.environment()
-        #create_env(cls.organization) # TODO: find proper place for this operation
+    # Initialize organization
+        if org:
+            cls.organization = cls.platform.organization(name=org)
+        else:
+            cls.organization = cls.platform.organization(name='test-frame1work-run')
+
+    # Initialize environment
+        cls.environment = cls.organization.environment(name='default')
+
 
     @classmethod
     def tearDownClass(cls):
-        # Clean after tests here
-        pass
+        print "BaseTestCasePrivate TeadDownClass"
 
     def setUp(self):
+    # Run before each test
         super(BaseTestCasePrivate, self).setUp()
         pass
 
     def tearDown(self):
+    # Run after each test
         super(BaseTestCasePrivate, self).tearDown()
         pass
-

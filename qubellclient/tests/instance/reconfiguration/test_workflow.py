@@ -19,9 +19,7 @@ import os
 import qubellclient.tests.base as base
 from qubellclient.private.manifest import Manifest
 from qubellclient.tools import retry
-from qubellclient.tools import rand
 from qubellclient.tests.base import attr
-prefix = rand()
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
@@ -36,7 +34,7 @@ class WorkflowInstance(base.BaseTestCasePrivate):
     @classmethod
     def setUpClass(cls):
         super(WorkflowInstance, cls).setUpClass()
-        cls.client = cls.organization.application(name="%s-workflow-reconfiguration" % prefix, manifest=cls.manifest)
+        cls.client = cls.organization.application(name="%s-workflow-reconfiguration" % cls.prefix, manifest=cls.manifest)
 
     @classmethod
     def tearDownClass(cls):

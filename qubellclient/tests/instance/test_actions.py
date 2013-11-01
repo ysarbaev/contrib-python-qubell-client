@@ -24,9 +24,7 @@ import os
 import qubellclient.tests.base as base
 from qubellclient.private.manifest import Manifest
 from qubellclient.tests.base import attr
-from qubellclient.tools import rand
 
-prefix = rand()
 
 class BasicInstanceActionsTest(base.BaseTestCasePrivate):
 
@@ -35,7 +33,7 @@ class BasicInstanceActionsTest(base.BaseTestCasePrivate):
     def setUpClass(cls):
         # Call all parents setups
         super(BasicInstanceActionsTest, cls).setUpClass()
-        cls.app = cls.organization.application(name="%s-test-instance-actions" % prefix, manifest=cls.manifest)
+        cls.app = cls.organization.application(name="%s-test-instance-actions" % cls.prefix, manifest=cls.manifest)
 
 # Here we cleaning our environment. Delete all created stuff
     @classmethod

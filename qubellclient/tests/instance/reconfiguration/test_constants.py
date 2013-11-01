@@ -17,8 +17,6 @@
 import os
 import qubellclient.tests.base as base
 from qubellclient.private.manifest import Manifest
-from qubellclient.tools import rand
-prefix = rand()
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
@@ -31,7 +29,7 @@ class Constants(base.BaseTestCasePrivate):
     @classmethod
     def setUpClass(cls):
         super(Constants, cls).setUpClass()
-        cls.client = cls.organization.application(name="%s-constants-reconfiguration" % prefix, manifest=cls.manifest)
+        cls.client = cls.organization.application(name="%s-constants-reconfiguration" % cls.prefix, manifest=cls.manifest)
 
     @classmethod
     def tearDownClass(cls):
@@ -40,7 +38,6 @@ class Constants(base.BaseTestCasePrivate):
         cls.client.delete()
 
     def reconf(self, base_manifest, target_manifest):
-        rnd = rand()
         self.client.upload(base_manifest)
         inst1 = self.client.launch(destroyInterval=300000)
         self.assertTrue(inst1.ready(),"Instance failed to start")
@@ -48,7 +45,7 @@ class Constants(base.BaseTestCasePrivate):
         self.client.upload(target_manifest)
         inst2 = self.client.launch(destroyInterval=300000)
         self.assertTrue(inst2.ready(),"Instance failed to start")
-        rev2 = self.client.revisionCreate(name=rnd+'-rev2', instance=inst2)
+        rev2 = self.client.revisionCreate(name=self.prefix+'rev2', instance=inst2)
 
         inst1.reconfigure(revisionId=rev2.revisionId)
         return inst1

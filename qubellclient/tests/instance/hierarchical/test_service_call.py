@@ -24,10 +24,8 @@ from time import sleep
 from qubellclient.tests import base
 from qubellclient.private.manifest import Manifest
 from qubellclient.tests.base import attr
-from qubellclient.tools import rand
 import os
 
-prefix = rand()
 
 class ServiceCallTestApp(base.BaseTestCasePrivate):
 
@@ -36,8 +34,8 @@ class ServiceCallTestApp(base.BaseTestCasePrivate):
         super(ServiceCallTestApp, cls).setUpClass()
 
     # Create applications for tests
-        cls.parent = cls.organization.application(name="%s-test-servicecall-parent" % prefix, manifest=cls.manifest)
-        cls.child = cls.organization.application(name="%s-test-servicecall-child" % prefix, manifest=cls.manifest)
+        cls.parent = cls.organization.application(name="%s-test-servicecall-parent" % cls.prefix, manifest=cls.manifest)
+        cls.child = cls.organization.application(name="%s-test-servicecall-child" % cls.prefix, manifest=cls.manifest)
 
     # Create non shared instance to use in tests
         mnf = Manifest(file=os.path.join(os.path.dirname(__file__), 'child.yml'))
@@ -45,10 +43,10 @@ class ServiceCallTestApp(base.BaseTestCasePrivate):
         cls.child.upload(mnf)
         cls.child_instance = cls.child.launch(destroyInterval=600000)
         assert cls.child_instance.ready()
-        cls.child_revision = cls.child.revisionCreate(name='%s-tests-servicecall-shared' % prefix, instance=cls.child_instance)
+        cls.child_revision = cls.child.revisionCreate(name='%s-tests-servicecall-shared' % cls.prefix, instance=cls.child_instance)
 
         params = ''.join('%s: %s' % (cls.child_revision.revisionId.split('-')[0], cls.child_instance.instanceId))
-        cls.shared_service = cls.organization.service(name='%s-HierarchicalAppTest-instance' % prefix,
+        cls.shared_service = cls.organization.service(name='%s-HierarchicalAppTest-instance' % cls.prefix,
                                                           type='builtin:shared_instances_catalog',
                                                           parameters=params)
         cls.environment.serviceAdd(cls.shared_service)

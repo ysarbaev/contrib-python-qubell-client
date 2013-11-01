@@ -31,14 +31,20 @@ class Organization(QubellPlatform):
 
     def __init__(self, context, id=None, name=None):
         self.context = context
-        self.name = name or "test-org-"+tools.rand()
-
-        # Create org
-        if not id:
-            self.organizationId = self._create()['id']
-        # Or use existing
+        if name:
+            self.name = name
+            orgz = [org for org in self.json() if org['name'] == name]
+            # Org found by name
+            if len(orgz):
+                self.organizationId = orgz[0]['id']
+            else:
+                self.organizationId = self._create()['id']
         else:
-            self.organizationId = id
+            self.name = '%s - tests' % self.prefix
+            if id:
+                self.organizationId = id
+            else:
+                self.organizationId = self._create()['id']
 
         self.context.organizationId = self.organizationId
 

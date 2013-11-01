@@ -24,17 +24,15 @@ import os
 from qubellclient.tests import base
 from qubellclient.private.manifest import Manifest
 from qubellclient.tests.base import attr
-from qubellclient.tools import rand
-prefix = rand()
 
 class HierappReconfiguration(base.BaseTestCasePrivate):
 
     @classmethod
     def setUpClass(cls):
         super(HierappReconfiguration, cls).setUpClass()
-        cls.parent_app = cls.organization.application(name="%s-reconfiguration-hierapp-parent" % prefix, manifest=cls.manifest)
-        cls.child_app = cls.organization.application(name="%s-reconfiguration-hierapp-child" % prefix, manifest=cls.manifest)
-        cls.new_child_app = cls.organization.application(name="%s-reconfiguration-hierapp-child-new" % prefix, manifest=cls.manifest)
+        cls.parent_app = cls.organization.application(name="%s-reconfiguration-hierapp-parent" % cls.prefix, manifest=cls.manifest)
+        cls.child_app = cls.organization.application(name="%s-reconfiguration-hierapp-child" % cls.prefix, manifest=cls.manifest)
+        cls.new_child_app = cls.organization.application(name="%s-reconfiguration-hierapp-child-new" % cls.prefix, manifest=cls.manifest)
 
         # Prepare child
         cmnf = Manifest(file=os.path.join(os.path.dirname(__file__), "hier-child.one.yml"))

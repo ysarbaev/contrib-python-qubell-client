@@ -19,3 +19,106 @@ __license__ = "Apache"
 __version__ = "1.0.1"
 __email__ = "vkhomenko@qubell.com"
 
+import os
+import sys
+
+from qubellclient.private.platform import QubellPlatform, Context
+import logging as log
+
+
+user = os.environ.get('QUBELL_USER')
+password = os.environ.get('QUBELL_PASSWORD')
+api = os.environ.get('QUBELL_API')
+org = os.environ.get('QUBELL_ORG')
+
+
+provider = os.environ.get('PROVIDER', 'aws-ec2')
+region = os.environ.get('REGION', 'us-east-1')
+identity = os.environ.get('JCLOUDS_IDENTITY')
+credentials = os.environ.get('JCLOUDS_CREDENTIALS')
+
+cloud_access = {
+      "provider": provider,
+      "usedEnvironments": [],
+      "ec2SecurityGroup": "default",
+      "providerCopy": provider,
+      "name": "generated-provider-for-tests",
+      "jcloudsIdentity": identity,
+      "jcloudsCredential": credentials,
+      "jcloudsRegions": region
+    }
+
+def setUpModule():
+# This runs once for module (all tests)
+# Best place to initialize platform.
+# Here we check existance of given credentials and create services if needed
+    print "qubellclient tests setUpModule"
+
+    exit = 0
+    if not user:
+        log.error('No username provided. Set QUBELL_USER env')
+        exit = 1
+    if not password:
+        log.error('No password provided. Set QUBELL_PASSWORD env')
+        exit = 1
+    if not api:
+        log.error('No api url provided. Set QUBELL_API env')
+        exit = 1
+
+    if exit:
+        sys.exit(1)
+
+# Setup access
+    context = Context(user=user, password=password, api=api)
+
+# Initialize platform and check access
+    platform = QubellPlatform(context=context)
+    assert platform.authenticate()
+
+    if os.environ.get('QUBELL_NEW'):
+        create_env(platform)
+
+
+def create_env(platform):
+
+# Initialize organization
+#    if org: organization = platform.organization(id=org)
+#    else: organization = platform.organization(name='test-framework-run')
+    organization = platform.organization(name='test-framework-run')
+    os.environ['QUBELL_ORG'] = organization.organizationId
+
+# Create independent environment
+    environment = organization.environment(name='default') #TODO: create own
+    environment.clean()
+
+# Add services
+    key_service = organization.service(type='builtin:cobalt_secure_store', name='Keystore')
+    wf_service = organization.service(type='builtin:workflow_service', name='Workflow', parameters='{}')
+
+# Add services to environment
+    environment.serviceAdd(key_service)
+    environment.serviceAdd(wf_service)
+    environment.policyAdd(
+        {"action": "provisionVms",
+         "parameter": "publicKeyId",
+         "value": key_service.regenerate()['id']})
+# Add cloud provider
+    provider = organization.provider(cloud_access)
+    environment.providerAdd(provider)
+
+
+
+def tearDownModule():
+# Clean after tests executed
+    print "qubellclient tests tearDownModule"
+# Run after framework finish
+# Clean after tests here
+# Remove environment
+    #cls.environment.delete()
+
+# Remove created services
+    #cls.key_service.delete()
+    #cls.wf_service.delete()
+
+# Remove provider
+    #cls.provider.delete()

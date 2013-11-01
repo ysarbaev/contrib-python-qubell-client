@@ -19,25 +19,19 @@ __license__ = "Apache"
 __version__ = "1.0.1"
 __email__ = "vkhomenko@qubell.com"
 
-from time import sleep
-
 from qubellclient.tests import base
 from qubellclient.private.manifest import Manifest
-from qubellclient.tests.base import attr
-from qubellclient.tools import rand
 import os
 
-prefix = rand()
 
 class MarkerPropertyTest(base.BaseTestCasePrivate):
-
 
     @classmethod
     def setUpClass(cls):
         super(MarkerPropertyTest, cls).setUpClass()
 
     # Create applications for tests
-        cls.app = cls.organization.application(name="%s-test-marker-property" % prefix, manifest=cls.manifest)
+        cls.app = cls.organization.application(name="%s-test-marker-property" % cls.prefix, manifest=cls.manifest)
 
     @classmethod
     def tearDownClass(cls):
