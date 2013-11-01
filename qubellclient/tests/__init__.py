@@ -82,10 +82,8 @@ def setUpModule():
 def create_env(platform):
 
 # Initialize organization
-#    if org: organization = platform.organization(id=org)
-#    else: organization = platform.organization(name='test-framework-run')
-    organization = platform.organization(name='test-framework-run')
-    os.environ['QUBELL_ORG'] = organization.organizationId
+    if org: organization = platform.organization(name=org)
+    else: organization = platform.organization(name='test-framework-run')
 
 # Create independent environment
     environment = organization.environment(name='default') #TODO: create own

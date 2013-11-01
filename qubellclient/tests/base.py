@@ -36,7 +36,7 @@ org = os.environ.get('QUBELL_ORG')
 if not user: log.error('No username provided. Set QUBELL_USER env')
 if not password: log.error('No password provided. Set QUBELL_PASSWORD env')
 if not api: log.error('No api url provided. Set QUBELL_API env')
-
+if not org: log.error('No organization name provided. Set QUBELL_ORG env')
 
 def attr(*args, **kwargs):
     """A decorator which applies the nose and testtools attr decorator
@@ -66,10 +66,7 @@ class BaseTestCasePrivate(testtools.TestCase):
         cls.manifest = Manifest(file=os.path.join(os.path.dirname(__file__), 'default.yml'), name='BaseTestManifest')
 
     # Initialize organization
-        if org:
-            cls.organization = cls.platform.organization(name=org)
-        else:
-            cls.organization = cls.platform.organization(name='test-frame1work-run')
+        cls.organization = cls.platform.organization(name=org)
 
     # Initialize environment
         cls.environment = cls.organization.environment(name='default')
