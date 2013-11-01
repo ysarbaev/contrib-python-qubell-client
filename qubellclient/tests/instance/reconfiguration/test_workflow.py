@@ -45,7 +45,6 @@ class WorkflowInstance(base.BaseTestCasePrivate):
 
 
     def reconf(self, base_manifest, target_manifest):
-        rnd = rand()
         self.client.upload(base_manifest)
         inst1 = self.client.launch(destroyInterval=300000)
         self.assertTrue(inst1.ready(),"Instance failed to start")
@@ -53,7 +52,7 @@ class WorkflowInstance(base.BaseTestCasePrivate):
         self.client.upload(target_manifest)
         inst2 = self.client.launch(destroyInterval=300000)
         self.assertTrue(inst2.ready(),"Instance failed to start")
-        rev2 = self.client.revisionCreate(name=rnd+'-rev2', instance=inst2)
+        rev2 = self.client.revisionCreate(name='rev2', instance=inst2)
 
         inst1.reconfigure(revisionId=rev2.revisionId)
         rev2.delete()
