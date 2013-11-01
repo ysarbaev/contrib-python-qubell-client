@@ -17,6 +17,7 @@
 import os
 import qubellclient.tests.base as base
 from qubellclient.private.manifest import Manifest
+from qubellclient.tools import rand
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
@@ -38,6 +39,7 @@ class Constants(base.BaseTestCasePrivate):
         cls.client.delete()
 
     def reconf(self, base_manifest, target_manifest):
+        rnd = rand()
         self.client.upload(base_manifest)
         inst1 = self.client.launch(destroyInterval=300000)
         self.assertTrue(inst1.ready(),"Instance failed to start")
@@ -45,7 +47,7 @@ class Constants(base.BaseTestCasePrivate):
         self.client.upload(target_manifest)
         inst2 = self.client.launch(destroyInterval=300000)
         self.assertTrue(inst2.ready(),"Instance failed to start")
-        rev2 = self.client.revisionCreate(name=self.prefix+'rev2', instance=inst2)
+        rev2 = self.client.revisionCreate(name='%s-rev2' % rnd, instance=inst2)
 
         inst1.reconfigure(revisionId=rev2.revisionId)
         return inst1
