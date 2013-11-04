@@ -45,6 +45,8 @@ application:
             return:
               out:
                 value: ${in}
+              out2:
+                value: out2
           gogo:
             steps: []
             return:

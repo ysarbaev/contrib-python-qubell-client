@@ -84,7 +84,7 @@ application:
                           results: result
                 return:
                   out:
-                    value: "{$.results}"
+                    value: "{$.results.own}"
                   own:
                     value: "Main Scall launched"
 
