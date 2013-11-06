@@ -35,26 +35,32 @@ class Constants(base.BaseTestCasePrivate):
     @classmethod
     def tearDownClass(cls):
         super(Constants, cls).tearDownClass()
-        cls.client.clean()
+        #cls.client.clean()
         cls.client.delete()
+
+    def tearDown(self):
+        self.inst1.delete()
+        assert self.inst1.destroyed()
+
+        self.inst2.delete()
+        assert self.inst2.destroyed()
 
     def reconf(self, base_manifest, target_manifest):
         rnd = rand()
         self.client.upload(base_manifest)
-        inst1 = self.client.launch(destroyInterval=300000)
-        self.assertTrue(inst1, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
-        self.assertTrue(inst1.ready(), "Instance not 'running' after timeout")
+        self.inst1 = self.client.launch(destroyInterval=300000)
+        self.assertTrue(self.inst1, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
+        self.assertTrue(self.inst1.ready(), "Instance not 'running' after timeout")
 
         self.client.upload(target_manifest)
-        inst2 = self.client.launch(destroyInterval=300000)
-        self.assertTrue(inst2, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
-        self.assertTrue(inst2.ready(), "Instance not 'running' after timeout")
+        self.inst2 = self.client.launch(destroyInterval=300000)
+        self.assertTrue(self.inst2, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
+        self.assertTrue(self.inst2.ready(), "Instance not 'running' after timeout")
 
-        rev2 = self.client.revisionCreate(name='%s-rev2' % rnd, instance=inst2)
+        rev2 = self.client.revisionCreate(name='%s-rev2' % rnd, instance=self.inst2)
 
-        inst1.reconfigure(revisionId=rev2.revisionId)
-        return inst1
-        rev2.delete()
+        self.inst1.reconfigure(revisionId=rev2.revisionId)
+        return self.inst1
 
     # May fail because "Unknown status"
     def test_parameter_added(self):

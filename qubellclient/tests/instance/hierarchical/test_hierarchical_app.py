@@ -87,10 +87,17 @@ class HierarchicalAppTest(base.BaseTestCasePrivate):
         cls.shared_service.delete()
 
     # Clean apps
-        cls.parent.clean()
-        cls.child_one.clean()
-        cls.child_two.clean()
-        cls.child_three.clean()
+
+        cls.child_one_instance.delete()
+        assert cls.child_one_instance.destroyed()
+        cls.child_two_instance.delete()
+        assert cls.child_two_instance.destroyed()
+        cls.child_three_instance.delete()
+        assert cls.child_three_instance.destroyed()
+        #cls.parent.clean()
+        #cls.child_one.clean()
+        #cls.child_two.clean()
+        #cls.child_three.clean()
 
         cls.parent.delete()
         cls.child_one.delete()
@@ -111,7 +118,9 @@ class HierarchicalAppTest(base.BaseTestCasePrivate):
 
         self.assertEqual(parent_instance.submodules[0]['status'], 'Running')
         self.assertNotEqual(parent_instance.submodules[0]['id'], self.child_three_instance.instanceId)
-        self.assertTrue(parent_instance.destroy())
+
+        self.assertTrue(parent_instance.delete(), "%s-%s: Instance failed to destroy" % (self.prefix, self._testMethodName))
+        self.assertTrue(parent_instance.destroyed(), "%s-%s: Instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
 
 
     def test_launch_hierapp_shared_instance(self):
@@ -143,7 +152,8 @@ class HierarchicalAppTest(base.BaseTestCasePrivate):
         # TODO: BUG
         #self.assertFalse(child_instance.destroy())
 
-        self.assertTrue(parent_instance.destroy())
+        self.assertTrue(parent_instance.delete(), "%s-%s: Instance failed to destroy" % (self.prefix, self._testMethodName))
+        self.assertTrue(parent_instance.destroyed(), "%s-%s: Instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
 
 
 
@@ -183,4 +193,5 @@ class HierarchicalAppTest(base.BaseTestCasePrivate):
         # TODO: BUG
         #self.assertFalse(child_instance.destroy())
 
-        self.assertTrue(parent_instance.destroy())
+        self.assertTrue(parent_instance.delete(), "%s-%s: Instance failed to destroy" % (self.prefix, self._testMethodName))
+        self.assertTrue(parent_instance.destroyed(), "%s-%s: Instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))

@@ -60,8 +60,8 @@ class ServiceCallTestApp(base.BaseTestCasePrivate):
         cls.environment.serviceRemove(cls.shared_service)
         cls.shared_service.delete()
 
-        cls.parent.clean()
-        cls.child.clean()
+        cls.child_instance.delete()
+        assert cls.child_instance.destroyed()
 
         cls.parent.delete()
         cls.child.delete()
@@ -103,7 +103,8 @@ class ServiceCallTestApp(base.BaseTestCasePrivate):
         # TODO: BUG
         #self.assertFalse(child_instance.destroy())
 
-        self.assertTrue(parent_instance.destroy())
+        self.assertTrue(parent_instance.delete(), "%s-%s: Instance failed to destroy" % (self.prefix, self._testMethodName))
+        self.assertTrue(parent_instance.destroyed(), "%s-%s: Instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
 
     def test_servicecall_hierapp(self):
         """ Launch hierarchical with non shared instance and execute service call on child.
@@ -135,4 +136,5 @@ class ServiceCallTestApp(base.BaseTestCasePrivate):
         # TODO: BUG
         #self.assertFalse(child_instance.destroy())
 
-        self.assertTrue(parent_instance.destroy())
+        self.assertTrue(parent_instance.delete(), "%s-%s: Instance failed to destroy" % (self.prefix, self._testMethodName))
+        self.assertTrue(parent_instance.destroyed(), "%s-%s: Instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))

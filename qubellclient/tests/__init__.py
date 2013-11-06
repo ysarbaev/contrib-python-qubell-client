@@ -25,7 +25,6 @@ import sys
 from qubellclient.private.platform import QubellPlatform, Context
 import logging as log
 
-
 user = os.environ.get('QUBELL_USER')
 password = os.environ.get('QUBELL_PASSWORD')
 api = os.environ.get('QUBELL_API')
@@ -48,11 +47,11 @@ cloud_access = {
       "jcloudsRegions": region
     }
 
+
 def setUpModule():
 # This runs once for module (all tests)
 # Best place to initialize platform.
 # Here we check existance of given credentials and create services if needed
-    print "qubellclient tests setUpModule"
 
     exit = 0
     if not user:
@@ -108,7 +107,7 @@ def create_env(platform):
 
 def tearDownModule():
 # Clean after tests executed
-    print "qubellclient tests tearDownModule"
+    pass
 # Run after framework finish
 # Clean after tests here
 # Remove environment

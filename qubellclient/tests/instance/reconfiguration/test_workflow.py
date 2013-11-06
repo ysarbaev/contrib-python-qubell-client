@@ -40,25 +40,24 @@ class WorkflowInstance(base.BaseTestCasePrivate):
     def tearDownClass(cls):
         super(WorkflowInstance, cls).tearDownClass()
         # Remove all revisions after tests
-        cls.client.clean()
+        #cls.client.clean()
         cls.client.delete()
 
 
     def reconf(self, base_manifest, target_manifest):
         self.client.upload(base_manifest)
-        inst1 = self.client.launch(destroyInterval=300000)
-        self.assertTrue(inst1, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
-        self.assertTrue(inst1.ready(), "Instance not 'running' after timeout")
+        self.inst1 = self.client.launch(destroyInterval=300000)
+        self.assertTrue(self.inst1, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
+        self.assertTrue(self.inst1.ready(), "Instance not 'running' after timeout")
 
         self.client.upload(target_manifest)
-        inst2 = self.client.launch(destroyInterval=300000)
-        self.assertTrue(inst2, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
-        self.assertTrue(inst2.ready(),"Instance not 'running' after timeout")
-        rev2 = self.client.revisionCreate(name='rev2', instance=inst2)
-
-        inst1.reconfigure(revisionId=rev2.revisionId)
-        rev2.delete()
-        return inst1
+        self.inst2 = self.client.launch(destroyInterval=300000)
+        self.assertTrue(self.inst2, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
+        self.assertTrue(self.inst2.ready(),"Instance not 'running' after timeout")
+        rev2 = self.client.revisionCreate(name='rev2', instance=self.inst2)
+        assert rev2
+        self.inst1.reconfigure(revisionId=rev2.revisionId)
+        return self.inst1
 
     @attr('smoke')
     def test_run_trigger_on_parameter_change(self):
@@ -80,6 +79,9 @@ class WorkflowInstance(base.BaseTestCasePrivate):
         waitFor()
         self.assertEqual("UPDATED by update workflow", inst1.returnValues['out.app_output'])
 
+        self.assertTrue(inst1.delete(), "%s-%s: Instance failed to destroy" % (self.prefix, self._testMethodName))
+        self.assertTrue(inst1.destroyed(), "%s-%s: Instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
+
 
     def test_parameter_added(self):
         """ Reconfigure app adding new parameter. New parameter should be shown after reconfiguration.
@@ -94,6 +96,11 @@ class WorkflowInstance(base.BaseTestCasePrivate):
         waitFor()
         self.assertEqual("Hello from BASE WORKFLOW manifest", reconfigured_inst.returnValues['out.app_output'])
 
+        self.assertTrue(self.inst1.delete(), "%s-%s: Instance failed to destroy" % (self.prefix, self._testMethodName))
+        self.assertTrue(self.inst1.destroyed(), "%s-%s: Instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
+        self.assertTrue(self.inst2.delete(), "%s-%s: Instance failed to destroy" % (self.prefix, self._testMethodName))
+        self.assertTrue(self.inst2.destroyed(), "%s-%s: Instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
+
 
     def test_parameter_removed(self):
         """ Reconfigure app removing parameter. Old parameter should disappear after reconfiguration.
@@ -107,6 +114,11 @@ class WorkflowInstance(base.BaseTestCasePrivate):
         def waitFor(): return not reconfigured_inst.returnValues.has_key('out.app_output')
         waitFor()
         self.assertFalse(reconfigured_inst.returnValues.has_key('out.app_output'))
+
+        self.assertTrue(self.inst1.delete(), "%s-%s: Instance failed to destroy" % (self.prefix, self._testMethodName))
+        self.assertTrue(self.inst1.destroyed(), "%s-%s: Instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
+        self.assertTrue(self.inst2.delete(), "%s-%s: Instance failed to destroy" % (self.prefix, self._testMethodName))
+        self.assertTrue(self.inst2.destroyed(), "%s-%s: Instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
 
 
     def test_workflow_component_added(self):
@@ -126,6 +138,11 @@ class WorkflowInstance(base.BaseTestCasePrivate):
         self.assertTrue(reconfigured_inst.returnValues.has_key('out.app2_output'))
         self.assertEqual("Hi new binding", reconfigured_inst.returnValues['out.app2_output'])
 
+        self.assertTrue(self.inst1.delete(), "%s-%s: Instance failed to destroy" % (self.prefix, self._testMethodName))
+        self.assertTrue(self.inst1.destroyed(), "%s-%s: Instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
+        self.assertTrue(self.inst2.delete(), "%s-%s: Instance failed to destroy" % (self.prefix, self._testMethodName))
+        self.assertTrue(self.inst2.destroyed(), "%s-%s: Instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
+
     def test_workflow_removed(self):
         """ Reconfigure app removing workflow. Workflow should be destroyed after reconfiguration.
         """
@@ -143,6 +160,10 @@ class WorkflowInstance(base.BaseTestCasePrivate):
         self.assertEqual("Hello from BASE WORKFLOW manifest", reconfigured_inst.returnValues['out.app_output'])
         self.assertFalse('action.newgo' in [x['name'] for x in reconfigured_inst.availableWorkflows])
 
+        self.assertTrue(self.inst1.delete(), "%s-%s: Instance failed to destroy" % (self.prefix, self._testMethodName))
+        self.assertTrue(self.inst1.destroyed(), "%s-%s: Instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
+        self.assertTrue(self.inst2.delete(), "%s-%s: Instance failed to destroy" % (self.prefix, self._testMethodName))
+        self.assertTrue(self.inst2.destroyed(), "%s-%s: Instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
 
     def test_workflow_update(self):
         """ Reconfigure app changing workflow. Workflow should be updated.
@@ -161,6 +182,12 @@ class WorkflowInstance(base.BaseTestCasePrivate):
         waitFor()
 
         self.assertEqual("NEW GOGO launched", reconfigured_inst.returnValues['out.app_output'])
+
+        self.assertTrue(self.inst1.delete(), "%s-%s: Instance failed to destroy" % (self.prefix, self._testMethodName))
+        self.assertTrue(self.inst1.destroyed(), "%s-%s: Instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
+        self.assertTrue(self.inst2.delete(), "%s-%s: Instance failed to destroy" % (self.prefix, self._testMethodName))
+        self.assertTrue(self.inst2.destroyed(), "%s-%s: Instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
+
 
     @attr('smoke')
     def test_workflow_added(self):
@@ -187,3 +214,8 @@ class WorkflowInstance(base.BaseTestCasePrivate):
         reconfigured_inst.runWorkflow(name='action.stop')
         self.assertTrue(reconfigured_inst.ready())
         self.assertEqual("Action STOP launched", reconfigured_inst.returnValues['out.new_output'])
+
+        self.assertTrue(self.inst1.delete(), "%s-%s: Instance failed to destroy" % (self.prefix, self._testMethodName))
+        self.assertTrue(self.inst1.destroyed(), "%s-%s: Instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
+        self.assertTrue(self.inst2.delete(), "%s-%s: Instance failed to destroy" % (self.prefix, self._testMethodName))
+        self.assertTrue(self.inst2.destroyed(), "%s-%s: Instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))

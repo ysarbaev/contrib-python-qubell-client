@@ -32,6 +32,7 @@ user = os.environ.get('QUBELL_USER')
 password = os.environ.get('QUBELL_PASSWORD')
 api = os.environ.get('QUBELL_API')
 org = os.environ.get('QUBELL_ORG')
+prefix = os.environ.get('QUBELL_PREFIX')
 
 if not user: log.error('No username provided. Set QUBELL_USER env')
 if not password: log.error('No password provided. Set QUBELL_PASSWORD env')
@@ -55,7 +56,7 @@ class BaseTestCasePrivate(testtools.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.prefix = rand()
+        cls.prefix = prefix or rand()
         cls.context = Context(user=user, password=password, api=api)
 
     # Initialize platform and check access
@@ -74,7 +75,7 @@ class BaseTestCasePrivate(testtools.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        print "BaseTestCasePrivate TeadDownClass"
+        pass
 
     def setUp(self):
     # Run before each test
@@ -86,6 +87,3 @@ class BaseTestCasePrivate(testtools.TestCase):
         super(BaseTestCasePrivate, self).tearDown()
         pass
 
-    def error(self, msg):
-        log.error("Unable to continue: %s" % msg)
-        self.failUnlessRaises

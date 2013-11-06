@@ -39,7 +39,9 @@ class MarkerPropertyTest(base.BaseTestCasePrivate):
         super(MarkerPropertyTest, cls).tearDownClass()
 
     # Clean apps
-        cls.app.clean()
+
+        #cls.app.clean()
+
         cls.app.delete()
 
 
@@ -81,7 +83,8 @@ class MarkerPropertyTest(base.BaseTestCasePrivate):
         self.assertEqual(out['output.obj'], 'aa:bb')
 
         # TODO: instance should be destroyed before properties removed, otherwise it will be in inconsistent state and
-        self.app.clean()
+        self.assertTrue(ins.delete(), "%s-%s: Instance failed to destroy" % (self.prefix, self._testMethodName))
+        self.assertTrue(ins.destroyed(), "%s-%s: Instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
 
         self.assertTrue(self.environment.propertyRemove(name='sample-property-str'))
         self.assertTrue(self.environment.propertyRemove(name='sample-property-int'))

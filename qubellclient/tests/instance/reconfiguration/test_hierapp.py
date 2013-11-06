@@ -61,9 +61,12 @@ class HierappReconfiguration(base.BaseTestCasePrivate):
         cls.child_service.delete()
         cls.child_rev.delete()
 
-        cls.parent_app.clean()
-        cls.child_app.clean()
-        cls.new_child_app.clean()
+        cls.child_instance.delete()
+        assert cls.child_instance.destroyed()
+
+        #cls.parent_app.clean()
+        #cls.child_app.clean()
+        #cls.new_child_app.clean()
 
         cls.parent_app.delete()
         cls.child_app.delete()
@@ -107,6 +110,13 @@ class HierappReconfiguration(base.BaseTestCasePrivate):
 
         self.assertTrue(new_rev.delete)
 
+        self.assertTrue(parent_instance.delete(), "%s-%s: Instance failed to destroy" % (self.prefix, self._testMethodName))
+        self.assertTrue(parent_instance.destroyed(), "%s-%s: Instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
+        self.assertTrue(new_parent_instance.delete(), "%s-%s: Instance failed to destroy" % (self.prefix, self._testMethodName))
+        self.assertTrue(new_parent_instance.destroyed(), "%s-%s: Instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
+
+
+
     @attr('skip') # TODO: Bug here. need investigation
     def test_switch_child_shared_standalone_and_back(self):
         """ Launch hierarchical app with non shared instance. Change child to shared, check. Switch back.
@@ -149,3 +159,6 @@ class HierappReconfiguration(base.BaseTestCasePrivate):
         self.assertTrue(parent_instance.ready(), "Instance failed to reconfigure")
         self.assertEqual(parent_instance.submodules[0]['status'], 'Running')
         self.assertNotEqual(parent_instance.submodules[0]['id'], self.child_instance.instanceId)
+
+        self.assertTrue(parent_instance.delete(), "%s-%s: Instance failed to destroy" % (self.prefix, self._testMethodName))
+        self.assertTrue(parent_instance.destroyed(), "%s-%s: Instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
