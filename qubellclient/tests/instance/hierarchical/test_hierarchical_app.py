@@ -45,6 +45,7 @@ class HierarchicalAppTest(base.BaseTestCasePrivate):
         mnf.patch('application/components/child_app/configuration/configuration.workflows/launch/return/own/value', 'Child1 Ahoy!')
         cls.child_one.upload(mnf)
         cls.child_one_instance = cls.child_one.launch(destroyInterval=600000)
+        assert cls.child_one_instance
         assert cls.child_one_instance.ready()
         cls.child_one_revision = cls.child_one.revisionCreate(name='%s-tests-basic-hierapp-shared-one' % cls.prefix, instance=cls.child_one_instance)
 
@@ -54,6 +55,7 @@ class HierarchicalAppTest(base.BaseTestCasePrivate):
         mnf.patch('application/components/child_app/configuration/configuration.workflows/launch/return/own/value', 'Child2 Welcomes you')
         cls.child_two.upload(mnf)
         cls.child_two_instance = cls.child_two.launch(destroyInterval=600000)
+        assert cls.child_two_instance
         assert cls.child_two_instance.ready()
         cls.child_two_revision = cls.child_two.revisionCreate(name='%s-tests-basic-hierapp-shared-two' % cls.prefix, instance=cls.child_two_instance)
 
@@ -73,7 +75,8 @@ class HierarchicalAppTest(base.BaseTestCasePrivate):
         mnf.patch('application/components/child_app/configuration/configuration.workflows/launch/return/own/value', 'Child3 raises hands')
         cls.child_three.upload(mnf)
         cls.child_three_instance = cls.child_three.launch(destroyInterval=600000)
-
+        assert cls.child_three_instance
+        assert cls.child_three_instance.ready()
 
     @classmethod
     def tearDownClass(cls):
@@ -103,7 +106,8 @@ class HierarchicalAppTest(base.BaseTestCasePrivate):
         pmnf.patch('application/components/child/configuration/__locator.application-id', self.child_three.applicationId)
         self.parent.upload(pmnf)
         parent_instance = self.parent.launch(destroyInterval=300000)
-        self.assertTrue(parent_instance.ready(), "Instance failed to start")
+        self.assertTrue(parent_instance, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
+        self.assertTrue(parent_instance.ready(),"%s-%s: Instance not in 'running' state after timeout" % (self.prefix, self._testMethodName))
 
         self.assertEqual(parent_instance.submodules[0]['status'], 'Running')
         self.assertNotEqual(parent_instance.submodules[0]['id'], self.child_three_instance.instanceId)
@@ -129,7 +133,8 @@ class HierarchicalAppTest(base.BaseTestCasePrivate):
 
         self.parent.upload(pmnf)
         parent_instance = self.parent.launch(destroyInterval=600000, parameters=parameters)
-        self.assertTrue(parent_instance.ready(), "Parent instance failed to start")
+        self.assertTrue(parent_instance, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
+        self.assertTrue(parent_instance.ready(),"%s-%s: Instance not in 'running' state after timeout" % (self.prefix, self._testMethodName))
 
         self.assertEqual(parent_instance.submodules[0]['status'], 'Running')
         self.assertEqual(parent_instance.submodules[0]['id'], self.child_one_instance.instanceId)
@@ -163,7 +168,8 @@ class HierarchicalAppTest(base.BaseTestCasePrivate):
 
         self.parent.upload(pmnf)
         parent_instance = self.parent.launch(destroyInterval=600000, parameters=parameters)
-        self.assertTrue(parent_instance.ready(), "Parent instance failed to start")
+        self.assertTrue(parent_instance, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
+        self.assertTrue(parent_instance.ready(),"%s-%s: Instance not in 'running' state after timeout" % (self.prefix, self._testMethodName))
 
         self.assertEqual(parent_instance.submodules[0]['status'], 'Running')
         sub = parent_instance.submodules

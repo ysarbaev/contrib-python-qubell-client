@@ -45,7 +45,9 @@ class Application(Organization):
 
         # Create application
         if not id:
-            self.applicationId = self._create()['id']
+            newapp = self._create()
+            assert newapp
+            self.applicationId = newapp['id']
         # Use existing app
         else:
             self.applicationId = id

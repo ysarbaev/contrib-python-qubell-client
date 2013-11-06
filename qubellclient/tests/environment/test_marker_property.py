@@ -32,6 +32,7 @@ class MarkerPropertyTest(base.BaseTestCasePrivate):
 
     # Create applications for tests
         cls.app = cls.organization.application(name="%s-test-marker-property" % cls.prefix, manifest=cls.manifest)
+        assert cls.app
 
     @classmethod
     def tearDownClass(cls):
@@ -71,7 +72,8 @@ class MarkerPropertyTest(base.BaseTestCasePrivate):
         self.assertTrue(self.environment.markerAdd('test-marker'))
 
         ins = self.app.launch(destroyInterval=300000)
-        self.assertTrue(ins.ready(), 'Instance failed to start') # This manifest require marker. Will get error if no marker present
+        self.assertTrue(ins, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
+        self.assertTrue(ins.ready(),"%s-%s: Instance not in 'running' state after timeout" % (self.prefix, self._testMethodName))
 
         out = ins.returnValues
         self.assertEqual(out['output.str'], 'test-property-string')

@@ -48,7 +48,9 @@ class BasicInstanceActionsTest(base.BaseTestCasePrivate):
         super(BasicInstanceActionsTest, self).setUp()
         self.app.upload(self.manifest)
         self.instance = self.app.launch(destroyInterval=300000)
-        self.assertTrue(self.instance.ready())
+
+        self.assertTrue(self.instance, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
+        self.assertTrue(self.instance.ready(),"%s-%s: Instance not in 'running' state after timeout" % (self.prefix, self._testMethodName))
 
 # Also, clean after each test
     def tearDown(self):

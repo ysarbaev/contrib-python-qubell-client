@@ -47,11 +47,13 @@ class WorkflowInstance(base.BaseTestCasePrivate):
     def reconf(self, base_manifest, target_manifest):
         self.client.upload(base_manifest)
         inst1 = self.client.launch(destroyInterval=300000)
-        self.assertTrue(inst1.ready(),"Instance failed to start")
+        self.assertTrue(inst1, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
+        self.assertTrue(inst1.ready(), "Instance not 'running' after timeout")
 
         self.client.upload(target_manifest)
         inst2 = self.client.launch(destroyInterval=300000)
-        self.assertTrue(inst2.ready(),"Instance failed to start")
+        self.assertTrue(inst2, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
+        self.assertTrue(inst2.ready(),"Instance not 'running' after timeout")
         rev2 = self.client.revisionCreate(name='rev2', instance=inst2)
 
         inst1.reconfigure(revisionId=rev2.revisionId)
@@ -65,7 +67,8 @@ class WorkflowInstance(base.BaseTestCasePrivate):
         src = Manifest(file=os.path.join(os.path.dirname(__file__), "workflow-trigger_on_param.yml"))
         self.client.upload(src)
         inst1 = self.client.launch(destroyInterval=300000)
-        self.assertTrue(inst1.ready(),"Instance failed to start")
+        self.assertTrue(inst1, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
+        self.assertTrue(inst1.ready(),"%s-%s: Instance not in 'running' state after timeout" % (self.prefix, self._testMethodName))
         self.assertEqual("Hello from BASE WORKFLOW manifest", inst1.returnValues['out.app_output'])
 
         new_params = {'in.app_trigger': 'trig it'}

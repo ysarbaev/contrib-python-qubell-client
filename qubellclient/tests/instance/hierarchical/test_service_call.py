@@ -42,6 +42,7 @@ class ServiceCallTestApp(base.BaseTestCasePrivate):
         mnf.patch('application/components/child_app/configuration/configuration.workflows/launch/return/own/value', 'Service call child')
         cls.child.upload(mnf)
         cls.child_instance = cls.child.launch(destroyInterval=600000)
+        assert cls.child_instance
         assert cls.child_instance.ready()
         cls.child_revision = cls.child.revisionCreate(name='%s-tests-servicecall-shared' % cls.prefix, instance=cls.child_instance)
 
@@ -81,7 +82,8 @@ class ServiceCallTestApp(base.BaseTestCasePrivate):
             }}
 
         parent_instance = self.parent.launch(destroyInterval=600000, parameters=parameters)
-        self.assertTrue(parent_instance.ready(), "Parent instance failed to start")
+        self.assertTrue(parent_instance, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
+        self.assertTrue(parent_instance.ready(),"%s-%s: Instance not in 'running' state after timeout" % (self.prefix, self._testMethodName))
 
         self.assertEqual(parent_instance.submodules[0]['status'], 'Running')
         sub = parent_instance.submodules
@@ -112,7 +114,8 @@ class ServiceCallTestApp(base.BaseTestCasePrivate):
         self.parent.upload(pmnf)
 
         parent_instance = self.parent.launch(destroyInterval=600000)
-        self.assertTrue(parent_instance.ready(), "Parent instance failed to start")
+        self.assertTrue(parent_instance, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
+        self.assertTrue(parent_instance.ready(),"%s-%s: Instance not in 'running' state after timeout" % (self.prefix, self._testMethodName))
 
         self.assertEqual(parent_instance.submodules[0]['status'], 'Running')
         sub = parent_instance.submodules

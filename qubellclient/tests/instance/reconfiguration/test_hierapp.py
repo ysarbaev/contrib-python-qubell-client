@@ -80,7 +80,9 @@ class HierappReconfiguration(base.BaseTestCasePrivate):
 
         self.parent_app.upload(pmnf)
         parent_instance = self.parent_app.launch(destroyInterval=300000)
-        self.assertTrue(parent_instance.ready(), "Instance failed to start")
+        self.assertTrue(parent_instance, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
+        self.assertTrue(parent_instance.ready(),"%s-%s: Instance not in 'running' state after timeout" % (self.prefix, self._testMethodName))
+
         self.assertEqual(parent_instance.submodules[0]['status'], 'Running')
 
 
@@ -88,7 +90,9 @@ class HierappReconfiguration(base.BaseTestCasePrivate):
         pmnf.patch('application/components/child/configuration/__locator.application-id', self.new_child_app.applicationId)
         self.parent_app.upload(pmnf)
         new_parent_instance = self.parent_app.launch(destroyInterval=300000)
-        self.assertTrue(new_parent_instance.ready(), "Instance failed to start")
+        self.assertTrue(new_parent_instance, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
+        self.assertTrue(new_parent_instance.ready(),"%s-%s: Instance not in 'running' state after timeout" % (self.prefix, self._testMethodName))
+
         self.assertEqual(new_parent_instance.submodules[0]['status'], 'Running')
 
         new_rev = self.parent_app.revisionCreate(name='tests-new-child', instance=new_parent_instance)
@@ -114,7 +118,9 @@ class HierappReconfiguration(base.BaseTestCasePrivate):
         self.parent_app.upload(pmnf)
 
         parent_instance = self.parent_app.launch(destroyInterval=300000)
-        self.assertTrue(parent_instance.ready(), "Parent instance failed to start")
+        self.assertTrue(parent_instance, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
+        self.assertTrue(parent_instance.ready(),"%s-%s: Instance not in 'running' state after timeout" % (self.prefix, self._testMethodName))
+
         non_shared_rev = self.parent_app.revisionCreate(name='non-shared-child', instance=parent_instance)
 
         # Ensure we use non shared instance

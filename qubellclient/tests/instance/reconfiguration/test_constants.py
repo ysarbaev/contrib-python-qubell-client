@@ -42,11 +42,14 @@ class Constants(base.BaseTestCasePrivate):
         rnd = rand()
         self.client.upload(base_manifest)
         inst1 = self.client.launch(destroyInterval=300000)
-        self.assertTrue(inst1.ready(),"Instance failed to start")
+        self.assertTrue(inst1, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
+        self.assertTrue(inst1.ready(), "Instance not 'running' after timeout")
 
         self.client.upload(target_manifest)
         inst2 = self.client.launch(destroyInterval=300000)
-        self.assertTrue(inst2.ready(),"Instance failed to start")
+        self.assertTrue(inst2, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
+        self.assertTrue(inst2.ready(), "Instance not 'running' after timeout")
+
         rev2 = self.client.revisionCreate(name='%s-rev2' % rnd, instance=inst2)
 
         inst1.reconfigure(revisionId=rev2.revisionId)

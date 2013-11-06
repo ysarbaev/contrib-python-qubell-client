@@ -85,3 +85,7 @@ class BaseTestCasePrivate(testtools.TestCase):
     # Run after each test
         super(BaseTestCasePrivate, self).tearDown()
         pass
+
+    def error(self, msg):
+        log.error("Unable to continue: %s" % msg)
+        self.failUnlessRaises
