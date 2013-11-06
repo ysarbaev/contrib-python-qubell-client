@@ -40,7 +40,7 @@ class Organization(QubellPlatform):
             else:
                 self.organizationId = self._create()['id']
         else:
-            self.name = '%s - tests' % self.prefix
+            self.name = 'testsuite-run'
             if id:
                 self.organizationId = id
             else:

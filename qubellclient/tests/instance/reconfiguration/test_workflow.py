@@ -20,6 +20,7 @@ import qubellclient.tests.base as base
 from qubellclient.private.manifest import Manifest
 from qubellclient.tools import retry
 from qubellclient.tests.base import attr
+from qubellclient.tools import rand
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
@@ -54,7 +55,7 @@ class WorkflowInstance(base.BaseTestCasePrivate):
         self.inst2 = self.client.launch(destroyInterval=300000)
         self.assertTrue(self.inst2, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
         self.assertTrue(self.inst2.ready(),"Instance not 'running' after timeout")
-        rev2 = self.client.revisionCreate(name='rev2', instance=self.inst2)
+        rev2 = self.client.revisionCreate(name='%s-rev2' % self._testMethodName, instance=self.inst2)
         assert rev2
         self.inst1.reconfigure(revisionId=rev2.revisionId)
         return self.inst1
