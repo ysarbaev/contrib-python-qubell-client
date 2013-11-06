@@ -40,7 +40,7 @@ class BasicInstanceActionsTest(base.BaseTestCasePrivate):
     def tearDownClass(cls):
         # Call all parents teardowns
         super(BasicInstanceActionsTest, cls).tearDownClass()
-        cls.app.clean()
+        #cls.app.clean()
         cls.app.delete()
 
 # This would be executed for each test
@@ -55,7 +55,8 @@ class BasicInstanceActionsTest(base.BaseTestCasePrivate):
 # Also, clean after each test
     def tearDown(self):
         super(BasicInstanceActionsTest, self).tearDown()
-        self.instance.destroy()
+        self.assertTrue(self.instance.destroy())
+        self.assertTrue(self.instance.destroyed())
 
 
 # Tests
