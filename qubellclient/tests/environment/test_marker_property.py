@@ -60,7 +60,7 @@ class MarkerPropertyTest(base.BaseTestCasePrivate):
         self.assertEqual(prop[0]['name'], 'test-name')
         self.assertEqual(prop[0]['value'], 'TEST-PROPERTY')
         self.assertTrue(self.environment.propertyRemove('test-name'))
-        prop = [p for p in self.environment.json()['properties'] if p['test-name'] == 'test-name']
+        prop = [p for p in self.environment.json()['properties'] if p['name'] == 'test-name']
         self.assertFalse(len(prop))
 
     def test_marker_property_usage(self):
@@ -80,7 +80,11 @@ class MarkerPropertyTest(base.BaseTestCasePrivate):
         self.assertEqual(out['output.int'], '42')
         self.assertEqual(out['output.obj'], 'aa:bb')
 
+        # TODO: instance should be destroyed before properties removed, otherwise it will be in inconsistent state and
+        self.app.clean()
+
         self.assertTrue(self.environment.propertyRemove(name='sample-property-str'))
         self.assertTrue(self.environment.propertyRemove(name='sample-property-int'))
         self.assertTrue(self.environment.propertyRemove(name='sample-property-obj'))
         self.assertTrue(self.environment.markerRemove('test-marker'))
+

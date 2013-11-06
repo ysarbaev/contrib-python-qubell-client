@@ -17,26 +17,42 @@
 import os
 from qubellclient.private.platform import QubellPlatform, Context
 
-__author__ = "Vasyl Khomenko"
-__copyright__ = "Copyright 2013, Qubell.com"
-__license__ = "Apache"
-__version__ = "1.0.1"
-__email__ = "vkhomenko@qubell.com"
 
 """
 Example shows how to configure environment from scratch.
 To use this script, setup environmnt variables or modify defauls (see bellow) 
+
+Environment variables:
+QUBELL_USER, QUBELL_PASSWORD - user to access qubell
+QUBELL_API - url to qubell platform
+QUBELL_ORG - name of organization to use. Will be created if not exists.
+
+PROVIDER, REGION, JCLOUDS_IDENTITY, JCLOUDS_CREDENTIALS - credentials for amazon ec2. (will create provider)
+
+
+To run script, set up environment variables and run script by:
+
+python create_env.py
+
 """
 
 user = os.environ.get('QUBELL_USER', 'user')
 password = os.environ.get('QUBELL_PASSWORD', 'password')
-api = os.environ.get('QUBELL_API', 'http://api.qubell.com')
+api = os.environ.get('QUBELL_API', 'https://express.qubell.com')
 org = os.environ.get('QUBELL_ORG', 'organization')
 
 provider = os.environ.get('PROVIDER', 'aws-ec2')
 region = os.environ.get('REGION', 'us-east-1')
 identity = os.environ.get('JCLOUDS_IDENTITY')
 credentials = os.environ.get('JCLOUDS_CREDENTIALS')
+
+
+__author__ = "Vasyl Khomenko"
+__copyright__ = "Copyright 2013, Qubell.com"
+__license__ = "Apache"
+__version__ = "1.0.1"
+__email__ = "vkhomenko@qubell.com"
+
 
 cloud_access = {
       "provider": provider,
