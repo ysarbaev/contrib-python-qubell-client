@@ -1,4 +1,3 @@
-
 ====================
 Python-qubell-client
 ====================
@@ -11,17 +10,26 @@ qubellclient/tests - tests in python unittests format. Primary goal is to test q
 
 
 Pre-requisites
---------------
+==============
 
 - python2.7 or greater
-- python-requests
-- python-yaml
-- python-nose
-- python-testtools
+- requests
+- yaml
+- testtools
+- nose
 
+::
+
+    sudo pip install -r requirements.txt
+or
+
+::
+
+    sudo easy_install `cat requirements.txt`
+    
 
 Configuration
--------------
+=============
 
 To configure tests, set up environment variables:
 QUBELL_USER, QUBELL_PASSWORD - user to access qubell
@@ -31,32 +39,51 @@ QUBELL_ORG - name of organization to use. Will be created if not exists.
 PROVIDER, REGION, JCLOUDS_IDENTITY, JCLOUDS_CREDENTIALS - credentials for amazon ec2. (will create provider)
 QUBELL_NEW - if you want to create new environment while tests run
 
+::
+
+	export QUBELL_API="http://qubell.com"
+	export QUBELL_USER="user@gmail.com"
+	export QUBELL_PASSWORD="password"
+	export QUBELL_ORG="my-org"
+
+	export JCLOUDS_IDENTITY="FFFFFFFFF"
+	export JCLOUDS_CREDENTIALS="FFFFFFFFFF"
+
 
 Running tests
--------------
+=============
 
-Run single test:
- 
-    nosetests -s -v qubellclient.tests.instance.test_actions:InstanceTest.test_actions
+Run single test::
 
-Run all tests:
- 
+    nosetests -s -v qubellclient.tests.instance.test_actions:BasicInstanceActionsTest.test_actions
+
+Run all tests::
+
     nosetests -s -v qubellclient/tests/
 
-or just:
- 
+or just::
+
     nosetests
 
 
 
-Creating qubell environment
-===========================
+Using client
+============
 
+Create environment
+__________________
+Working example could be found in qubellclient/create_env.py. To use it, setup environment variables (see below) and run it::
+
+	python qubellclient/create_env.py 
+
+
+Building sandboxes
+__________________
 Sandboxes in qubell platform could be created on different levels. Maximum isolated sandbox could be achieved by separate organization (with it's own environments, users and application). 
 
 Organization
-------------
-Creating organization is simple:
+____________
+Creating organization is simple::
 
 	from qubellclient.private.platform import QubellPlatform, Context
 
@@ -69,7 +96,7 @@ After executing this code, organization "test-org" would be created (if not exis
 Now we need to create environment in organization.
 
 Environment
------------
+___________
 
 Usual environment consists of cloud account, keystore service and workflow service. So, we need to add theese services to our organization, then add them to our environment. By default we use "default" environment::
 
@@ -112,8 +139,8 @@ Usual environment consists of cloud account, keystore service and workflow servi
 Now, platform ready to be used. We need only application with valid manifest.
 
 Application
------------
-We need manifest to create application:
+___________
+We need manifest to create application::
 
 	manifest = Manifest(url="https://raw.github.com/qubell/docs/master/developer/examples/hierarchical-main.yml?login=vasichkin&token=19f0453adcc53ea22ff6def5d78bcf46")
 
@@ -122,7 +149,7 @@ We need manifest to create application:
 
 
 Application would be crated.
-To launch it, use code:
+To launch it, use code::
 
 	instance = app.launch()
 
@@ -139,7 +166,7 @@ We have base class, where basic initialization made.
 To add test, find existing test class that fits usecase or create new. 
 
 
-Simple test looks like this:
+Simple test looks like this::
 
 	import os
 	import qubellclient.tests.base as base
@@ -195,7 +222,7 @@ Simple test looks like this:
 	        self.assertEqual('Action WF launched', self.instance.returnValues['out.app_output'])
 
 Best practices:
----------------
+_______________
 
 - Every testclass should create it's own application. Use prefix in name as shown in example
 - Use setUp and setUpClass for environment preparations. Test should only contain tested operations
