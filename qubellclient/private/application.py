@@ -133,7 +133,12 @@ class Application(Organization):
         headers = {'Content-Type': 'application/json'}
         data = json.dumps(argv)
         resp = requests.post(url, cookies=self.context.cookies, data=data, verify=False, headers=headers)
-        log.debug(resp.text)
+
+        log.debug('--- APPLICATION LAUNCH REQUEST ---')
+        log.debug('REQUEST HEADERS: %s' % resp.request.headers)
+        log.debug('REQUEST: %s' % resp.request.body)
+        log.debug('RESPONSE: %s' % resp.text)
+
         self.rawResponse = resp
         if resp.status_code == 200:
             instance_id = resp.json()['id']
@@ -152,8 +157,8 @@ class Application(Organization):
                     'parameters': parameters,
                     'submoduleRevisions': {},
                     'returnValues': [],
-                    'applicationId': self.context.applicationId,
-                    'applicationName': "api",
+                    'applicationId': self.applicationId,
+                    'applicationName': self.name,
                     'version': version,
                     'instanceId': instance.instanceId})
         resp = requests.post(url, cookies=self.context.cookies, data=payload, verify=False, headers=headers)

@@ -44,7 +44,7 @@ class Instance(application.Application):
         self.instanceId = id
         self.context = context
         self.context.instanceId = self.instanceId
-        self.name = "Instance-Class"
+        self.name = self.name
         self._status = 'Init'
 
     def __getattr__(self, key):
@@ -136,12 +136,15 @@ class Instance(application.Application):
                    'revisionId': revisionId,
                    'instanceName': name})
         resp = requests.put(url, cookies=self.context.cookies, data=payload, verify=False, headers=headers)
-        log.debug(resp.text)
+
+        log.debug('--- INSTANCE RECONFIGUREATION REQUEST ---')
+        log.debug('REQUEST HEADERS: %s' % resp.request.headers)
+        log.debug('REQUEST: %s' % resp.request.body)
+        log.debug('RESPONSE: %s' % resp.text)
         self.rawRespose = resp
         if resp.status_code == 200:
             return resp.json()
         else:
-            return resp.json()
             return False
 
 

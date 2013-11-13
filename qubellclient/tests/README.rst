@@ -4,10 +4,34 @@ Writing tests
 We use python's unittests to create tests.
 We have base class, where basic initialization made.
 
-To add test, find existing test class that fits usecase or create new. 
+To add test, find existing test class that fits use-case or create new.
 
 
-Simple test looks like this::
+Hello-world test::
+
+import qubellclient.tests.base as base
+
+
+class FirstTest(base.BaseTestCasePrivate):
+
+    def test_instance_launch(self):
+        app = self.organization.application(manifest=self.manifest)
+        self.assertTrue(app.name)             # we can get False if error
+
+        instance = app.launch()
+        self.assertTrue(instance)             # Instance launch will return False if errors
+        self.assertTrue(instance.ready())     # Wait until instance become running
+
+        self.assertFalse(app.delete())        # Should get error if delete app while it has running instance.
+        self.assertTrue(instance.destroy())   # Destroying instance
+        self.assertTrue(instance.destroyed()) # Wait until it destroyed
+        self.assertTrue(app.delete())         # Delete application
+
+
+This test creates application, and launches instance. Waits until it 'Running', then cleans.
+
+
+Previous test could be written in more convenient way, using setups and teardowns::
 
 	import os
 	import qubellclient.tests.base as base
@@ -49,7 +73,6 @@ Simple test looks like this::
 	        super(BasicInstanceActionsTest, self).tearDown()
 	        self.assertTrue(self.instance.destroy())
 	        self.assertTrue(self.instance.destroyed())
-
 
 	# Tests
 	    @attr('smoke')
