@@ -123,7 +123,7 @@ class HierappReconfiguration(base.BaseTestCasePrivate):
 
 
 
-    @attr('smoke') # TODO: Bug here. need investigation
+    @attr('smoke')
     def test_switch_child_shared_standalone_and_back(self):
         """ Launch hierarchical app with non shared instance. Change child to shared, check. Switch back.
         """

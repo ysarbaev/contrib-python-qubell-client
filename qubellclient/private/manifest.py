@@ -41,9 +41,10 @@ class Manifest(object):
                 self.source = file
             elif os.path.exists(os.path.join(os.path.dirname(__file__), file)):
                 self.source = os.path.join(os.path.dirname(__file__), file)
+            else:
+                exit("No manifest found: %s " % self.name)
 
-#            elif os.path.exists(os.path.dirname(os.path.abspath(file))):
-#                self.source = os.path.join(os.path.dirname(os.path.abspath(qubell.config)), file)
+
             self.content = open(self.source, 'r').read()
 
     def patch(self, path, value):
