@@ -40,13 +40,19 @@ class HierappReconfiguration(base.BaseTestCasePrivate):
 
 
         # Prepare shared child
-        cls.child_instance = cls.child_app.launch(destroyInterval=300000)
+        cls.child_instance = cls.child_app.launch(destroyInterval=3000000)
         assert cls.child_instance.ready()
-        cls.child_rev = cls.child_app.revisionCreate(name='tests-reconf-hierapp-shared', instance=cls.child_instance)
+
+        # Need to specify parameters, otherwise we'll get empty revision...
+        parameters = [{
+      "name": "parent_in.child_input",
+      "value": "Hello from parent to child"}]
+
+        cls.child_rev = cls.child_app.revisionCreate(name='tests-reconf-hierapp-shared', instance=cls.child_instance,parameters=parameters)
         revision_id = cls.child_rev.revisionId.split('-')[0]
         instance_id = cls.child_instance.instanceId
 
-        cls.child_service = cls.organization.service(name='shared-test', type='builtin:shared_instances_catalog', parameters='%s: %s' % (revision_id, instance_id))
+        cls.child_service = cls.organization.service(name='%s-reconfiguration-shared-test' % cls.prefix, type='builtin:shared_instances_catalog', parameters='%s: %s' % (revision_id, instance_id))
         cls.environment.serviceAdd(cls.child_service)
 
         # Prepare new_child
@@ -117,7 +123,7 @@ class HierappReconfiguration(base.BaseTestCasePrivate):
 
 
 
-    @attr('skip') # TODO: Bug here. need investigation
+    @attr('smoke') # TODO: Bug here. need investigation
     def test_switch_child_shared_standalone_and_back(self):
         """ Launch hierarchical app with non shared instance. Change child to shared, check. Switch back.
         """
@@ -127,9 +133,10 @@ class HierappReconfiguration(base.BaseTestCasePrivate):
         pmnf.patch('application/components/child/configuration/__locator.application-id', self.child_app.applicationId)
         self.parent_app.upload(pmnf)
 
-        parent_instance = self.parent_app.launch(destroyInterval=300000)
+        parent_instance = self.parent_app.launch(destroyInterval=3000000)
         self.assertTrue(parent_instance, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
         self.assertTrue(parent_instance.ready(),"%s-%s: Instance not in 'running' state after timeout" % (self.prefix, self._testMethodName))
+
 
         non_shared_rev = self.parent_app.revisionCreate(name='non-shared-child', instance=parent_instance)
 
@@ -138,22 +145,22 @@ class HierappReconfiguration(base.BaseTestCasePrivate):
         self.assertNotEqual(parent_instance.submodules[0]['id'], self.child_instance.instanceId)
 
         # Reconfigure parent to use shared child
-        parameters = {self.child_app.name: {'revisionId': self.child_rev.revisionId}}
-        parent_instance.reconfigure(parameters=parameters)
+        parameters = {
+            'parent_in.child_input': 'Set on reconfiguration',
+            'child': {
+                'revisionId': self.child_rev.revisionId}}
 
-        import time
-        time.sleep(10)
+
+        self.assertTrue(parent_instance.reconfigure(parameters=parameters))
+
         # Check we use shared instance
         self.assertTrue(parent_instance.ready(), "Instance failed to reconfigure")
+        self.assertTrue(parent_instance.submodules, 'No submodules found')
         self.assertEqual(parent_instance.submodules[0]['status'], 'Running')
         self.assertEqual(parent_instance.submodules[0]['id'], self.child_instance.instanceId)
-        print parent_instance.submodules
-
 
         # Switch back to non shared instance
-        parent_instance.reconfigure(revisionId=non_shared_rev.revisionId)
-
-        time.sleep(10)
+        self.assertTrue(parent_instance.reconfigure(revisionId=non_shared_rev.revisionId))
 
         # Check we use shared instance again
         self.assertTrue(parent_instance.ready(), "Instance failed to reconfigure")
