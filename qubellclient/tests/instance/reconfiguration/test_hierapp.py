@@ -48,7 +48,7 @@ class HierappReconfiguration(base.BaseTestCasePrivate):
       "name": "parent_in.child_input",
       "value": "Hello from parent to child"}]
 
-        cls.child_rev = cls.child_app.revisionCreate(name='tests-reconf-hierapp-shared', instance=cls.child_instance,parameters=parameters)
+        cls.child_rev = cls.child_app.create_revision(name='tests-reconf-hierapp-shared', instance=cls.child_instance,parameters=parameters)
         revision_id = cls.child_rev.revisionId.split('-')[0]
         instance_id = cls.child_instance.instanceId
 
@@ -104,7 +104,7 @@ class HierappReconfiguration(base.BaseTestCasePrivate):
 
         self.assertEqual(new_parent_instance.submodules[0]['status'], 'Running')
 
-        new_rev = self.parent_app.revisionCreate(name='tests-new-child', instance=new_parent_instance)
+        new_rev = self.parent_app.create_revision(name='tests-new-child', instance=new_parent_instance)
 
         # Reconfigure old parent with new revision
         parent_instance.reconfigure(revisionId=new_rev.revisionId)
@@ -138,7 +138,7 @@ class HierappReconfiguration(base.BaseTestCasePrivate):
         self.assertTrue(parent_instance.ready(),"%s-%s: Instance not in 'running' state after timeout" % (self.prefix, self._testMethodName))
 
 
-        non_shared_rev = self.parent_app.revisionCreate(name='non-shared-child', instance=parent_instance)
+        non_shared_rev = self.parent_app.create_revision(name='non-shared-child', instance=parent_instance)
 
         # Ensure we use non shared instance
         self.assertEqual(parent_instance.submodules[0]['status'], 'Running')

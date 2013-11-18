@@ -22,28 +22,23 @@ __email__ = "vkhomenko@qubell.com"
 import requests
 import logging as log
 from qubellclient.private.organization import Organization
+from qubellclient.private import exceptions
 import simplejson as json
 
 class Environment(Organization):
 
-    def __init__(self, context, id=None, name='default'):
-        self.name = name
+    def __init__(self, context, id):
+        self.environmentId = id
         self.context = context
-        if id:
-            self.environmentId = id
-        else:
-            self.environmentId = self.list()[0]['id'] # TODO
         self.context.environmentId = self.environmentId
+        my = self.json()
+        self.name = my['name']
 
-    def list(self):
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/environments.json'
-        resp = requests.get(url, cookies=self.context.cookies, verify=False)
-        log.debug(resp.text)
-        self.rawRespose = resp
-        if resp.status_code == 200:
-            return resp.json()
-        else:
-            return False
+    def __getattr__(self, key):
+        resp = self.json()
+        if not resp.has_key(key):
+            raise exceptions.NotFoundError('Cannot get property %s' % key)
+        return resp[key] or False
 
     def json(self):
         url = self.context.api+'/organizations/'+self.context.organizationId+'/environments/'+self.environmentId+'.json'
@@ -52,8 +47,16 @@ class Environment(Organization):
         self.rawRespose = resp
         if resp.status_code == 200:
             return resp.json()
-        else:
-            return False
+        raise exceptions.ApiError('Unable to get environment properties, got error: %s' % resp.text)
+
+    def delete(self):
+        url = self.context.api+'/organizations/'+self.context.organizationId+'/environments/'+self.environmentId+'.json'
+        headers = {'Content-Type': 'application/json'}
+        resp = requests.delete(url, cookies=self.context.cookies, data=json.dumps({}), verify=False, headers=headers)
+        log.debug(resp.text)
+        if resp.status_code == 200:
+            return True
+        raise exceptions.ApiError('Unable to delete environment %s, got error: %s' % (self.environmentId, resp.text))
 
     def servicesAvailable(self):
         url = self.context.api+'/organizations/'+self.context.organizationId+'/environments/'+self.environmentId+'/availableServices.json'

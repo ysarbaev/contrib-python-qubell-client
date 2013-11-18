@@ -94,7 +94,7 @@ class ThreeLevelHierarchicalAppTest(base.BaseTestCasePrivate):
         self.assertTrue(last_child_instance)
         self.assertTrue(last_child_instance.ready())
 
-        last_child_revision = self.last_child.revisionCreate(name='%s-shared_last_child' % self._testMethodName, instance=last_child_instance)
+        last_child_revision = self.last_child.create_revision(name='%s-shared_last_child' % self._testMethodName, instance=last_child_instance)
 
         params = ''.join('%s: %s\n' % (last_child_revision.revisionId.split('-')[0], last_child_instance.instanceId))
 
@@ -145,7 +145,7 @@ class ThreeLevelHierarchicalAppTest(base.BaseTestCasePrivate):
         self.assertTrue(middle_child_instance)
         self.assertTrue(middle_child_instance.ready())
 
-        middle_child_revision = self.middle_child.revisionCreate(name='%s-shared_middle_child' % self._testMethodName, instance=middle_child_instance)
+        middle_child_revision = self.middle_child.create_revision(name='%s-shared_middle_child' % self._testMethodName, instance=middle_child_instance)
 
         params = ''.join('%s: %s\n' % (middle_child_revision.revisionId.split('-')[0], middle_child_instance.instanceId))
 

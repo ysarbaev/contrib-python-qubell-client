@@ -47,7 +47,7 @@ class HierarchicalAppTest(base.BaseTestCasePrivate):
         cls.child_one_instance = cls.child_one.launch(destroyInterval=600000)
         assert cls.child_one_instance
         assert cls.child_one_instance.ready()
-        cls.child_one_revision = cls.child_one.revisionCreate(name='%s-tests-basic-hierapp-shared-one' % cls.prefix, instance=cls.child_one_instance)
+        cls.child_one_revision = cls.child_one.create_revision(name='%s-tests-basic-hierapp-shared-one' % cls.prefix, instance=cls.child_one_instance)
 
 
     # Create shared instance Two to use in tests
@@ -57,7 +57,7 @@ class HierarchicalAppTest(base.BaseTestCasePrivate):
         cls.child_two_instance = cls.child_two.launch(destroyInterval=600000)
         assert cls.child_two_instance
         assert cls.child_two_instance.ready()
-        cls.child_two_revision = cls.child_two.revisionCreate(name='%s-tests-basic-hierapp-shared-two' % cls.prefix, instance=cls.child_two_instance)
+        cls.child_two_revision = cls.child_two.create_revision(name='%s-tests-basic-hierapp-shared-two' % cls.prefix, instance=cls.child_two_instance)
 
 
 

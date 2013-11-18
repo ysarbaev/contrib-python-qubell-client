@@ -20,52 +20,26 @@ __version__ = "1.0.1"
 __email__ = "vkhomenko@qubell.com"
 
 from qubellclient.private.organization import Organization
+from qubellclient.private import exceptions
 import requests
 import simplejson as json
 
 import logging as log
 
 class Service(Organization):
-    rawResponse = None
 
-    def __init__(self, context, id=None, name=None, type=None, parameters={}):
-        self.name = name
-        self.type = type
+    def __init__(self, context, id):
         self.context = context
+        self.serviceId = id
+        my = self.json()
+        self.name = my['name']
+        self.type = my['typeId']
 
-        # Create service
-        if not id:
-            self.serviceId = self._create(parameters)['id']
-        # Service exists, init.
-        else:
-            self.serviceId = id
-
-    def _create(self, parameters):
-        data = {
-            "name": self.name,
-            "typeId": self.type,
-            "zoneId": self.context.zoneId}
-
-        if 'builtin:shared_instances_catalog' in self.type:
-            data['parameters'] = {'configuration.shared-instances': parameters}
-        elif 'builtin:workflow_service' in self.type:
-            data['parameters'] = {'configuration.policies': parameters}
-        else:
-            data['parameters'] = parameters
-
-
-        payload = json.dumps(data)
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/services.json'
-        headers = {'Content-Type': 'application/json'}
-        resp = requests.post(url, cookies=self.context.cookies, data=payload, verify=False, headers=headers)
-        log.debug(resp.text)
-
-        self.rawResponse = resp
-        if resp.status_code == 200:
-            self.serviceId = resp.json()['id']
-            return resp.json()
-        else:
-            return False
+    def __getattr__(self, key):
+        resp = self.json()
+        if not resp.has_key(key):
+            raise exceptions.NotFoundError('Cannot get property %s' % key)
+        return resp[key] or False
 
     # TODO: should be separate class
     def regenerate(self):
@@ -73,7 +47,6 @@ class Service(Organization):
         headers = {'Content-Type': 'application/json'}
         resp = requests.post(url, cookies=self.context.cookies, data=json.dumps({}), verify=False, headers=headers)
         log.debug(resp.text)
-        self.rawResponse = resp
         if resp.status_code == 200:
             return resp.json()
         else:
@@ -83,30 +56,17 @@ class Service(Organization):
         url = self.context.api+'/organizations/'+self.context.organizationId+'/services.json'
         resp = requests.get(url, cookies=self.context.cookies, verify=False)
         log.debug(resp.text)
-        self.rawRespose = resp
         if resp.status_code == 200:
             service = [x for x in resp.json() if x['id'] == self.serviceId]
             if len(service)>0:
                 return service[0]
-            else:
-                return False
-
-        else:
-            return False
+        raise exceptions.ApiError('Unable to get service properties, got error: %s' % resp.text)
 
     def delete(self):
         url = self.context.api+'/organizations/'+self.context.organizationId+'/services/'+self.serviceId+'.json'
         headers = {'Content-Type': 'application/json'}
         resp = requests.delete(url, cookies=self.context.cookies, data=json.dumps({}), verify=False, headers=headers)
         log.debug(resp.text)
-        self.rawResponse = resp
         if resp.status_code == 200:
-            #print resp.json()
             return True
-        else:
-            return False
-
-
-
-
-
+        raise exceptions.ApiError('Unable to delete service %s, got error: %s' % (self.serviceId, resp.text))

@@ -96,7 +96,7 @@ class BasicInstanceActionsTest(base.BaseTestCasePrivate):
         ''' Create new revision. Change latest manifest. Launch revision and check it uses not latest, but revisions manifest.
         '''
 
-        rev = self.app.revisionCreate(name='test-revision-launch', instance=self.instance)
+        rev = self.app.create_revision(name='test-revision-launch', instance=self.instance)
         self.assertTrue(rev)
 
         manf1 = Manifest(file=os.path.join(os.path.dirname(__file__), 'simple_manifest.yml'))

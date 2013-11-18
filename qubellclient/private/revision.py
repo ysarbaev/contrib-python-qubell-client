@@ -22,8 +22,7 @@ __email__ = "vkhomenko@qubell.com"
 import logging as log
 import application
 import requests
-import simplejson as json
-from qubellclient.tools import retry
+from qubellclient.private import exceptions
 
 
 
@@ -31,12 +30,24 @@ class Revision(application.Application):
     """
     Base class for revision
     """
-    rawRespose = None
 
-    def __init__(self, context, name=None, id=None):
-        if id: self.revisionId = id
+    def __init__(self, context, id):
+        self.revisionId = id
         self.context = context
-        if name: self.name = name
+
+    def __getattr__(self, key):
+        resp = self.json()
+        if not resp.has_key(key):
+            raise exceptions.NotFoundError('Cannot get property %s' % key)
+        return resp[key] or False
+
+    def json(self):
+        url = self.context.api+'/organizations/'+self.context.organizationId+'/applications/'+self.context.applicationId+'/revisions/'+self.revisionId+'.json'
+        resp = requests.get(url, cookies=self.context.cookies, verify=False)
+        log.debug(resp.text)
+        if resp.status_code == 200:
+            resp.json()
+        raise exceptions.ApiError('Unable to get service properties, got error: %s' % resp.text)
 
     def delete(self):
         url = self.context.api+'/organizations/'+self.context.organizationId+'/applications/'+self.context.applicationId+'/revisions/'+self.revisionId+'.json'
@@ -45,5 +56,4 @@ class Revision(application.Application):
         self.rawRespose = resp
         if resp.status_code==200:
             return True
-        else:
-            return False
+        raise exceptions.ApiError('Unable to delete revision, got error: %s' % resp.text)

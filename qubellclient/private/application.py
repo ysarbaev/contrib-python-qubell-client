@@ -24,7 +24,7 @@ import logging as log
 import requests
 import simplejson as json
 from qubellclient.private.organization import Organization
-import qubellclient.tools as tools
+from qubellclient.private import exceptions
 
 class Application(Organization):
     """
@@ -38,30 +38,14 @@ class Application(Organization):
             ret[val['id']] = val['value']
         return ret
 
-    def __init__(self, context, id=None, manifest=None, name=None):
+    def __init__(self, context, id):
         self.context = context
-        self.name = name or "test-app-"+tools.rand()
-        self.manifest = manifest
+        self.applicationId = id
+        self.context.applicationId = id
 
-        # Create application
-        if not id:
-            newapp = self._create()
-            assert newapp
-            self.applicationId = newapp['id']
-        # Use existing app
-        else:
-            self.applicationId = id
-        self.context.applicationId = self.applicationId
-
-    def _create(self):
-        log.info("Creating application: %s" % self.name)
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/applications.json'
-        resp = requests.post(url, files={'path': self.manifest.content}, data={'manifestSource': 'upload', 'name': self.name}, verify=False, cookies=self.context.cookies)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        else:
-            return False
+        my = self.json()
+        self.name = my['name']
+        self.manifest = my['manifest']
 
     def delete(self):
         log.info("Removing application: %s" % self.name)
@@ -93,26 +77,19 @@ class Application(Organization):
                 obj.delete()
         return True
 
-
     def json(self, key=None):
         url = self.context.api+'/organizations/'+self.context.organizationId+'/applications/'+self.applicationId+'.json'
         resp = requests.get(url, cookies=self.context.cookies, data="{}", verify=False)
         log.debug(resp.text)
-        self.rawRespose = resp
         if resp.status_code == 200:
-            # return same way public api does
-#            if key and (key in ['instances', 'environments']):
-#                return self.__parse(resp.json()[key])
-#            else:
-#                return resp.json()[key]
             return resp.json()
-        else:
-            return None
+        raise exceptions.ApiError('Unable to get application by url %s\n, got error: %s' % (url, resp.text))
 
     def __getattr__(self, key):
         resp = self.json()
+        if not resp.has_key(key):
+            raise exceptions.NotFoundError('Cannot get property %s' % key)
         return resp[key] or False
-
 
     def upload(self, manifest):
         log.info("Uploading manifest")
@@ -148,7 +125,15 @@ class Application(Organization):
             log.error('Unable to launch instance: %s' % resp.content)
             return False
 
-    def revisionCreate(self, name, instance, parameters=[], version=None):
+    def get_revision(self, id):
+        from qubellclient.private.revision import Revision
+        self.context.applicationId = self.applicationId
+        return Revision(context=self.context, id=id)
+
+    def list_revisions(self):
+        return self.revisions()
+
+    def create_revision(self, name, instance, parameters=[], version=None):
         if not version:
             version=self.getManifest()['version']
         url = self.context.api+'/organizations/'+self.context.organizationId+'/applications/'+self.applicationId+'/revisions.json'
@@ -163,14 +148,15 @@ class Application(Organization):
                     'instanceId': instance.instanceId})
         resp = requests.post(url, cookies=self.context.cookies, data=payload, verify=False, headers=headers)
         log.debug(resp.text)
-        self.rawRespose = resp
         if resp.status_code==200:
-            import revision
-            return revision.Revision(context=self.context, name=name, id=resp.json()['id'])
-        else:
-            return False
+            return self.get_revision(id=resp.json()['id'])
+        raise exceptions.ApiError('Unable to get revision, got error: %s' % resp.text)
 
-    def getManifest(self):
+    def delete_revision(self, id):
+        rev = self.get_revision(id)
+        rev.delete()
+
+    def get_manifest(self):
         url = self.context.api+'/organizations/'+self.context.organizationId+'/applications/'+self.applicationId+'/refreshManifest.json'
         headers = {'Content-Type': 'application/json'}
         payload = json.dumps({})

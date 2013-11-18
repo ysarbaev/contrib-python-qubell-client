@@ -57,7 +57,7 @@ class Constants(base.BaseTestCasePrivate):
         self.assertTrue(self.inst2, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
         self.assertTrue(self.inst2.ready(), "Instance not 'running' after timeout")
 
-        rev2 = self.client.revisionCreate(name='%s-rev2' % self._testMethodName, instance=self.inst2)
+        rev2 = self.client.create_revision(name='%s-rev2' % self._testMethodName, instance=self.inst2)
 
         self.inst1.reconfigure(revisionId=rev2.revisionId)
         return self.inst1

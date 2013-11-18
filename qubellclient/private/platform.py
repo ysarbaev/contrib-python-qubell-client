@@ -21,6 +21,8 @@ __email__ = "vkhomenko@qubell.com"
 
 import logging as log
 import requests
+import simplejson as json
+from qubellclient.private import exceptions
 
 class QubellPlatform(object):
 
@@ -43,14 +45,57 @@ class QubellPlatform(object):
         else:
             return False
 
-
-    def getContext(self):
+    def get_context(self):
         return self.context
 
+    def create_organization(self, name):
+        log.info("Creating organization: %s" % name)
+        url = self.context.api+'/organizations.json'
+        headers = {'Content-Type': 'application/json'}
+        payload = json.dumps({'editable': 'true',
+                              'name': name})
+        resp = requests.post(url, cookies=self.context.cookies, data=payload, verify=False, headers=headers)
+        log.debug(resp.text)
+        if resp.status_code == 200:
+            return self.get_organization(resp.json()['id'])
+        raise exceptions.ApiError('Unable to create organization %s, got error: %s' % (name, resp.text))
 
-    def organization(self, *args, **kwargs):
+    def get_organization(self, id):
+        log.info("Picking organization: %s" % id)
         from qubellclient.private.organization import Organization
-        return Organization(self.context, *args, **kwargs)
+        return Organization(self.context, id=id)
+
+    def organization(self, id=None, name=None):
+        """ Smart object. Will create organization or pick one, if exists"""
+        if name:
+            orgz = [org for org in self.list_organizations() if org['name'] == name]
+            # Org found by name
+            if len(orgz):
+                return self.get_organization(orgz[0]['id'])
+            else:
+                return self.create_organization(name)
+        else:
+            name = 'generated-org-name'
+            if id:
+                return self.get_organization(id)
+            else:
+                return self.create_organization(name)
+
+    def list_organizations(self):
+        url = self.context.api+'/organizations.json'
+        resp = requests.get(url, cookies=self.context.cookies, verify=False)
+        log.debug(resp.text)
+        if resp.status_code == 200:
+            return resp.json()
+        raise exceptions.ApiError('Unable to get organizations list, got error: %s' % resp.text)
+
+
+    def rename_organization(self):
+        raise NotImplementedError
+
+    def delete_organization(self):
+        raise NotImplementedError('Api does not support organization deletion')
+
 
 class Context(object):
     def __init__(self, user, password, api):

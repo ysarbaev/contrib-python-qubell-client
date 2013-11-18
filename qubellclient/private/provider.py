@@ -20,34 +20,40 @@ __version__ = "1.0.1"
 __email__ = "vkhomenko@qubell.com"
 
 from qubellclient.private.organization import Organization
+from qubellclient.private import exceptions
 import requests
+import logging as log
 import simplejson as json
 
-import logging as log
-
 class Provider(Organization):
-    rawResponse = None
 
-    def __init__(self, context, parameters, id=None):
+    def __init__(self, context, id):
         self.context = context
-        self.__dict__.update(parameters)
+        self.providerId = id
+        my = self.json()
+        self.__dict__.update(my)
 
-        # Use existing
-        if id:
-            self.providerId = id
+    def __getattr__(self, key):
+        resp = self.json()
+        if not resp.has_key(key):
+            raise exceptions.NotFoundError('Cannot get property %s' % key)
+        return resp[key] or False
 
-        # Or create
-        else:
-            payload = json.dumps(parameters)
+    def json(self):
+        url = self.context.api+'/organizations/'+self.context.organizationId+'/providers.json'
+        resp = requests.get(url, cookies=self.context.cookies, verify=False)
+        log.debug(resp.text)
+        if resp.status_code == 200:
+            provider = [x for x in resp.json() if x['id'] == self.providerId]
+            if len(provider)>0:
+                return provider[0]
+        raise exceptions.ApiError('Unable to get provider properties, got error: %s' % resp.text)
 
-            url = self.context.api+'/organizations/'+self.context.organizationId+'/providers.json'
-            headers = {'Content-Type': 'application/json'}
-            resp = requests.post(url, cookies=self.context.cookies, data=payload, verify=False, headers=headers)
-            log.debug(resp.text)
-
-            self.rawResponse = resp
-            if resp.status_code == 200:
-                self.providerId = resp.json()['id']
-                # Regenerate key when new keystore added
-            else:
-                return False
+    def delete(self):
+        url = self.context.api+'/organizations/'+self.context.organizationId+'/providers/'+self.providerId+'.json'
+        headers = {'Content-Type': 'application/json'}
+        resp = requests.delete(url, cookies=self.context.cookies, data=json.dumps({}), verify=False, headers=headers)
+        log.debug(resp.text)
+        if resp.status_code == 200:
+            return True
+        raise exceptions.ApiError('Unable to delete provider %s, got error: %s' % (self.providerId, resp.text))

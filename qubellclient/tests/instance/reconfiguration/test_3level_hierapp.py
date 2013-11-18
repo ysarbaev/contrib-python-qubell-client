@@ -48,7 +48,7 @@ class ThreeLevelHierappReconfiguration(base.BaseTestCasePrivate):
     # Create shared last_child
         cls.last_child_instance = cls.last_child.launch(destroyInterval=300000)
         assert cls.last_child_instance.ready()
-        cls.last_child_rev = cls.last_child.revisionCreate(name='tests-reconf-3l-hierapp-shared', instance=cls.last_child_instance)
+        cls.last_child_rev = cls.last_child.create_revision(name='tests-reconf-3l-hierapp-shared', instance=cls.last_child_instance)
         params = '%s: %s' % (cls.last_child_rev.revisionId.split('-')[0], cls.last_child_instance.instanceId)
 
         cls.last_child_service = cls.organization.service(name='shared-test', type='builtin:shared_instances_catalog', parameters=params)
@@ -80,7 +80,7 @@ class ThreeLevelHierappReconfiguration(base.BaseTestCasePrivate):
         self.assertTrue(parent_instance, "%s-%s: Parent instance failed to launch" % (self.prefix, self._testMethodName))
         self.assertTrue(parent_instance.ready(),"%s-%s: Parent instance not in 'running' state after timeout" % (self.prefix, self._testMethodName))
 
-        non_shared_rev = self.parent.revisionCreate(name='non-shared-child', instance=parent_instance)
+        non_shared_rev = self.parent.create_revision(name='non-shared-child', instance=parent_instance)
 
 
         middle_instance = Instance(self.context, id=parent_instance.submodules[0]['id']) # initialize middle instance (we can only get id from parent)

@@ -44,7 +44,7 @@ class ServiceCallTestApp(base.BaseTestCasePrivate):
         cls.child_instance = cls.child.launch(destroyInterval=600000)
         assert cls.child_instance
         assert cls.child_instance.ready()
-        cls.child_revision = cls.child.revisionCreate(name='%s-tests-servicecall-shared' % cls.prefix, instance=cls.child_instance)
+        cls.child_revision = cls.child.create_revision(name='%s-tests-servicecall-shared' % cls.prefix, instance=cls.child_instance)
 
         params = ''.join('%s: %s' % (cls.child_revision.revisionId.split('-')[0], cls.child_instance.instanceId))
         cls.shared_service = cls.organization.service(name='%s-HierarchicalAppTest-instance' % cls.prefix,
