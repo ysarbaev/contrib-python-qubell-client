@@ -47,7 +47,7 @@ class Provider(Organization):
             provider = [x for x in resp.json() if x['id'] == self.providerId]
             if len(provider)>0:
                 return provider[0]
-        raise exceptions.ApiError('Unable to get provider properties, got error: %s' % resp.text)
+        raise exceptions.ApiError('Unable to get provider %s properties, got error: %s' % (self.providerId, resp.text))
 
     def delete(self):
         url = self.context.api+'/organizations/'+self.context.organizationId+'/providers/'+self.providerId+'.json'

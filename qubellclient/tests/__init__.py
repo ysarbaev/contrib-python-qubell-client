@@ -100,7 +100,7 @@ def create_env(platform):
          "parameter": "publicKeyId",
          "value": key_service.regenerate()['id']})
 # Add cloud provider
-    provider = organization.provider(cloud_access)
+    provider = organization.provider(name='test-provider', parameters=cloud_access)
     environment.providerAdd(provider)
 
 

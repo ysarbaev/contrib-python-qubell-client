@@ -248,7 +248,7 @@ class Organization(QubellPlatform):
     def get_provider(self, id):
         from provider import Provider
         self.context.organizationId = self.organizationId
-        return Provider(self.context, id)
+        return Provider(context=self.context, id=id)
 
     def delete_provider(self, id):
         prov = self.get_provider(id)
