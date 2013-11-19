@@ -51,8 +51,8 @@ class HierappReconfiguration(base.BaseTestCasePrivate):
         cls.child_rev = cls.child_app.create_revision(name='tests-reconf-hierapp-shared', instance=cls.child_instance,parameters=parameters)
         revision_id = cls.child_rev.revisionId.split('-')[0]
         instance_id = cls.child_instance.instanceId
-
-        cls.child_service = cls.organization.service(name='%s-reconfiguration-shared-test' % cls.prefix, type='builtin:shared_instances_catalog', parameters='%s: %s' % (revision_id, instance_id))
+        params = '%s: %s' % (revision_id, instance_id)
+        cls.child_service = cls.organization.service(name='%s-reconfiguration-shared-test' % cls.prefix, type='builtin:shared_instances_catalog', parameters={'configuration.shared-instances': params})
         cls.environment.serviceAdd(cls.child_service)
 
         # Prepare new_child

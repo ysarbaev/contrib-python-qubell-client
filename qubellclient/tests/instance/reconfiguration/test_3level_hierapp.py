@@ -51,7 +51,7 @@ class ThreeLevelHierappReconfiguration(base.BaseTestCasePrivate):
         cls.last_child_rev = cls.last_child.create_revision(name='tests-reconf-3l-hierapp-shared', instance=cls.last_child_instance)
         params = '%s: %s' % (cls.last_child_rev.revisionId.split('-')[0], cls.last_child_instance.instanceId)
 
-        cls.last_child_service = cls.organization.service(name='shared-test', type='builtin:shared_instances_catalog', parameters=params)
+        cls.last_child_service = cls.organization.service(name='shared-test', type='builtin:shared_instances_catalog', parameters={'configuration.shared-instances': params})
         cls.environment.serviceAdd(cls.last_child_service)
 
 

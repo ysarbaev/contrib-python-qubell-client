@@ -90,7 +90,7 @@ def create_env(platform):
 
 # Add services
     key_service = organization.service(type='builtin:cobalt_secure_store', name='Keystore')
-    wf_service = organization.service(type='builtin:workflow_service', name='Workflow', parameters='{}')
+    wf_service = organization.service(type='builtin:workflow_service', name='Workflow', parameters= {'configuration.policies': '{}'})
 
 # Add services to environment
     environment.serviceAdd(key_service)

@@ -120,6 +120,7 @@ class Organization(QubellPlatform):
         url = self.context.api+'/organizations/'+self.context.organizationId+'/services.json'
         headers = {'Content-Type': 'application/json'}
         resp = requests.post(url, cookies=self.context.cookies, data=json.dumps(data), verify=False, headers=headers)
+        log.debug(resp.request.body)
         log.debug(resp.text)
 
         if resp.status_code == 200:
@@ -130,11 +131,11 @@ class Organization(QubellPlatform):
         return self.create_service(name=name, type='builtin:cobalt_secure_store', parameters=parameters, zone=zone)
 
     def create_workflow_service(self, name='generated-workflow', policies={}, zone=None):
-        parameters = {'configuration.policies': policies}
+        parameters = {'configuration.policies': json.dumps(policies)}
         return self.create_service(name=name, type='builtin:workflow_service', parameters=parameters, zone=zone)
 
     def create_shared_service(self, name='generated-shared', instances={}, zone=None):
-        parameters = {'configuration.shared-instances': instances}
+        parameters = {'configuration.shared-instances': json.dumps(instances)}
         return self.create_service(name=name, type='builtin:shared_instances_catalog', parameters=parameters, zone=zone)
 
     def get_service(self, id):

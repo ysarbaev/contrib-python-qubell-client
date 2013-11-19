@@ -135,7 +135,7 @@ class Application(Organization):
 
     def create_revision(self, name, instance, parameters=[], version=None):
         if not version:
-            version=self.getManifest()['version']
+            version=self.get_manifest()['version']
         url = self.context.api+'/organizations/'+self.context.organizationId+'/applications/'+self.applicationId+'/revisions.json'
         headers = {'Content-Type': 'application/json'}
         payload = json.dumps({ 'name': name,

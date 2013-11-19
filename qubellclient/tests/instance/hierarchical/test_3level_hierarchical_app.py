@@ -100,7 +100,7 @@ class ThreeLevelHierarchicalAppTest(base.BaseTestCasePrivate):
 
         shared_service = self.organization.service(name='%s-ThreeLevelHierarchicalAppTest-last-child' % self.prefix,
                                                           type='builtin:shared_instances_catalog',
-                                                          parameters=params)
+                                                          parameters={'configuration.shared-instances': params})
         self.environment.serviceAdd(shared_service)
 
         parameters = {
@@ -151,7 +151,7 @@ class ThreeLevelHierarchicalAppTest(base.BaseTestCasePrivate):
 
         shared_service = self.organization.service(name='%s-ThreeLevelHierarchicalAppTest-middle_child' % self.prefix,
                                                           type='builtin:shared_instances_catalog',
-                                                          parameters=params)
+                                                          parameters={'configuration.shared-instances': params})
         self.environment.serviceAdd(shared_service)
 
         parameters = {

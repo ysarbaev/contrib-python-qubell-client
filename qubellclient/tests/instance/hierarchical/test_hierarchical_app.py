@@ -59,14 +59,12 @@ class HierarchicalAppTest(base.BaseTestCasePrivate):
         assert cls.child_two_instance.ready()
         cls.child_two_revision = cls.child_two.create_revision(name='%s-tests-basic-hierapp-shared-two' % cls.prefix, instance=cls.child_two_instance)
 
-
-
         params = ''.join('%s: %s\n' % (cls.child_one_revision.revisionId.split('-')[0], cls.child_one_instance.instanceId))
         params += ''.join('%s: %s' % (cls.child_two_revision.revisionId.split('-')[0], cls.child_two_instance.instanceId))
 
         cls.shared_service = cls.organization.service(name='%s-HierarchicalAppTest-instance' % cls.prefix,
                                                           type='builtin:shared_instances_catalog',
-                                                          parameters=params)
+                                                          parameters= {'configuration.shared-instances': params})
         cls.environment.serviceAdd(cls.shared_service)
 
 
@@ -154,7 +152,6 @@ class HierarchicalAppTest(base.BaseTestCasePrivate):
 
         self.assertTrue(parent_instance.delete(), "%s-%s: Instance failed to destroy" % (self.prefix, self._testMethodName))
         self.assertTrue(parent_instance.destroyed(), "%s-%s: Instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
-
 
 
     @attr('smoke')

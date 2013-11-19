@@ -49,7 +49,7 @@ class ServiceCallTestApp(base.BaseTestCasePrivate):
         params = ''.join('%s: %s' % (cls.child_revision.revisionId.split('-')[0], cls.child_instance.instanceId))
         cls.shared_service = cls.organization.service(name='%s-HierarchicalAppTest-instance' % cls.prefix,
                                                           type='builtin:shared_instances_catalog',
-                                                          parameters=params)
+                                                          parameters={'configuration.shared-instances': params})
         cls.environment.serviceAdd(cls.shared_service)
 
     @classmethod
