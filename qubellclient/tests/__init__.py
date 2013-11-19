@@ -28,7 +28,9 @@ import logging as log
 user = os.environ.get('QUBELL_USER')
 password = os.environ.get('QUBELL_PASSWORD')
 api = os.environ.get('QUBELL_API')
-org = os.environ.get('QUBELL_ORG')
+org = os.environ.get('QUBELL_ORG') or 'test-framework-run'
+zone = os.environ.get('QUBELL_ZONE')
+new_env = os.environ.get('QUBELL_NEW')
 
 
 provider = os.environ.get('PROVIDER', 'aws-ec2')
@@ -52,7 +54,7 @@ def setUpModule():
 # This runs once for module (all tests)
 # Best place to initialize platform.
 # Here we check existance of given credentials and create services if needed
-
+    print "Creating ENV"
     exit = 0
     if not user:
         log.error('No username provided. Set QUBELL_USER env')
@@ -73,35 +75,50 @@ def setUpModule():
 # Initialize platform and check access
     platform = QubellPlatform(context=context)
     assert platform.authenticate()
-
-    if os.environ.get('QUBELL_NEW'):
-        create_env(platform)
-
-
-def create_env(platform):
-
+    print "Authorization passed"
 # Initialize organization
-    if org: organization = platform.organization(name=org)
-    else: organization = platform.organization(name='test-framework-run')
+    organization = platform.organization(name=org)
+    print "Using orgainzation %s" % org
 
-# Create independent environment
-    environment = organization.environment(name='default') #TODO: create own
-    environment.clean()
+    if zone and new_env: # Need to run tests against zones. Create env for each
+        z = [x for x in organization.list_zones() if x['name'] == zone]
+        if len(z):
+            print "Using zone %s" % zone
+            create_env(organization, z[0]['id'])
+    elif new_env: # Create env in default zone
+        create_env(organization)
+
+    print "ENV created"
+
+def create_env(organization, agent=None):
+    print "creating ZONE: %s" % agent
 
 # Add services
-    key_service = organization.service(type='builtin:cobalt_secure_store', name='Keystore')
-    wf_service = organization.service(type='builtin:workflow_service', name='Workflow', parameters= {'configuration.policies': '{}'})
+    key_service = organization.service(type='builtin:cobalt_secure_store', name='Keystore', zone=agent)
+    print "Keystore service %s initialized" % key_service.name
+    wf_service = organization.service(type='builtin:workflow_service', name='Workflow', parameters= {'configuration.policies': '{}'}, zone=agent)
+    print "Workflow service %s initialized" % wf_service.name
+
+# Create independent environment
+    environment = organization.environment(name='default', default='true', zone=agent) #TODO: create own
+    environment.set_backend(agent)
+    environment.clean()
+    print "Setting default env"
 
 # Add services to environment
     environment.serviceAdd(key_service)
+    print "Added keystore service"
     environment.serviceAdd(wf_service)
+    print "Added workflow service"
     environment.policyAdd(
         {"action": "provisionVms",
          "parameter": "publicKeyId",
          "value": key_service.regenerate()['id']})
+    print "Keystore generated key"
 # Add cloud provider
     provider = organization.provider(name='test-provider', parameters=cloud_access)
     environment.providerAdd(provider)
+    print "Added provider %s" % provider.name
 
 
 

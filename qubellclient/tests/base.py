@@ -33,6 +33,8 @@ password = os.environ.get('QUBELL_PASSWORD')
 api = os.environ.get('QUBELL_API')
 org = os.environ.get('QUBELL_ORG')
 prefix = os.environ.get('QUBELL_PREFIX')
+zone = os.environ.get('QUBELL_ZONE')
+new_env = os.environ.get('QUBELL_NEW')
 
 if not user: log.error('No username provided. Set QUBELL_USER env')
 if not password: log.error('No password provided. Set QUBELL_PASSWORD env')
@@ -70,7 +72,7 @@ class BaseTestCasePrivate(testtools.TestCase):
         cls.organization = cls.platform.organization(name=org)
 
     # Initialize environment
-        cls.environment = cls.organization.environment(name='default')
+        cls.environment = cls.organization.environment(name='default', zone=zone)
 
 
     @classmethod

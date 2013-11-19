@@ -32,7 +32,7 @@ class Organization(QubellPlatform):
         self.organizationId = id
 
         self.name = self.json()['name']
-        self.zoneId = self.getZones()[0]['id'] # TODO: Think about how to choose zone
+        self.zoneId = self.list_zones()[0]['id'] # TODO: Think about how to choose zone
         self.context.zoneId = self.zoneId
 
     def __getattr__(self, key):
@@ -48,19 +48,6 @@ class Organization(QubellPlatform):
         if resp.status_code == 200:
             return resp.json()
         raise exceptions.ApiError('Unable to get organization by id %s, got error: %s' % (self.organizationId, resp.text))
-
-    def provider(self, *args, **kwargs):
-        from provider import Provider
-        return Provider(self.context, *args, **kwargs)
-
-    def getZones(self):
-        url = self.context.api+'/organizations/'+self.organizationId+'/zones.json'
-        resp = requests.get(url, cookies=self.context.cookies, verify=False)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        else:
-            return False
 
 ### APPLICATION
     def create_application(self, name, manifest):
@@ -117,7 +104,7 @@ class Organization(QubellPlatform):
                 'zoneId': zone,
                 'parameters': parameters}
 
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/services.json'
+        url = self.context.api+'/organizations/'+self.organizationId+'/services.json'
         headers = {'Content-Type': 'application/json'}
         resp = requests.post(url, cookies=self.context.cookies, data=json.dumps(data), verify=False, headers=headers)
         log.debug(resp.request.body)
@@ -140,11 +127,12 @@ class Organization(QubellPlatform):
 
     def get_service(self, id):
         log.info("Picking service: %s" % id)
+        self.context.organizationId = self.organizationId
         from service import Service
         return Service(self.context, id=id)
 
     def list_services(self):
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/services.json'
+        url = self.context.api+'/organizations/'+self.organizationId+'/services.json'
         resp = requests.get(url, cookies=self.context.cookies, verify=False)
         log.debug(resp.text)
         if resp.status_code == 200:
@@ -185,6 +173,7 @@ class Organization(QubellPlatform):
         url = self.context.api+'/organizations/'+self.organizationId+'/environments.json'
         headers = {'Content-Type': 'application/json'}
         resp = requests.post(url, cookies=self.context.cookies, data=json.dumps(data), verify=False, headers=headers)
+        log.debug(resp.request.body)
         log.debug(resp.text)
 
         if resp.status_code == 200:
@@ -202,13 +191,14 @@ class Organization(QubellPlatform):
     def get_environment(self, id):
         from environment import Environment
         self.context.organizationId = self.organizationId
+        self.context.environmentId = id
         return Environment(self.context, id)
 
     def delete_environment(self, id):
         env = self.get_environment(id)
         return env.delete()
 
-    def environment(self, id=None, name=None, zone=None):
+    def environment(self, id=None, name=None, zone=None, default=False):
         """ Smart object. Will create environment or pick one, if exists"""
         if name:
             envs = [env for env in self.list_environments() if env['name'] == name]
@@ -216,13 +206,23 @@ class Organization(QubellPlatform):
             if len(envs):
                 return self.get_environment(envs[0]['id']) # pick first
             else:
-                return self.create_environment(name=name, zone=zone)
+                return self.create_environment(name=name, zone=zone, default=default)
         else:
             name = 'generated-env'
             if id:
                 return self.get_environment(id)
             else:
-                return self.create_environment(name=name, zone=zone)
+                return self.create_environment(name=name, zone=zone, default=default)
+
+    def set_default_environment(self, id):
+        url = self.context.api+'/organizations/'+self.organizationId+'/defaultEnvironment.json'
+        headers = {'Content-Type': 'application/json'}
+        data = json.dumps({'environmentId': id})
+        resp = requests.put(url, cookies=self.context.cookies, data=data, verify=False)
+        log.debug(resp.text)
+        if resp.status_code == 200:
+            return resp.json()
+        raise exceptions.ApiError('Unable to set default environment, got error: %s' % resp.text)
 
 ### PROVIDER
     def create_provider(self, name, parameters):
@@ -272,4 +272,12 @@ class Organization(QubellPlatform):
                 return self.create_provider(name=name, parameters=parameters)
         raise exceptions.NotFoundError('Provider not found or not enough parameters to create provider: %s' % name)
 
-###
+### ZONES
+
+    def list_zones(self):
+        url = self.context.api+'/organizations/'+self.organizationId+'/zones.json'
+        resp = requests.get(url, cookies=self.context.cookies, verify=False)
+        log.debug(resp.text)
+        if resp.status_code == 200:
+            return resp.json()
+        raise exceptions.ApiError('Unable to get zones list, got error: %s' % resp.text)

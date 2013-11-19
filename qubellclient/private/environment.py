@@ -65,8 +65,8 @@ class Environment(Organization):
         self.rawRespose = resp
         if resp.status_code == 200:
             return resp.json()
-        else:
-            return False
+        raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
+
 
     def serviceAdd(self, service):
         data = self.json()
@@ -81,8 +81,8 @@ class Environment(Organization):
         self.rawRespose = resp
         if resp.status_code == 200:
             return resp.json()
-        else:
-            return False
+        raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
+
 
     def serviceRemove(self, service):
         data = self.json()
@@ -97,8 +97,8 @@ class Environment(Organization):
         self.rawRespose = resp
         if resp.status_code == 200:
             return resp.json()
-        else:
-            return False
+        raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
+
 
 
     def markerAdd(self, marker):
@@ -113,8 +113,8 @@ class Environment(Organization):
         self.rawRespose = resp
         if resp.status_code == 200:
             return resp.json()
-        else:
-            return False
+        raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
+
 
     def markerRemove(self, marker):
         data = self.json()
@@ -128,8 +128,8 @@ class Environment(Organization):
         self.rawRespose = resp
         if resp.status_code == 200:
             return resp.json()
-        else:
-            return False
+        raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
+
 
 
     def propertyAdd(self, name, type, value):
@@ -144,8 +144,8 @@ class Environment(Organization):
         self.rawRespose = resp
         if resp.status_code == 200:
             return resp.json()
-        else:
-            return False
+        raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
+
 
     def propertyRemove(self, name):
         data = self.json()
@@ -162,8 +162,8 @@ class Environment(Organization):
         self.rawRespose = resp
         if resp.status_code == 200:
             return resp.json()
-        else:
-            return False
+        raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
+
 
 
     def clean(self):
@@ -179,8 +179,8 @@ class Environment(Organization):
         self.rawRespose = resp
         if resp.status_code == 200:
             return resp.json()
-        else:
-            return False
+        raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
+
 
     def __getattr__(self, item):
         return self.json()[item]
@@ -197,8 +197,8 @@ class Environment(Organization):
         self.rawRespose = resp
         if resp.status_code == 200:
             return resp.json()
-        else:
-            return False
+        raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
+
 
     def providerAdd(self, provider):
         data = self.json()
@@ -212,5 +212,16 @@ class Environment(Organization):
         self.rawRespose = resp
         if resp.status_code == 200:
             return resp.json()
-        else:
-            return False
+        raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
+
+    def set_backend(self, zone):
+        data = self.json()
+        data.update({'backend': zone})
+        url = self.context.api+'/organizations/'+self.context.organizationId+'/environments/'+self.environmentId+'.json'
+        payload = json.dumps(data)
+        headers = {'Content-Type': 'application/json'}
+        resp = requests.put(url, cookies=self.context.cookies, data=payload, verify=False, headers=headers)
+        log.debug(resp.text)
+        if resp.status_code == 200:
+            return resp.json()
+        raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)

@@ -108,6 +108,8 @@ class Application(Organization):
     def launch(self, **argv):
         url = self.context.api+'/organizations/'+self.context.organizationId+'/applications/'+self.applicationId+'/launch.json'
         headers = {'Content-Type': 'application/json'}
+        if not 'environmentId' in argv.keys():
+            argv['environmentId'] = self.context.environmentId
         data = json.dumps(argv)
         resp = requests.post(url, cookies=self.context.cookies, data=data, verify=False, headers=headers)
 
