@@ -61,7 +61,6 @@ application:
 
           configuration:
             configuration.triggers: {}
-            input.in: "Some value"
             configuration.workflows:
               launch:
                 steps: []

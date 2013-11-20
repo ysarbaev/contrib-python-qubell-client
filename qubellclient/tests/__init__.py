@@ -101,7 +101,8 @@ def create_env(organization, agent=None):
 
 # Create independent environment
     environment = organization.environment(name='default', default='true', zone=agent) #TODO: create own
-    environment.set_backend(agent)
+    if agent:
+        environment.set_backend(agent)
     environment.clean()
     print "Setting default env"
 

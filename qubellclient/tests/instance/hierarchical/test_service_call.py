@@ -118,6 +118,7 @@ class ServiceCallTestApp(base.BaseTestCasePrivate):
         self.assertTrue(parent_instance, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
         self.assertTrue(parent_instance.ready(),"%s-%s: Instance not in 'running' state after timeout" % (self.prefix, self._testMethodName))
 
+        self.assertTrue(parent_instance.submodules, 'Parent does not start submodules')
         self.assertEqual(parent_instance.submodules[0]['status'], 'Running')
         sub = parent_instance.submodules
 
