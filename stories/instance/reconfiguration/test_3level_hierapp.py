@@ -21,10 +21,11 @@ __email__ = "vkhomenko@qubell.com"
 
 import os
 
-from qubellclient.tests import base
+from stories import base
+from stories.base import attr
 from qubellclient.private.manifest import Manifest
 from qubellclient.private.instance import Instance
-from qubellclient.tests.base import attr
+
 
 class ThreeLevelHierappReconfiguration(base.BaseTestCasePrivate):
 
@@ -49,10 +50,8 @@ class ThreeLevelHierappReconfiguration(base.BaseTestCasePrivate):
         cls.last_child_instance = cls.last_child.launch(destroyInterval=300000)
         assert cls.last_child_instance.ready()
         cls.last_child_rev = cls.last_child.create_revision(name='tests-reconf-3l-hierapp-shared', instance=cls.last_child_instance)
-        params = '%s: %s' % (cls.last_child_rev.revisionId.split('-')[0], cls.last_child_instance.instanceId)
+        cls.shared_service.add_shared_instance(cls.last_child_rev, cls.last_child_instance)
 
-        cls.last_child_service = cls.organization.service(name='shared-test', type='builtin:shared_instances_catalog', parameters={'configuration.shared-instances': params})
-        cls.environment.serviceAdd(cls.last_child_service)
 
 
     @classmethod
@@ -60,10 +59,8 @@ class ThreeLevelHierappReconfiguration(base.BaseTestCasePrivate):
         super(ThreeLevelHierappReconfiguration, cls).tearDownClass()
         assert cls.last_child_instance.delete()
         assert cls.last_child_instance.destroyed()
-        cls.environment.serviceRemove(cls.last_child_service)
-        cls.last_child_service.delete()
+        cls.shared_service.remove_shared_instance(cls.last_child_instance)
         cls.last_child_rev.delete()
-
 
         cls.parent.delete()
         cls.middle_child.delete()

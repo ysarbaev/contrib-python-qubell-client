@@ -19,16 +19,15 @@ __license__ = "Apache"
 __version__ = "1.0.1"
 __email__ = "vkhomenko@qubell.com"
 
-from time import sleep
-
-from qubellclient.tests import base
+from stories import base
+from stories.base import attr
 from qubellclient.private.manifest import Manifest
-from qubellclient.tests.base import attr
 import os
 
 
 class HierarchicalAppTest(base.BaseTestCasePrivate):
-
+    _multiprocess_can_split_ = True
+    #_multiprocess_shared_ = True
 
     @classmethod
     def setUpClass(cls):
@@ -59,13 +58,9 @@ class HierarchicalAppTest(base.BaseTestCasePrivate):
         assert cls.child_two_instance.ready()
         cls.child_two_revision = cls.child_two.create_revision(name='%s-tests-basic-hierapp-shared-two' % cls.prefix, instance=cls.child_two_instance)
 
-        params = ''.join('%s: %s\n' % (cls.child_one_revision.revisionId.split('-')[0], cls.child_one_instance.instanceId))
-        params += ''.join('%s: %s' % (cls.child_two_revision.revisionId.split('-')[0], cls.child_two_instance.instanceId))
-
-        cls.shared_service = cls.organization.service(name='%s-HierarchicalAppTest-instance' % cls.prefix,
-                                                          type='builtin:shared_instances_catalog',
-                                                          parameters= {'configuration.shared-instances': params})
-        cls.environment.serviceAdd(cls.shared_service)
+        #cls.shared_service = cls.organization.create_shared_service(name='%s-HierarchicalAppTest-instance' % cls.prefix)
+        cls.shared_service.add_shared_instance(cls.child_one_revision, cls.child_one_instance)
+        cls.shared_service.add_shared_instance(cls.child_two_revision, cls.child_two_instance)
 
 
     # Create non shared instance Three to use in tests
@@ -78,14 +73,11 @@ class HierarchicalAppTest(base.BaseTestCasePrivate):
 
     @classmethod
     def tearDownClass(cls):
-        super(HierarchicalAppTest, cls).tearDownClass()
-
     # Remove created services
-        cls.environment.serviceRemove(cls.shared_service)
-        cls.shared_service.delete()
+        cls.shared_service.remove_shared_instance(instance=cls.child_one_instance)
+        cls.shared_service.remove_shared_instance(instance=cls.child_two_instance)
 
     # Clean apps
-
         cls.child_one_instance.delete()
         assert cls.child_one_instance.destroyed()
         cls.child_two_instance.delete()
@@ -101,7 +93,7 @@ class HierarchicalAppTest(base.BaseTestCasePrivate):
         cls.child_one.delete()
         cls.child_two.delete()
         cls.child_three.delete()
-
+        super(HierarchicalAppTest, cls).tearDownClass()
 
     @attr('smoke')
     def test_launch_basic_non_shared_hierapp(self):

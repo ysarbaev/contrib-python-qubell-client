@@ -99,12 +99,12 @@ class Instance(application.Application):
     def destroyed(self, timeout=3):  # Shortcut for convinience. Temeout = 3 min (ask timeout*6 times every 10 sec)
         return self.waitForStatus(final='Destroyed', accepted=['Destroying', 'Running'], timeout=[timeout*6, 10, 1])
 
-    def runWorkflow(self, name, params={}):
+    def runWorkflow(self, name, parameters={}):
         log.info("Running workflow %s" % name)
 
         url = self.context.api+'/organizations/'+self.context.organizationId+'/instances/'+self.instanceId+'/workflows/'+name+'.json'
         headers = {'Content-Type': 'application/json'}
-        payload = json.dumps(params)
+        payload = json.dumps(parameters)
         resp = requests.post(url, cookies=self.context.cookies, data=payload, verify=False, headers=headers)
         log.debug(resp.text)
         self.rawResponse = resp

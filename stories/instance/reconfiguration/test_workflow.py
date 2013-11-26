@@ -16,11 +16,10 @@
 
 
 import os
-import qubellclient.tests.base as base
+from stories import base
+from stories.base import attr
 from qubellclient.private.manifest import Manifest
 from qubellclient.tools import retry
-from qubellclient.tests.base import attr
-from qubellclient.tools import rand
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"

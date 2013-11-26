@@ -20,13 +20,15 @@ __version__ = "1.0.1"
 __email__ = "vkhomenko@qubell.com"
 
 
+
 import os
-import qubellclient.tests.base as base
+from stories import base
 from qubellclient.private.manifest import Manifest
-from qubellclient.tests.base import attr
+from stories.base import attr
 
 
 class BasicInstanceActionsTest(base.BaseTestCasePrivate):
+    _multiprocess_can_split_ = True
 
 # Here we prepare environment once for all tests in class.
     @classmethod

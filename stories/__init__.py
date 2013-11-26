@@ -51,6 +51,8 @@ cloud_access = {
 
 
 def setUpModule():
+    _multiprocess_shared_ = True
+
 # This runs once for module (all tests)
 # Best place to initialize platform.
 # Here we check existance of given credentials and create services if needed
@@ -98,6 +100,8 @@ def create_env(organization, agent=None):
     print "Keystore service %s initialized" % key_service.name
     wf_service = organization.service(type='builtin:workflow_service', name='Workflow', parameters= {'configuration.policies': '{}'}, zone=agent)
     print "Workflow service %s initialized" % wf_service.name
+    shared_service = organization.service(type='builtin:shared_instances_catalog', name='BaseTestSharedService', parameters= {'configuration.shared-instances': '{}'}, zone=agent)
+    print "Shared instance service %s initialized" % shared_service.name
 
 # Create independent environment
     environment = organization.environment(name='default', default='true', zone=agent) #TODO: create own
@@ -111,6 +115,9 @@ def create_env(organization, agent=None):
     print "Added keystore service"
     environment.serviceAdd(wf_service)
     print "Added workflow service"
+    environment.serviceAdd(shared_service)
+    print "Added shared service"
+
     environment.policyAdd(
         {"action": "provisionVms",
          "parameter": "publicKeyId",

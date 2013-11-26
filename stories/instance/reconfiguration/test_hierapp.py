@@ -21,9 +21,9 @@ __email__ = "vkhomenko@qubell.com"
 
 import os
 
-from qubellclient.tests import base
+from stories import base
+from stories.base import attr
 from qubellclient.private.manifest import Manifest
-from qubellclient.tests.base import attr
 
 class HierappReconfiguration(base.BaseTestCasePrivate):
 
@@ -49,11 +49,7 @@ class HierappReconfiguration(base.BaseTestCasePrivate):
       "value": "Hello from parent to child"}]
 
         cls.child_rev = cls.child_app.create_revision(name='tests-reconf-hierapp-shared', instance=cls.child_instance,parameters=parameters)
-        revision_id = cls.child_rev.revisionId.split('-')[0]
-        instance_id = cls.child_instance.instanceId
-        params = '%s: %s' % (revision_id, instance_id)
-        cls.child_service = cls.organization.service(name='%s-reconfiguration-shared-test' % cls.prefix, type='builtin:shared_instances_catalog', parameters={'configuration.shared-instances': params})
-        cls.environment.serviceAdd(cls.child_service)
+        cls.shared_service.add_shared_instance(cls.child_rev, cls.child_instance)
 
         # Prepare new_child
         cmnf = Manifest(file=os.path.join(os.path.dirname(__file__), "hier-child.two.yml"))
@@ -63,8 +59,7 @@ class HierappReconfiguration(base.BaseTestCasePrivate):
     @classmethod
     def tearDownClass(cls):
         super(HierappReconfiguration, cls).tearDownClass()
-        cls.environment.serviceRemove(cls.child_service)
-        cls.child_service.delete()
+        cls.shared_service.remove_shared_instance(cls.child_instance)
         cls.child_rev.delete()
 
         cls.child_instance.delete()

@@ -19,7 +19,8 @@ __license__ = "Apache"
 __version__ = "1.0.1"
 __email__ = "vkhomenko@qubell.com"
 
-from qubellclient.tests import base
+from stories import base
+from stories.base import attr
 from qubellclient.private.manifest import Manifest
 import os
 
@@ -56,13 +57,15 @@ class MarkerPropertyTest(base.BaseTestCasePrivate):
         self.assertFalse(len(mrk))
 
     def test_property_crud(self):
-        self.assertTrue(self.environment.propertyAdd(name='test-name', type='string', value='TEST-PROPERTY'))
-        prop = [p for p in self.environment.json()['properties'] if p['name'] == 'test-name']
+        self.assertTrue(self.environment.propertyAdd(name='test-property-crud', type='string', value='TEST-PROPERTY'))
+        import time
+        time.sleep(5)
+        prop = [p for p in self.environment.json()['properties'] if p['name'] == 'test-property-crud']
         self.assertTrue(len(prop))
-        self.assertEqual(prop[0]['name'], 'test-name')
+        self.assertEqual(prop[0]['name'], 'test-property-crud')
         self.assertEqual(prop[0]['value'], 'TEST-PROPERTY')
-        self.assertTrue(self.environment.propertyRemove('test-name'))
-        prop = [p for p in self.environment.json()['properties'] if p['name'] == 'test-name']
+        self.assertTrue(self.environment.propertyRemove('test-property-crud'))
+        prop = [p for p in self.environment.json()['properties'] if p['name'] == 'test-property-crud']
         self.assertFalse(len(prop))
 
     def test_marker_property_usage(self):

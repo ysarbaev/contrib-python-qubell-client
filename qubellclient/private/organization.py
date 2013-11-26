@@ -31,8 +31,14 @@ class Organization(QubellPlatform):
         self.context = context
         self.organizationId = id
 
-        self.name = self.json()['name']
-        self.zoneId = self.list_zones()[0]['id'] # TODO: Think about how to choose zone
+        my = self.json()
+        self.name = my['name']
+        backends = my['backends']
+        zones = [bk for bk in backends if bk['isDefault']==True]
+        if len(zones):
+            self.zoneId = zones[0]['id']
+        else:
+            self.zoneId = self.list_zones()[0]['id'] # TODO: Think about how to choose zone
         self.context.zoneId = self.zoneId
 
     def __getattr__(self, key):
@@ -42,10 +48,13 @@ class Organization(QubellPlatform):
         return resp[key] or False
 
     def json(self):
-        url = self.context.api+'/organizations/%s.json' % self.organizationId
+        url = self.context.api+'/organizations.json'
         resp = requests.get(url, cookies=self.context.cookies, verify=False)
         log.debug(resp.text)
         if resp.status_code == 200:
+            org = [x for x in resp.json() if x['id'] == self.organizationId]
+            if len(org)>0:
+                return org[0]
             return resp.json()
         raise exceptions.ApiError('Unable to get organization by id %s, got error: %s' % (self.organizationId, resp.text))
 
@@ -98,7 +107,7 @@ class Organization(QubellPlatform):
     def create_service(self, name, type, parameters={}, zone=None):
         log.info("Creating service: %s" % name)
         if not zone:
-            zone = self.context.zoneId
+            zone = self.zoneId
         data = {'name': name,
                 'typeId': type,
                 'zoneId': zone,
@@ -134,6 +143,7 @@ class Organization(QubellPlatform):
     def list_services(self):
         url = self.context.api+'/organizations/'+self.organizationId+'/services.json'
         resp = requests.get(url, cookies=self.context.cookies, verify=False)
+        log.debug(resp.request.body)
         log.debug(resp.text)
         if resp.status_code == 200:
             return resp.json()

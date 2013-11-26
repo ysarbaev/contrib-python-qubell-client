@@ -51,11 +51,15 @@ def attr(*args, **kwargs):
         # TODO: Should do something if test is skipped
     return decorator
 
+
+
+_multiprocess_shared_ = True
 class BaseTestCasePrivate(testtools.TestCase):
     ## TODO: Main preparation should be here
     """ Here we prepare global env. (load config, etc)
     """
-
+    #_multiprocess_shared_ = True
+    _multiprocess_can_split_ = True
     @classmethod
     def setUpClass(cls):
         cls.prefix = prefix or rand()
@@ -70,10 +74,22 @@ class BaseTestCasePrivate(testtools.TestCase):
 
     # Initialize organization
         cls.organization = cls.platform.organization(name=org)
+        #cls.shared_service = cls.organization.create_shared_service(name='BaseTestSharedService')
+
+
+        if zone:
+            z = [x for x in cls.organization.list_zones() if x['name'] == zone]
+            if z:
+                cls.organization.zoneId = z[0]['id']
+
 
     # Initialize environment
-        cls.environment = cls.organization.environment(name='default', zone=zone)
-
+        if zone:
+            cls.environment = cls.organization.environment(name='default', zone=cls.organization.zoneId)
+            cls.environment.set_backend(cls.organization.zoneId)
+        else:
+            cls.environment = cls.organization.environment(name='default')
+        cls.shared_service = cls.organization.service(name='BaseTestSharedService')
 
     @classmethod
     def tearDownClass(cls):

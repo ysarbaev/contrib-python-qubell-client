@@ -23,6 +23,7 @@ from qubellclient.private.organization import Organization
 from qubellclient.private import exceptions
 import requests
 import simplejson as json
+import yaml
 
 import logging as log
 
@@ -34,6 +35,7 @@ class Service(Organization):
         my = self.json()
         self.name = my['name']
         self.type = my['typeId']
+        self.zone = my['zoneId']
 
     def __getattr__(self, key):
         resp = self.json()
@@ -49,8 +51,50 @@ class Service(Organization):
         log.debug(resp.text)
         if resp.status_code == 200:
             return resp.json()
+        raise exceptions.ApiError('Unable to regenerate key: %s' % resp.text)
+
+    def modify(self, parameters):
+        url = self.context.api+'/organizations/'+self.context.organizationId+'/services/'+self.serviceId+'.json'
+        headers = {'Content-Type': 'application/json'}
+        payload = {#'id': self.serviceId,
+                   'name': self.name,
+                   'typeId': self.type,
+                   'zoneId': self.zone,
+                   'parameters': parameters}
+        resp = requests.put(url, cookies=self.context.cookies, data=json.dumps(payload), verify=False, headers=headers)
+        log.debug(resp.request.body)
+        log.debug(resp.text)
+        if resp.status_code == 200:
+            return resp.json()
+        raise exceptions.ApiError('Unable to modify service %s: %s' % (self.name, resp.text))
+
+    def add_shared_instance(self, revision, instance):
+        params = self.json()['parameters']
+        if params.has_key('configuration.shared-instances'):
+            old = yaml.safe_load(params['configuration.shared-instances'])
+            old[revision.revisionId.split('-')[0]] = instance.instanceId
+            params['configuration.shared-instances'] = yaml.safe_dump(old, default_flow_style=False)
+            self.modify(params)
         else:
-            return False
+            raise exceptions.ApiError('Unable to add shared instance %s to service %s' % (instance.name, self.name))
+
+    def remove_shared_instance(self, instance=None, revision=None):
+        params = self.json()['parameters']
+        if params.has_key('configuration.shared-instances'):
+            old = yaml.safe_load(params['configuration.shared-instances'])
+            if instance.instanceId in old.values():
+                val = [x for x,y in old.items() if y == instance.instanceId]
+                del old[val[0]]
+            else:
+                raise exceptions.ApiError('Unable find shared instance %s in service %s' % (instance.instanceId, self.name))
+            params['configuration.shared-instances'] = yaml.safe_dump(old, default_flow_style=False)
+            self.modify(params)
+        else:
+            raise exceptions.ApiError('Unable to add shared instance %s to service %s' % (instance.name, self.name))
+
+    def list_shared_instances(self):
+        params = self.json()['parameters']
+        return yaml.safe_load(params['configuration.shared-instances'])
 
     def json(self):
         url = self.context.api+'/organizations/'+self.context.organizationId+'/services.json'

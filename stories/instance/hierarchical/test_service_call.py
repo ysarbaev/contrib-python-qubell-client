@@ -21,13 +21,15 @@ __email__ = "vkhomenko@qubell.com"
 
 from time import sleep
 
-from qubellclient.tests import base
+from stories import base
+from stories.base import attr
 from qubellclient.private.manifest import Manifest
-from qubellclient.tests.base import attr
 import os
 
 
 class ServiceCallTestApp(base.BaseTestCasePrivate):
+    _multiprocess_can_split_ = True
+    #_multiprocess_shared_ = True
 
     @classmethod
     def setUpClass(cls):
@@ -46,25 +48,21 @@ class ServiceCallTestApp(base.BaseTestCasePrivate):
         assert cls.child_instance.ready()
         cls.child_revision = cls.child.create_revision(name='%s-tests-servicecall-shared' % cls.prefix, instance=cls.child_instance)
 
-        params = ''.join('%s: %s' % (cls.child_revision.revisionId.split('-')[0], cls.child_instance.instanceId))
-        cls.shared_service = cls.organization.service(name='%s-HierarchicalAppTest-instance' % cls.prefix,
-                                                          type='builtin:shared_instances_catalog',
-                                                          parameters={'configuration.shared-instances': params})
-        cls.environment.serviceAdd(cls.shared_service)
+        cls.shared_service.add_shared_instance(cls.child_revision, cls.child_instance)
 
     @classmethod
     def tearDownClass(cls):
-        super(ServiceCallTestApp, cls).tearDownClass()
 
     # Remove created services
-        cls.environment.serviceRemove(cls.shared_service)
-        cls.shared_service.delete()
+        cls.shared_service.remove_shared_instance(cls.child_instance)
 
         cls.child_instance.delete()
         assert cls.child_instance.destroyed()
 
         cls.parent.delete()
         cls.child.delete()
+        super(ServiceCallTestApp, cls).tearDownClass()
+
 
     @attr('smoke')
     def test_servicecall_hierapp_with_shared_child(self):

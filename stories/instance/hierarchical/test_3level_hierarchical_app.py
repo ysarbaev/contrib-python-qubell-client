@@ -21,15 +21,16 @@ __email__ = "vkhomenko@qubell.com"
 
 from time import sleep
 
-from qubellclient.tests import base
+from stories import base
+from stories.base import attr
 from qubellclient.private.manifest import Manifest
 from qubellclient.private.instance import Instance
-from qubellclient.tests.base import attr
 import os
 
 
 class ThreeLevelHierarchicalAppTest(base.BaseTestCasePrivate):
-
+    _multiprocess_can_split_ = True
+    #_multiprocess_shared_ = True
 
     @classmethod
     def setUpClass(cls):
@@ -83,8 +84,6 @@ class ThreeLevelHierarchicalAppTest(base.BaseTestCasePrivate):
         self.assertFalse(middle_instance.status) # Check submodule does not exists
 
 
-
-    # BUG HERE
     def test_launch_3level_hierapp_shared_last_child(self):
         """ Launch 3-level hierarchical app with last child as shared instance.
         """
@@ -96,12 +95,8 @@ class ThreeLevelHierarchicalAppTest(base.BaseTestCasePrivate):
 
         last_child_revision = self.last_child.create_revision(name='%s-shared_last_child' % self._testMethodName, instance=last_child_instance)
 
-        params = ''.join('%s: %s\n' % (last_child_revision.revisionId.split('-')[0], last_child_instance.instanceId))
-
-        shared_service = self.organization.service(name='%s-ThreeLevelHierarchicalAppTest-last-child' % self.prefix,
-                                                          type='builtin:shared_instances_catalog',
-                                                          parameters={'configuration.shared-instances': params})
-        self.environment.serviceAdd(shared_service)
+        #shared_service = self.organization.create_shared_service(name='%s-ThreeLevelHierarchicalAppTest-last-child' % self.prefix)
+        self.shared_service.add_shared_instance(last_child_revision, last_child_instance)
 
         parameters = {
              	'top_parent_in.last_child_input': 'UPD by test Hello from TOP parent to last child',
@@ -114,6 +109,7 @@ class ThreeLevelHierarchicalAppTest(base.BaseTestCasePrivate):
 
 
         parent_instance = self.parent.launch(destroyInterval=300000, parameters=parameters)
+
         self.assertTrue(parent_instance, "%s-%s: Parent instance failed to launch" % (self.prefix, self._testMethodName))
         self.assertTrue(parent_instance.ready(),"%s-%s: Parent instance not in 'running' state after timeout" % (self.prefix, self._testMethodName))
 
@@ -129,8 +125,7 @@ class ThreeLevelHierarchicalAppTest(base.BaseTestCasePrivate):
         self.assertTrue(parent_instance.destroyed(), "%s-%s: Parent instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
 
     # Remove created services and instance
-        self.environment.serviceRemove(shared_service)
-        shared_service.delete()
+        self.shared_service.remove_shared_instance(last_child_instance)
         self.assertTrue(last_child_instance.delete(), "%s-%s: Last child instance failed to destroy" % (self.prefix, self._testMethodName))
         self.assertTrue(last_child_instance.destroyed(), "%s-%s: Last child instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
 
@@ -147,12 +142,8 @@ class ThreeLevelHierarchicalAppTest(base.BaseTestCasePrivate):
 
         middle_child_revision = self.middle_child.create_revision(name='%s-shared_middle_child' % self._testMethodName, instance=middle_child_instance)
 
-        params = ''.join('%s: %s\n' % (middle_child_revision.revisionId.split('-')[0], middle_child_instance.instanceId))
-
-        shared_service = self.organization.service(name='%s-ThreeLevelHierarchicalAppTest-middle_child' % self.prefix,
-                                                          type='builtin:shared_instances_catalog',
-                                                          parameters={'configuration.shared-instances': params})
-        self.environment.serviceAdd(shared_service)
+        #shared_service = self.organization.create_shared_service(name='%s-ThreeLevelHierarchicalAppTest-middle-child' % self.prefix)
+        self.shared_service.add_shared_instance(middle_child_revision, middle_child_instance)
 
         parameters = {
                 "middle_child": {
@@ -176,8 +167,7 @@ class ThreeLevelHierarchicalAppTest(base.BaseTestCasePrivate):
         self.assertEqual(middle_child_instance.status, 'Running') # Check shared still alive
 
     # Remove created services and instance
-        self.environment.serviceRemove(shared_service)
-        shared_service.delete()
+        self.shared_service.remove_shared_instance(middle_child_instance)
         self.assertTrue(middle_child_instance.delete(), "%s-%s: Middle child instance failed to destroy" % (self.prefix, self._testMethodName))
         self.assertTrue(middle_child_instance.destroyed(), "%s-%s: Middle child instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
 
