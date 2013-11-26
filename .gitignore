@@ -40,5 +40,6 @@ output.xml
 
 qubellclient/public
 qubellclient/tests/self
-.setenv.sh
 .DS_Store
+.secure
+.universe
