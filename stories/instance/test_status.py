@@ -98,7 +98,7 @@ class InstanceStatusTest(base.BaseTestCasePrivate):
         self.assertTrue(self.instance.waitForStatus(final='Failed', accepted=['Requested', 'Executing', 'Unknown']), 'Got wrong status: Running. Should be: Failed')
 
         self.instance.runWorkflow(name='action.local_success')
-        self.assertTrue(self.instance.waitForStatus(final='Failed', accepted=['Requested', 'Executing', 'Unknown']), 'Got wrong status: Running. Should be: Failed')
+        self.assertTrue(self.instance.waitForStatus(final='Failed', accepted=['Requested', 'Executing', 'Unknown', 'Running']), 'Got wrong status: Running. Should be: Failed')
 
         self.assertEqual('Failed', self.instance.status)
         self.assertTrue(self.instance.errorMessage)
