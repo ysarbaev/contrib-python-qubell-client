@@ -89,17 +89,19 @@ class ThreeLevelHierappReconfiguration(base.BaseTestCasePrivate):
         # Reconfigure parent to use shared child
         parameters = {
              	'top_parent_in.last_child_input': 'UPD by test',
-  		        'top_parent_in.middle_child_input': 'UPD by test',
+  		        'top_parent_in.middle_child_input': 'UPD by test'}
+        submodules = {
                 'middle_child': {
                     'parameters': {
                         'last_child_in.app_input': 'UPD by test',
-                        'middle_child_in.app_input': 'UPD by test',
+                        'middle_child_in.app_input': 'UPD by test'},
+                    'submodules':{
                         'last_child': {
                             'revisionId': self.last_child_rev.revisionId
             }}}}
 
 
-        self.assertTrue(parent_instance.reconfigure(parameters=parameters))
+        self.assertTrue(parent_instance.reconfigure(parameters=parameters, submodules=submodules))
 
         # Check parent instance is ok
         self.assertTrue(parent_instance.ready(), "Instance failed to reconfigure")
@@ -120,6 +122,8 @@ class ThreeLevelHierappReconfiguration(base.BaseTestCasePrivate):
         self.assertTrue(parent_instance.ready(), "Instance failed to reconfigure")
         self.assertEqual(parent_instance.submodules[0]['status'], 'Running')
         # Check we use non-shared last child again
+        last_instance = Instance(self.context, id=middle_instance.submodules[0]['id'])
+        self.assertTrue(last_instance.ready())
         self.assertEqual(middle_instance.submodules[0]['status'], 'Running')
         self.assertNotEqual(middle_instance.submodules[0]['id'], self.last_child_instance.instanceId)
 

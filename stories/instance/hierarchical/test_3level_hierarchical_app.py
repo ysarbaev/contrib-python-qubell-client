@@ -100,15 +100,17 @@ class ThreeLevelHierarchicalAppTest(base.BaseTestCasePrivate):
 
         parameters = {
              	'top_parent_in.last_child_input': 'UPD by test Hello from TOP parent to last child',
-  		        'top_parent_in.middle_child_input': 'UPD by test Hello from TOP parent to middle child',
+  		        'top_parent_in.middle_child_input': 'UPD by test Hello from TOP parent to middle child',}
+        submodules = {
                 'middle_child': {
-                    'parameters': {
+                    'parameters': {},
+                    'submodules': {
                         'last_child': {
                             'revisionId': last_child_revision.revisionId
             }}}}
 
 
-        parent_instance = self.parent.launch(destroyInterval=300000, parameters=parameters)
+        parent_instance = self.parent.launch(destroyInterval=300000, parameters=parameters, submodules=submodules)
 
         self.assertTrue(parent_instance, "%s-%s: Parent instance failed to launch" % (self.prefix, self._testMethodName))
         self.assertTrue(parent_instance.ready(),"%s-%s: Parent instance not in 'running' state after timeout" % (self.prefix, self._testMethodName))
@@ -146,12 +148,14 @@ class ThreeLevelHierarchicalAppTest(base.BaseTestCasePrivate):
         self.shared_service.add_shared_instance(middle_child_revision, middle_child_instance)
 
         parameters = {
+                "top_parent_in.last_child_input": "Hello from TOP parent to lasr child",
+                "top_parent_in.middle_child_input": "Hello from TOP parent to middle child"}
+        submodules = {
                 "middle_child": {
-                    "revisionId": middle_child_revision.revisionId
-            }}
+                    "revisionId": middle_child_revision.revisionId}}
 
 
-        parent_instance = self.parent.launch(destroyInterval=00000, parameters=parameters)
+        parent_instance = self.parent.launch(destroyInterval=00000, parameters=parameters, submodules=submodules)
 
         self.assertTrue(parent_instance, "%s-%s: Parent instance failed to launch" % (self.prefix, self._testMethodName))
         self.assertTrue(parent_instance.ready(),"%s-%s: Parent instance not in 'running' state after timeout" % (self.prefix, self._testMethodName))

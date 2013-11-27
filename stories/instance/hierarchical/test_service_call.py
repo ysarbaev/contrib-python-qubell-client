@@ -73,13 +73,12 @@ class ServiceCallTestApp(base.BaseTestCasePrivate):
         pmnf.patch('application/components/child/configuration/__locator.application-id', self.child.applicationId)
         self.parent.upload(pmnf)
 
-
-        parameters = {
+        submodules = {
                 "child": {
                     "revisionId": self.child_revision.revisionId
             }}
 
-        parent_instance = self.parent.launch(destroyInterval=600000, parameters=parameters)
+        parent_instance = self.parent.launch(destroyInterval=600000, submodules=submodules)
         self.assertTrue(parent_instance, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
         self.assertTrue(parent_instance.ready(),"%s-%s: Instance not in 'running' state after timeout" % (self.prefix, self._testMethodName))
 

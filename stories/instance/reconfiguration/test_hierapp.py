@@ -141,12 +141,13 @@ class HierappReconfiguration(base.BaseTestCasePrivate):
 
         # Reconfigure parent to use shared child
         parameters = {
-            'parent_in.child_input': 'Set on reconfiguration',
+            'parent_in.child_input': 'Set on reconfiguration'}
+        submodules = {
             'child': {
                 'revisionId': self.child_rev.revisionId}}
 
 
-        self.assertTrue(parent_instance.reconfigure(parameters=parameters))
+        self.assertTrue(parent_instance.reconfigure(parameters=parameters, submodules=submodules))
 
         # Check we use shared instance
         self.assertTrue(parent_instance.ready(), "Instance failed to reconfigure")

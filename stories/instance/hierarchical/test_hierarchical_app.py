@@ -124,14 +124,14 @@ class HierarchicalAppTest(base.BaseTestCasePrivate):
 
         # Api BUG?? TODO
         parameters = {
-                "parent_in.child_input": "Hello from parent to child",
+                "parent_in.child_input": "Hello from parent to child"}
+        submodules = {
                 "child": {
-                    "revisionId": self.child_one_revision.revisionId
-            }}
+                    "revisionId": self.child_one_revision.revisionId}}
 
 
         self.parent.upload(pmnf)
-        parent_instance = self.parent.launch(destroyInterval=600000, parameters=parameters)
+        parent_instance = self.parent.launch(destroyInterval=600000, parameters=parameters, submodules=submodules)
         self.assertTrue(parent_instance, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
         self.assertTrue(parent_instance.ready(),"%s-%s: Instance not in 'running' state after timeout" % (self.prefix, self._testMethodName))
 
@@ -158,7 +158,8 @@ class HierarchicalAppTest(base.BaseTestCasePrivate):
 
         # TODO: bug. Need to pass params
         parameters = {
-                "parent_in.child_three_input": "Hello from parent to child3 BUG",
+                "parent_in.child_three_input": "Hello from parent to child3 BUG"}
+        submodules = {
                 "child-one": {
                     "revisionId": self.child_one_revision.revisionId},
                 "child-two": {
@@ -166,7 +167,7 @@ class HierarchicalAppTest(base.BaseTestCasePrivate):
 
 
         self.parent.upload(pmnf)
-        parent_instance = self.parent.launch(destroyInterval=600000, parameters=parameters)
+        parent_instance = self.parent.launch(destroyInterval=600000, parameters=parameters, submodules=submodules)
         self.assertTrue(parent_instance, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
         self.assertTrue(parent_instance.ready(),"%s-%s: Instance not in 'running' state after timeout" % (self.prefix, self._testMethodName))
 

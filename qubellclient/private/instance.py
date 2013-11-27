@@ -129,10 +129,15 @@ class Instance(application.Application):
 
 
 
-    def reconfigure(self, name='reconfigured', revisionId='', parameters={}):
+    def reconfigure(self, name='reconfigured', **kwargs):
+        revisionId = kwargs.get('revisionId', '')
+        parameters = kwargs.get('parameters', {})
+        submodules = kwargs.get('submodules', {})
         url = self.context.api+'/organizations/'+self.context.organizationId+'/instances/'+self.instanceId+'/configure.json'
         headers = {'Content-Type': 'application/json'}
-        payload = json.dumps({'parameters': parameters,
+        payload = json.dumps({
+                   'parameters': parameters,
+                   'submodules': submodules,
                    'revisionId': revisionId,
                    'instanceName': name})
         resp = requests.put(url, cookies=self.context.cookies, data=payload, verify=False, headers=headers)
