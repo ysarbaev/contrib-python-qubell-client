@@ -15,6 +15,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import sys
+import logging as log
 from qubellclient.private.platform import QubellPlatform, Context
 
 
@@ -40,6 +42,7 @@ user = os.environ.get('QUBELL_USER', 'user')
 password = os.environ.get('QUBELL_PASSWORD', 'password')
 api = os.environ.get('QUBELL_API', 'https://express.qubell.com')
 org = os.environ.get('QUBELL_ORG', 'organization')
+zone = os.environ.get('QUBELL_ZONE')
 
 provider = os.environ.get('PROVIDER', 'aws-ec2')
 region = os.environ.get('REGION', 'us-east-1')
@@ -59,41 +62,85 @@ cloud_access = {
       "usedEnvironments": [],
       "ec2SecurityGroup": "default",
       "providerCopy": provider,
-      "name": "generated-provider",
+      "name": "generated-provider-for-tests",
       "jcloudsIdentity": identity,
       "jcloudsCredential": credentials,
       "jcloudsRegions": region
     }
 
-# New organization needs environment to be set up
-context = Context(user=user, password=password, api=api)
-# Initialize our qubell platform
-platform = QubellPlatform(context=context)
-# Try to login
-if not platform.authenticate():
-    print("Wrong credentials")
-    exit(1)
 
-# Create organization
-org = platform.organization(name=org)
+def start():
+# Here we check existance of given credentials and create services if needed
+    print "Creating ENV"
+    exit = 0
+    if not user:
+        log.error('No username provided. Set QUBELL_USER env')
+        exit = 1
+    if not password:
+        log.error('No password provided. Set QUBELL_PASSWORD env')
+        exit = 1
+    if not api:
+        log.error('No api url provided. Set QUBELL_API env')
+        exit = 1
+
+    if exit:
+        sys.exit(1)
+
+# Setup access
+    context = Context(user=user, password=password, api=api)
+
+# Initialize platform and check access
+    platform = QubellPlatform(context=context)
+    assert platform.authenticate()
+    print "Authorization passed"
+# Initialize organization
+    organization = platform.organization(name=org)
+    print "Using orgainzation %s" % org
+
+    if zone: # Need to run tests against zones. Create env for each
+        z = [x for x in organization.list_zones() if x['name'] == zone]
+        if len(z):
+            print "Using zone %s" % zone
+            create_env(organization, z[0]['id'])
+
+    create_env(organization)
+    print "ENV created"
+
+def create_env(organization, agent=None):
+    print "creating ZONE: %s" % agent
 
 # Add services
-key_service = org.service(type='builtin:cobalt_secure_store', name='Keystore')
-wf_service = org.service(type='builtin:workflow_service', name='Workflow', parameters='{}')
+    key_service = organization.service(type='builtin:cobalt_secure_store', name='Keystore', zone=agent)
+    print "Keystore service %s initialized" % key_service.name
+    wf_service = organization.service(type='builtin:workflow_service', name='Workflow', parameters= {'configuration.policies': '{}'}, zone=agent)
+    print "Workflow service %s initialized" % wf_service.name
+    shared_service = organization.service(type='builtin:shared_instances_catalog', name='BaseTestSharedService', parameters= {'configuration.shared-instances': '{}'}, zone=agent)
+    print "Shared instance service %s initialized" % shared_service.name
+
+# Create independent environment
+    environment = organization.environment(name='default', default='true', zone=agent) #TODO: create own
+    if agent:
+        environment.set_backend(agent)
+    environment.clean()
+    print "Setting default env"
 
 # Add services to environment
-env = org.environment(name = 'default')
-env.clean()
-assert env.serviceAdd(key_service)
-assert env.serviceAdd(wf_service)
-assert env.policyAdd(
-    {"action": "provisionVms",
-     "parameter": "publicKeyId",
-     "value": key_service.regenerate()['id']})
+    environment.serviceAdd(key_service)
+    print "Added keystore service"
+    environment.serviceAdd(wf_service)
+    print "Added workflow service"
+    environment.serviceAdd(shared_service)
+    print "Added shared service"
 
-# Add cloud provider account
+    environment.policyAdd(
+        {"action": "provisionVms",
+         "parameter": "publicKeyId",
+         "value": key_service.regenerate()['id']})
+    print "Keystore generated key"
+# Add cloud provider
+    provider = organization.provider(name='test-provider', parameters=cloud_access)
+    environment.providerAdd(provider)
+    print "Added provider %s" % provider.name
 
-prov = org.provider(cloud_access)
-assert env.providerAdd(prov)
 
-print "Organization %s ready" % org.name
+start()
