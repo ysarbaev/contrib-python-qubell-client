@@ -24,7 +24,6 @@ from stories.base import attr
 from qubellclient.private.manifest import Manifest
 import os
 
-
 class MarkerPropertyTest(base.BaseTestCasePrivate):
 
     @classmethod
@@ -34,49 +33,49 @@ class MarkerPropertyTest(base.BaseTestCasePrivate):
     # Create applications for tests
         cls.app = cls.organization.application(name="%s-test-marker-property" % cls.prefix, manifest=cls.manifest)
         assert cls.app
+        cls.env = cls.organization.create_environment(name='MarkerPropertyTest-%s' % cls.prefix)
+        assert cls.env
 
     @classmethod
     def tearDownClass(cls):
-        super(MarkerPropertyTest, cls).tearDownClass()
-
-    # Clean apps
-
-        #cls.app.clean()
-
+        # TODO: BUG here https://github.com/qubell/vermilion/issues/2085
+        #cls.env.delete()
         cls.app.delete()
+        super(MarkerPropertyTest, cls).tearDownClass()
 
 
     def test_marker_crud(self):
-        self.assertTrue(self.environment.markerAdd('TEST-MARKER'))
-        mrk = [p for p in self.environment.json()['markers'] if p['name'] == 'TEST-MARKER']
+        self.assertTrue(self.env.markerAdd('TEST-MARKER'))
+        markers = self.env.json()['markers']
+        mrk = [p for p in markers if p['name'] == 'TEST-MARKER']
         self.assertTrue(len(mrk))
         self.assertEqual(mrk[0]['name'], 'TEST-MARKER')
-        self.assertTrue(self.environment.markerRemove('TEST-MARKER'))
-
-        mrk = [p for p in self.environment.json()['markers'] if p['name'] == 'TEST-MARKER']
-        self.assertFalse(len(mrk))
+        self.assertTrue(self.env.markerRemove('TEST-MARKER'))
+        markers = [p for p in self.env.json()['markers'] if p['name'] == 'TEST-MARKER']
+        self.assertFalse(len(markers))
 
     def test_property_crud(self):
-        self.assertTrue(self.environment.propertyAdd(name='test-property-crud', type='string', value='TEST-PROPERTY'))
-        import time
-        time.sleep(5)
-        prop = [p for p in self.environment.json()['properties'] if p['name'] == 'test-property-crud']
+        self.assertTrue(self.env.propertyAdd(name='test-property-crud', type='string', value='TEST-PROPERTY'))
+        properties = self.env.json()['properties']
+        prop = [p for p in properties if p['name'] == 'test-property-crud']
         self.assertTrue(len(prop))
         self.assertEqual(prop[0]['name'], 'test-property-crud')
         self.assertEqual(prop[0]['value'], 'TEST-PROPERTY')
-        self.assertTrue(self.environment.propertyRemove('test-property-crud'))
-        prop = [p for p in self.environment.json()['properties'] if p['name'] == 'test-property-crud']
-        self.assertFalse(len(prop))
+        self.assertTrue(self.env.propertyRemove('test-property-crud'))
+        properties = [p for p in self.env.json()['properties'] if p['name'] == 'test-property-crud']
+        self.assertFalse(len(properties))
 
     def test_marker_property_usage(self):
         mnf = Manifest(file=os.path.join(os.path.dirname(__file__), "marker-property.yml")) #Todo: resolve paths
         self.app.upload(mnf)
-        self.assertTrue(self.environment.propertyAdd(name='sample-property-str', type='string', value='test-property-string'))
-        self.assertTrue(self.environment.propertyAdd(name='sample-property-int', type='int', value='42'))
-        self.assertTrue(self.environment.propertyAdd(name='sample-property-obj', type='object', value='aa:bb'))
-        self.assertTrue(self.environment.markerAdd('test-marker'))
+        self.assertTrue(self.env.propertyAdd(name='sample-property-str', type='string', value='test-property-string'))
+        self.assertTrue(self.env.propertyAdd(name='sample-property-int', type='int', value='42'))
+        self.assertTrue(self.env.propertyAdd(name='sample-property-obj', type='object', value='aa:bb'))
+        self.assertTrue(self.env.markerAdd('test-marker'))
 
-        ins = self.app.launch(destroyInterval=300000)
+        self.env.serviceAdd(self.wf_service)
+
+        ins = self.app.launch(destroyInterval=300000, environmentId=self.env.environmentId)
         self.assertTrue(ins, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
         self.assertTrue(ins.ready(),"%s-%s: Instance not in 'running' state after timeout" % (self.prefix, self._testMethodName))
 
@@ -89,8 +88,8 @@ class MarkerPropertyTest(base.BaseTestCasePrivate):
         self.assertTrue(ins.delete(), "%s-%s: Instance failed to destroy" % (self.prefix, self._testMethodName))
         self.assertTrue(ins.destroyed(), "%s-%s: Instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
 
-        self.assertTrue(self.environment.propertyRemove(name='sample-property-str'))
-        self.assertTrue(self.environment.propertyRemove(name='sample-property-int'))
-        self.assertTrue(self.environment.propertyRemove(name='sample-property-obj'))
-        self.assertTrue(self.environment.markerRemove('test-marker'))
+        self.assertTrue(self.env.propertyRemove(name='sample-property-str'))
+        self.assertTrue(self.env.propertyRemove(name='sample-property-int'))
+        self.assertTrue(self.env.propertyRemove(name='sample-property-obj'))
+        self.assertTrue(self.env.markerRemove('test-marker'))
 

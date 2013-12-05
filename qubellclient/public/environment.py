@@ -41,13 +41,16 @@ class Environment(Organization):
         return resp[key] or False
 
     def json(self):
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/environments/'+self.environmentId+'.json'
-        resp = requests.get(url, cookies=self.context.cookies, verify=False)
+        url = self.context.api+'/api/1/organizations/'+self.context.organizationId+'/environments'
+        resp = requests.get(url, auth=(self.context.user, self.context.password), verify=False)
         log.debug(resp.text)
-        self.rawRespose = resp
         if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.ApiError('Unable to get environment properties, got error: %s' % resp.text)
+            env = [x for x in resp.json() if x['id'] == self.environmentId]
+            if len(env)>0:
+                return env[0]
+            raise exceptions.NotFoundError('Unable to find environment by id: %s' % self.organizationId)
+        raise exceptions.ApiError('Unable to get environment by id: %s, got error: %s' % (self.organizationId, resp.text))
+
 
     def delete(self):
         url = self.context.api+'/organizations/'+self.context.organizationId+'/environments/'+self.environmentId+'.json'

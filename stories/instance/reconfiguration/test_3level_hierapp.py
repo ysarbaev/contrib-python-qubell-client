@@ -52,11 +52,14 @@ class ThreeLevelHierappReconfiguration(base.BaseTestCasePrivate):
         cls.last_child_rev = cls.last_child.create_revision(name='tests-reconf-3l-hierapp-shared', instance=cls.last_child_instance)
         cls.shared_service.add_shared_instance(cls.last_child_rev, cls.last_child_instance)
 
+        cls.environment = cls.organization.create_environment(name='ThreeLevelHierappReconfiguration-%s' % cls.prefix)
+        assert cls.environment
 
+        cls.environment.serviceAdd(cls.wf_service)
+        cls.environment.serviceAdd(cls.shared_service)
 
     @classmethod
     def tearDownClass(cls):
-        super(ThreeLevelHierappReconfiguration, cls).tearDownClass()
         assert cls.last_child_instance.delete()
         assert cls.last_child_instance.destroyed()
         cls.shared_service.remove_shared_instance(cls.last_child_instance)
@@ -65,6 +68,9 @@ class ThreeLevelHierappReconfiguration(base.BaseTestCasePrivate):
         cls.parent.delete()
         cls.middle_child.delete()
         cls.last_child.delete()
+
+        cls.environment.delete()
+        super(ThreeLevelHierappReconfiguration, cls).tearDownClass()
 
     @attr('smoke')
     def test_switch_last_child_shared_standalone_and_back(self):

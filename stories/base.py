@@ -90,6 +90,8 @@ class BaseTestCasePrivate(testtools.TestCase):
         else:
             cls.environment = cls.organization.environment(name='default')
         cls.shared_service = cls.organization.service(name='BaseTestSharedService')
+        cls.wf_service = cls.organization.service(name='Workflow')
+        cls.key_service = cls.organization.service(name='Keystore')
 
     @classmethod
     def tearDownClass(cls):

@@ -23,6 +23,7 @@ import logging as log
 import application
 import requests
 import simplejson as json
+from qubellclient.private import exceptions
 from qubellclient.tools import retry
 
 
@@ -31,8 +32,6 @@ class Instance(application.Application):
     """
     Base class for application instance. Manifest required.
     """
-    rawRespose = None
-    _setatus = None
 
     def __parse(self, values):
         ret = {}
@@ -47,19 +46,21 @@ class Instance(application.Application):
         self.name = self.name
         self._status = 'Init'
 
-    def __getattr__(self, key):
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/instances/'+self.instanceId+'.json'
-        resp = requests.get(url, cookies=self.context.cookies, data="{}", verify=False)
+    def json(self):
+
+        url = self.context.api+'/api/1/instances/'+self.instanceId
+        resp = requests.get(url, auth=(self.context.user, self.context.password), verify=False)
         log.debug(resp.text)
-        self.rawRespose = resp
         if resp.status_code == 200:
-            # return same way old_public api does
-            if key in ['returnValues', ]:
-                return self.__parse(resp.json()[key])
-            else:
-                return resp.json()[key]
-        else:
-            return None
+            return resp.json()
+        raise exceptions.ApiError('Unable to get instance by id: %s, got error: %s' % (self.instanceId, resp.text))
+
+    def __getattr__(self, key=None):
+        resp = self.json()
+        if not resp.has_key(key):
+            raise exceptions.NotFoundError('Cannot get property %s' % key)
+        return resp[key] or False
+
 
     def waitForStatus(self, final='Running', accepted=['Requested'], timeout=[20, 10, 1]):
         log.debug('Waiting status: %s' % final)
@@ -101,73 +102,29 @@ class Instance(application.Application):
 
     def runWorkflow(self, name, parameters={}):
         log.info("Running workflow %s" % name)
-
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/instances/'+self.instanceId+'/workflows/'+name+'.json'
+        url = self.context.api+'/api/1/instances/'+self.instanceId+'/'+name
         headers = {'Content-Type': 'application/json'}
         payload = json.dumps(parameters)
-        resp = requests.post(url, cookies=self.context.cookies, data=payload, verify=False, headers=headers)
+        resp = requests.post(url, auth=(self.context.user, self.context.password), data=payload, verify=False, headers=headers)
         log.debug(resp.text)
-        self.rawResponse = resp
         if resp.status_code == 200:
-            return True
-        else:
-            log.error('Cannot execute workflow %s, got error: %s' % (name, resp.content))
-            return False
+            return resp.json()
+        raise exceptions.ApiError('Unable to run workflow %s, got error: %s' % (name, resp.text))
 
 
     def getManifest(self):
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/applications/'+self.context.applicationId+'/refreshManifest.json'
-        headers = {'Content-Type': 'application/json'}
-        payload = json.dumps({})
-        resp = requests.post(url, cookies=self.context.cookies, data=payload, verify=False, headers=headers)
-        log.debug(resp.text)
-        self.rawRespose = resp
-        if resp.status_code == 200:
-            return resp.json()
-        else:
-            return False
-
+        raise NotImplementedError
 
 
     def reconfigure(self, name='reconfigured', **kwargs):
-        revisionId = kwargs.get('revisionId', '')
-        parameters = kwargs.get('parameters', {})
-        submodules = kwargs.get('submodules', {})
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/instances/'+self.instanceId+'/configure.json'
-        headers = {'Content-Type': 'application/json'}
-        payload = json.dumps({
-                   'parameters': parameters,
-                   'submodules': submodules,
-                   'revisionId': revisionId,
-                   'instanceName': name})
-        resp = requests.put(url, cookies=self.context.cookies, data=payload, verify=False, headers=headers)
-
-        log.debug('--- INSTANCE RECONFIGUREATION REQUEST ---')
-        log.debug('REQUEST HEADERS: %s' % resp.request.headers)
-        log.debug('REQUEST: %s' % resp.request.body)
-        log.debug('RESPONSE: %s' % resp.text)
-        self.rawRespose = resp
-        if resp.status_code == 200:
-            return resp.json()
-        else:
-            return False
+        raise NotImplementedError
 
 
     def delete(self):
         return self.destroy()
 
     def destroy(self):
-        log.info("Destroying")
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/instances/'+self.instanceId+'/workflows/destroy.json'
-        headers = {'Content-Type': 'application/json'}
-        resp = requests.post(url, cookies=self.context.cookies, data=json.dumps({}), verify=False, headers=headers)
-        log.debug(resp.text)
-        self.rawRespose = resp
-        if resp.status_code == 200:
-            self._status = None
-            return resp.json()
-        else:
-            return False
+        raise NotImplementedError
 
     def __del__(self):
         pass
