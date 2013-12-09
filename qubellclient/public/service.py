@@ -56,14 +56,12 @@ class Service(Organization):
         raise NotImplementedError
 
     def modify(self, parameters):
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/services/'+self.serviceId+'.json'
+        url = self.context.api+'/api/1/services/'+self.serviceId
         headers = {'Content-Type': 'application/json'}
         payload = {#'id': self.serviceId,
                    'name': self.name,
-                   'typeId': self.type,
-                   'zoneId': self.zone,
                    'parameters': parameters}
-        resp = requests.put(url, cookies=self.context.cookies, data=json.dumps(payload), verify=False, headers=headers)
+        resp = requests.put(url, auth=(self.context.user, self.context.password), data=json.dumps(payload), verify=False, headers=headers)
         log.debug(resp.request.body)
         log.debug(resp.text)
         if resp.status_code == 200:
@@ -73,9 +71,7 @@ class Service(Organization):
     def add_shared_instance(self, revision, instance):
         params = self.json()['parameters']
         if params.has_key('configuration.shared-instances'):
-            old = yaml.safe_load(params['configuration.shared-instances'])
-            old[revision.revisionId.split('-')[0]] = instance.instanceId
-            params['configuration.shared-instances'] = yaml.safe_dump(old, default_flow_style=False)
+            params['configuration.shared-instances'][revision.revisionId.split('-')[0]] = instance.instanceId
             self.modify(params)
         else:
             raise exceptions.ApiError('Unable to add shared instance %s to service %s' % (instance.name, self.name))
@@ -83,13 +79,11 @@ class Service(Organization):
     def remove_shared_instance(self, instance=None, revision=None):
         params = self.json()['parameters']
         if params.has_key('configuration.shared-instances'):
-            old = yaml.safe_load(params['configuration.shared-instances'])
-            if instance.instanceId in old.values():
-                val = [x for x,y in old.items() if y == instance.instanceId]
-                del old[val[0]]
+            if instance.instanceId in params['configuration.shared-instances'].values():
+                val = [x for x,y in params['configuration.shared-instances'].items() if y == instance.instanceId]
+                del params['configuration.shared-instances'][val[0]]
             else:
                 raise exceptions.ApiError('Unable find shared instance %s in service %s' % (instance.instanceId, self.name))
-            params['configuration.shared-instances'] = yaml.safe_dump(old, default_flow_style=False)
             self.modify(params)
         else:
             raise exceptions.ApiError('Unable to add shared instance %s to service %s' % (instance.name, self.name))

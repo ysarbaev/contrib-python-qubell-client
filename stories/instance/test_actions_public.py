@@ -112,3 +112,4 @@ class BasicInstanceActionsTest(base.BaseTestCase):
 
         self.assertTrue(self.app.delete_instance(inst1.instanceId))
         self.assertTrue(rev.delete())
+

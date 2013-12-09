@@ -24,8 +24,6 @@ from time import sleep
 from stories import base
 from stories.base import attr
 from qubellclient.private.manifest import Manifest
-from qubellclient.private.instance import Instance
-from qubellclient.private import exceptions
 import os
 
 
@@ -103,7 +101,7 @@ class ThreeLevelHierarchicalAppTest(base.BaseTestCase):
         rev = self.last_child.create_revision(name='%s-shared_last_child' % self._testMethodName, instance=shared_last_child_instance)
         last_child_revision = self.last_child_public.get_revision(id=rev.revisionId)
 
-        self.shared_service.add_shared_instance(last_child_revision, shared_last_child_instance)
+        self.shared_service_public.add_shared_instance(last_child_revision, shared_last_child_instance)
 
         parameters = {
              	'top_parent_in.last_child_input': 'UPD by test Hello from TOP parent to last child',
@@ -141,7 +139,7 @@ class ThreeLevelHierarchicalAppTest(base.BaseTestCase):
         self.assertTrue(parent_instance.destroyed(), "%s-%s: Parent instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
 
     # Remove created services and instance
-        self.shared_service.remove_shared_instance(shared_last_child_instance)
+        self.shared_service_public.remove_shared_instance(shared_last_child_instance)
         self.assertTrue(self.last_child.delete_instance(id=shared_last_child_instance.instanceId), "%s-%s: Last child instance failed to destroy" % (self.prefix, self._testMethodName))
         self.assertTrue(last_child_instance.destroyed(), "%s-%s: Last child instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
 
@@ -158,7 +156,7 @@ class ThreeLevelHierarchicalAppTest(base.BaseTestCase):
         rev = self.last_child.create_revision(name='%s-shared_last_child' % self._testMethodName, instance=shared_last_child_instance)
         last_child_revision = self.last_child_public.get_revision(id=rev.revisionId)
 
-        self.shared_service.add_shared_instance(last_child_revision, shared_last_child_instance)
+        self.shared_service_public.add_shared_instance(last_child_revision, shared_last_child_instance)
 
     # Create shared middle child
         parameters = { 'last_child_in.app_input': 'Parent in to Last child',
@@ -175,7 +173,7 @@ class ThreeLevelHierarchicalAppTest(base.BaseTestCase):
         rev = self.middle_child.create_revision(name='%s-shared_middle_child' % self._testMethodName, instance=shared_middle_child_instance)
         middle_child_revision = self.middle_child_public.get_revision(id=rev.revisionId)
 
-        self.shared_service.add_shared_instance(middle_child_revision, shared_middle_child_instance)
+        self.shared_service_public.add_shared_instance(middle_child_revision, shared_middle_child_instance)
 
 
     # Start parent
@@ -215,12 +213,12 @@ class ThreeLevelHierarchicalAppTest(base.BaseTestCase):
         self.assertTrue(parent_instance.destroyed(), "%s-%s: Parent instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
 
     # Remove created services and middle instance
-        self.shared_service.remove_shared_instance(shared_middle_child_instance)
+        self.shared_service_public.remove_shared_instance(shared_middle_child_instance)
         self.assertTrue(self.middle_child.delete_instance(id=shared_middle_child_instance.instanceId), "%s-%s: Last child instance failed to destroy" % (self.prefix, self._testMethodName))
         self.assertTrue(middle_child_instance.destroyed(), "%s-%s: Last child instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
 
     # Remove created services and last instance
-        self.shared_service.remove_shared_instance(shared_last_child_instance)
+        self.shared_service_public.remove_shared_instance(shared_last_child_instance)
         self.assertTrue(self.last_child.delete_instance(id=shared_last_child_instance.instanceId), "%s-%s: Last child instance failed to destroy" % (self.prefix, self._testMethodName))
         self.assertTrue(last_child_instance.destroyed(), "%s-%s: Last child instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
 
