@@ -38,8 +38,7 @@ output.xml
 *.xml
 .idea
 
-qubellclient/public
-qubellclient/tests/self
+test_qubell_client
 .DS_Store
 .secure
 .universe

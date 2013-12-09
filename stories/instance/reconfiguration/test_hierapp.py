@@ -25,7 +25,7 @@ from stories import base
 from stories.base import attr
 from qubellclient.private.manifest import Manifest
 
-class HierappReconfiguration(base.BaseTestCasePrivate):
+class HierappReconfiguration(base.BaseTestCase):
 
     @classmethod
     def setUpClass(cls):

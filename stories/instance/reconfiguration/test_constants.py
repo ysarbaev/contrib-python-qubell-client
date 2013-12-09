@@ -25,7 +25,7 @@ __license__ = "Apache"
 __version__ = "1.0.1"
 __email__ = "vkhomenko@qubell.com"
 
-class Constants(base.BaseTestCasePrivate):
+class Constants(base.BaseTestCase):
 
     @classmethod
     def setUpClass(cls):

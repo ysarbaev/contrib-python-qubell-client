@@ -27,7 +27,7 @@ from qubellclient.private.manifest import Manifest
 import os
 
 
-class ServiceCallTestApp(base.BaseTestCasePrivate):
+class ServiceCallTestApp(base.BaseTestCase):
     _multiprocess_can_split_ = True
     #_multiprocess_shared_ = True
 

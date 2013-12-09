@@ -28,7 +28,7 @@ from qubellclient.private.instance import Instance
 import os
 
 
-class ThreeLevelHierarchicalAppTest(base.BaseTestCasePrivate):
+class ThreeLevelHierarchicalAppTest(base.BaseTestCase):
     _multiprocess_can_split_ = True
     #_multiprocess_shared_ = True
 
@@ -95,7 +95,6 @@ class ThreeLevelHierarchicalAppTest(base.BaseTestCasePrivate):
 
         last_child_revision = self.last_child.create_revision(name='%s-shared_last_child' % self._testMethodName, instance=last_child_instance)
 
-        #shared_service = self.organization.create_shared_service(name='%s-ThreeLevelHierarchicalAppTest-last-child' % self.prefix)
         self.shared_service.add_shared_instance(last_child_revision, last_child_instance)
 
         parameters = {
@@ -132,46 +131,70 @@ class ThreeLevelHierarchicalAppTest(base.BaseTestCasePrivate):
         self.assertTrue(last_child_instance.destroyed(), "%s-%s: Last child instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
 
 
-    def test_launch_3level_hierapp_shared_middle_child(self):
-        """ Launch 3-level hierarchical app with middle child as shared instance.
+    def test_launch_3level_hierapp_shared_middle_shared_last_child(self):
+        """ Launch 3-level hierarchical app with middle child as shared instance and last child shared too.
         We create basic hierapp, set it as shared and then use it in another hierapp :)
         """
 
+    # Create shared last child
+        last_child_instance = self.last_child.launch(destroyInterval=600000)
+        self.assertTrue(last_child_instance)
+        self.assertTrue(last_child_instance.ready())
+        last_child_revision = self.last_child.create_revision(name='%s-shared_last_child' % self._testMethodName, instance=last_child_instance)
+        self.shared_service.add_shared_instance(last_child_revision, last_child_instance)
+
     # Create shared middle child
-        middle_child_instance = self.middle_child.launch(destroyInterval=600000)
+        parameters = { 'last_child_in.app_input': 'Parent in to Last child',
+                       'middle_child_in.app_input': 'Middle param'}
+        submodules = {
+            'last_child': {
+                'revisionId': last_child_revision.revisionId}}
+
+        middle_child_instance = self.middle_child.launch(destroyInterval=600000, parameters=parameters, submodules=submodules)
         self.assertTrue(middle_child_instance)
         self.assertTrue(middle_child_instance.ready())
 
+    # Check we have last as shared
+        self.assertEqual(last_child_instance.instanceId, middle_child_instance.submodules[0]['id'])
         middle_child_revision = self.middle_child.create_revision(name='%s-shared_middle_child' % self._testMethodName, instance=middle_child_instance)
-
-        #shared_service = self.organization.create_shared_service(name='%s-ThreeLevelHierarchicalAppTest-middle-child' % self.prefix)
         self.shared_service.add_shared_instance(middle_child_revision, middle_child_instance)
 
+    # Start parent
         parameters = {
-                "top_parent_in.last_child_input": "Hello from TOP parent to lasr child",
-                "top_parent_in.middle_child_input": "Hello from TOP parent to middle child"}
+                'top_parent_in.last_child_input': 'Hello from TOP parent to last child',
+                'top_parent_in.middle_child_input': 'Hello from TOP parent to middle child'}
         submodules = {
-                "middle_child": {
-                    "revisionId": middle_child_revision.revisionId}}
+                'middle_child': {
+                    'revisionId': middle_child_revision.revisionId}}
 
 
-        parent_instance = self.parent.launch(destroyInterval=00000, parameters=parameters, submodules=submodules)
-
+        parent_instance = self.parent.launch(destroyInterval=600000, parameters=parameters, submodules=submodules)
         self.assertTrue(parent_instance, "%s-%s: Parent instance failed to launch" % (self.prefix, self._testMethodName))
         self.assertTrue(parent_instance.ready(),"%s-%s: Parent instance not in 'running' state after timeout" % (self.prefix, self._testMethodName))
 
-        self.assertTrue(parent_instance.submodules) # Check we have submodules started
+    # Check we have submodules started
+        self.assertTrue(parent_instance.submodules)
         self.assertEqual(parent_instance.submodules[0]['status'], 'Running')
 
-        self.assertEqual(parent_instance.submodules[0]['id'], middle_child_instance.instanceId, "Last child used is not shared one")  # Check we use shared last instance
+    # Check middle child is shared
+        self.assertEqual(parent_instance.submodules[0]['id'], middle_child_instance.instanceId, "Middle child used is not shared one")
 
+        mid = Instance(self.context, id=parent_instance.submodules[0]['id'])
+        self.assertEqual(middle_child_instance.status, 'Running') # Check shared still alive
+
+    # Check last child is shared
+        self.assertEqual(mid.submodules[0]['id'], last_child_instance.instanceId, "Last child used is not shared one")  # Check we use shared last instance
+
+    # Cleaning
         self.assertTrue(parent_instance.delete(), "%s-%s: Parent instance failed to destroy" % (self.prefix, self._testMethodName))
         self.assertTrue(parent_instance.destroyed(), "%s-%s: Parent instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
 
-        self.assertEqual(middle_child_instance.status, 'Running') # Check shared still alive
-
-    # Remove created services and instance
+    # Remove created services and middle instance
         self.shared_service.remove_shared_instance(middle_child_instance)
         self.assertTrue(middle_child_instance.delete(), "%s-%s: Middle child instance failed to destroy" % (self.prefix, self._testMethodName))
         self.assertTrue(middle_child_instance.destroyed(), "%s-%s: Middle child instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
 
+    # Remove created services and last instance
+        self.shared_service.remove_shared_instance(last_child_instance)
+        self.assertTrue(last_child_instance.delete(), "%s-%s: Last child instance failed to destroy" % (self.prefix, self._testMethodName))
+        self.assertTrue(last_child_instance.destroyed(), "%s-%s: Last child instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))

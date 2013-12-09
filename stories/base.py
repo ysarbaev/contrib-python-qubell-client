@@ -22,6 +22,7 @@ __email__ = "vkhomenko@qubell.com"
 import testtools
 import nose.plugins.attrib
 from qubellclient.private.platform import QubellPlatform, Context
+from qubellclient.public.platform import QubellPlatform as QubellPlatformPublic
 from qubellclient.private.manifest import Manifest
 import os
 from qubellclient.tools import rand
@@ -54,7 +55,7 @@ def attr(*args, **kwargs):
 
 
 _multiprocess_shared_ = True
-class BaseTestCasePrivate(testtools.TestCase):
+class BaseTestCase(testtools.TestCase):
     ## TODO: Main preparation should be here
     """ Here we prepare global env. (load config, etc)
     """
@@ -64,17 +65,20 @@ class BaseTestCasePrivate(testtools.TestCase):
     def setUpClass(cls):
         cls.prefix = prefix or rand()
         cls.context = Context(user=user, password=password, api=api)
+        cls.context_public = cls.context
 
     # Initialize platform and check access
         cls.platform = QubellPlatform(context=cls.context)
         assert cls.platform.authenticate()
+
+        cls.platform_public = QubellPlatformPublic(context=cls.context_public)
 
     # Set default manifest for app creation
         cls.manifest = Manifest(file=os.path.join(os.path.dirname(__file__), 'default.yml'), name='BaseTestManifest')
 
     # Initialize organization
         cls.organization = cls.platform.organization(name=org)
-        #cls.shared_service = cls.organization.create_shared_service(name='BaseTestSharedService')
+        cls.organization_public = cls.platform_public.organization(name=org)
 
 
         if zone:
@@ -89,9 +93,18 @@ class BaseTestCasePrivate(testtools.TestCase):
             cls.environment.set_backend(cls.organization.zoneId)
         else:
             cls.environment = cls.organization.environment(name='default')
+        cls.environment_public = cls.organization_public.environment(name='default')
+
         cls.shared_service = cls.organization.service(name='BaseTestSharedService')
         cls.wf_service = cls.organization.service(name='Workflow')
         cls.key_service = cls.organization.service(name='Keystore')
+
+        # Cannot get services by Name (list not imlpemented)
+        cls.shared_service_public = cls.organization_public.service(id=cls.shared_service.serviceId)
+        cls.wf_service_public = cls.organization_public.service(id=cls.wf_service.serviceId)
+        cls.key_service_public = cls.organization_public.service(id=cls.key_service.serviceId)
+
+
 
     @classmethod
     def tearDownClass(cls):
@@ -99,11 +112,11 @@ class BaseTestCasePrivate(testtools.TestCase):
 
     def setUp(self):
     # Run before each test
-        super(BaseTestCasePrivate, self).setUp()
+        super(BaseTestCase, self).setUp()
         pass
 
     def tearDown(self):
     # Run after each test
-        super(BaseTestCasePrivate, self).tearDown()
+        super(BaseTestCase, self).tearDown()
         pass
 

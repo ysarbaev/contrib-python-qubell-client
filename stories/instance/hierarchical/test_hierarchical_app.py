@@ -25,7 +25,7 @@ from qubellclient.private.manifest import Manifest
 import os
 
 
-class HierarchicalAppTest(base.BaseTestCasePrivate):
+class HierarchicalAppTest(base.BaseTestCase):
     _multiprocess_can_split_ = True
     #_multiprocess_shared_ = True
 

@@ -121,11 +121,18 @@ class Application(Organization):
         self.rawResponse = resp
         if resp.status_code == 200:
             instance_id = resp.json()['id']
-            from qubellclient.private.instance import Instance
-            return Instance(context=self.context, id=instance_id)
+            return self.get_instance(instance_id)
         else:
             log.error('Unable to launch instance: %s' % resp.content)
             return False
+
+    def get_instance(self, id):
+        from qubellclient.private.instance import Instance
+        return Instance(context=self.context, id=id)
+
+    def delete_instance(self, id):
+        ins = self.get_instance(id)
+        return ins.delete()
 
     def get_revision(self, id):
         from qubellclient.private.revision import Revision

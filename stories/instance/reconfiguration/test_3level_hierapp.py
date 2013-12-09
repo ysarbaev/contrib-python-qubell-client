@@ -27,7 +27,7 @@ from qubellclient.private.manifest import Manifest
 from qubellclient.private.instance import Instance
 
 
-class ThreeLevelHierappReconfiguration(base.BaseTestCasePrivate):
+class ThreeLevelHierappReconfiguration(base.BaseTestCase):
 
     @classmethod
     def setUpClass(cls):

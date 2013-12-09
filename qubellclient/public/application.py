@@ -23,7 +23,7 @@ __email__ = "vkhomenko@qubell.com"
 import logging as log
 import requests
 import simplejson as json
-from qubellclient.private.organization import Organization
+from qubellclient.public.organization import Organization
 from qubellclient.private import exceptions
 
 class Application(Organization):
@@ -116,10 +116,19 @@ class Application(Organization):
             return Instance(context=self.context, id=instance_id)
         raise exceptions.ApiError('Unable to launch application id: %s, got error: %s' % (self.applicationId, resp.text))
 
+    def get_instance(self, id):
+        from instance import Instance
+        return Instance(context=self.context, id=id)
+
+    def delete_instance(self, id):
+        ins = self.get_instance(id)
+        return ins.delete()
+
     def get_revision(self, id):
-        from qubellclient.private.revision import Revision
+        from revision import Revision
         self.context.applicationId = self.applicationId
         return Revision(context=self.context, id=id)
+
 
     def list_revisions(self):
         url = self.context.api+'/api/1/applications/'+self.applicationId+'/revisions'

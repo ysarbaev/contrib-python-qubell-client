@@ -43,15 +43,17 @@ class Service(Organization):
             raise exceptions.NotFoundError('Cannot get property %s' % key)
         return resp[key] or False
 
-    # TODO: should be separate class
-    def regenerate(self):
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/services/'+self.serviceId+'/keys/generate.json'
-        headers = {'Content-Type': 'application/json'}
-        resp = requests.post(url, cookies=self.context.cookies, data=json.dumps({}), verify=False, headers=headers)
+    def json(self):
+        url = self.context.api+'/api/1/services/'+self.serviceId
+        resp = requests.get(url, auth=(self.context.user, self.context.password), verify=False)
         log.debug(resp.text)
         if resp.status_code == 200:
             return resp.json()
-        raise exceptions.ApiError('Unable to regenerate key: %s' % resp.text)
+        raise exceptions.ApiError('Unable to get service properties, got error: %s' % resp.text)
+
+    # TODO: should be separate class
+    def regenerate(self):
+        raise NotImplementedError
 
     def modify(self, parameters):
         url = self.context.api+'/organizations/'+self.context.organizationId+'/services/'+self.serviceId+'.json'
@@ -96,21 +98,6 @@ class Service(Organization):
         params = self.json()['parameters']
         return yaml.safe_load(params['configuration.shared-instances'])
 
-    def json(self):
-        url = self.context.api+'/api/1/services/'+self.context.organizationId+'/services.json'
-        resp = requests.get(url, cookies=self.context.cookies, verify=False)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            service = [x for x in resp.json() if x['id'] == self.serviceId]
-            if len(service)>0:
-                return service[0]
-        raise exceptions.ApiError('Unable to get service properties, got error: %s' % resp.text)
 
     def delete(self):
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/services/'+self.serviceId+'.json'
-        headers = {'Content-Type': 'application/json'}
-        resp = requests.delete(url, cookies=self.context.cookies, data=json.dumps({}), verify=False, headers=headers)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return True
-        raise exceptions.ApiError('Unable to delete service %s, got error: %s' % (self.serviceId, resp.text))
+        raise NotImplementedError

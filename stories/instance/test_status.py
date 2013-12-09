@@ -27,7 +27,7 @@ from qubellclient.private.manifest import Manifest
 from stories.base import attr
 
 
-class InstanceStatusTest(base.BaseTestCasePrivate):
+class InstanceStatusTest(base.BaseTestCase):
     _multiprocess_can_split_ = True
 
 # Here we prepare environment once for all tests in class.

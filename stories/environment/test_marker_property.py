@@ -24,7 +24,7 @@ from stories.base import attr
 from qubellclient.private.manifest import Manifest
 import os
 
-class MarkerPropertyTest(base.BaseTestCasePrivate):
+class MarkerPropertyTest(base.BaseTestCase):
 
     @classmethod
     def setUpClass(cls):

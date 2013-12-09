@@ -35,30 +35,31 @@ class BasicInstanceActionsTest(base.BaseTestCase):
     def setUpClass(cls):
         # Call all parents setups
         super(BasicInstanceActionsTest, cls).setUpClass()
+        # Cannot be done via public
         cls.app = cls.organization.application(name="%s-test-instance-actions" % cls.prefix, manifest=cls.manifest)
-
+        cls.app_public = cls.organization_public.get_application(id=cls.app.applicationId)
 # Here we cleaning our environment. Delete all created stuff
     @classmethod
     def tearDownClass(cls):
         # Call all parents teardowns
         super(BasicInstanceActionsTest, cls).tearDownClass()
-        #cls.app.clean()
         cls.app.delete()
 
 # This would be executed for each test
     def setUp(self):
         super(BasicInstanceActionsTest, self).setUp()
-        self.app.upload(self.manifest)
-        self.instance = self.app.launch(destroyInterval=300000)
+        self.app_public.upload(self.manifest)
+        self.instance = self.app_public.launch(destroyInterval=300000)
 
         self.assertTrue(self.instance, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
         self.assertTrue(self.instance.ready(),"%s-%s: Instance not in 'running' state after timeout" % (self.prefix, self._testMethodName))
 
 # Also, clean after each test
     def tearDown(self):
-        super(BasicInstanceActionsTest, self).tearDown()
-        self.assertTrue(self.instance.destroy())
+        # Not implemented
+        self.assertTrue(self.app.delete_instance(self.instance.instanceId))
         self.assertTrue(self.instance.destroyed())
+        super(BasicInstanceActionsTest, self).tearDown()
 
 
 # Tests
@@ -67,7 +68,7 @@ class BasicInstanceActionsTest(base.BaseTestCase):
     def test_upload_manifest(self):
         """ Check uploading manifest to application works
         """
-        self.assertTrue(self.app.upload(self.app.manifest), 'Failed to upload manifest')
+        self.assertTrue(self.app_public.upload(self.app.manifest), 'Failed to upload manifest')
 
     @attr('skip') # This test would be skipped
     # Todo: Move to application actions
@@ -80,7 +81,7 @@ class BasicInstanceActionsTest(base.BaseTestCase):
           components:
             error:
         """
-        self.assertFalse(self.app.upload(badm), 'Succeed uploading unvalidatable manifest')
+        self.assertFalse(self.app_public.upload(badm), 'Succeed uploading unvalidatable manifest')
 
     @attr('smoke')
     def test_workflow_launch(self):
@@ -97,17 +98,17 @@ class BasicInstanceActionsTest(base.BaseTestCase):
     def test_revision(self):
         ''' Create new revision. Change latest manifest. Launch revision and check it uses not latest, but revisions manifest.
         '''
-
+        # Not implemented via public api
         rev = self.app.create_revision(name='test-revision-launch', instance=self.instance)
         self.assertTrue(rev)
 
         manf1 = Manifest(file=os.path.join(os.path.dirname(__file__), 'simple_manifest.yml'))
-        self.app.upload(manf1) # Upload new manifest. So, latest is not same as in our revision.
+        self.app_public.upload(manf1) # Upload new manifest. So, latest is not same as in our revision.
 
 
-        inst1 = self.app.launch(destroyInterval=600000, revisionId=rev.revisionId)
+        inst1 = self.app_public.launch(destroyInterval=600000, revisionId=rev.revisionId)
         self.assertTrue(inst1.ready(), 'Failed to launch instance.')
         self.assertEqual('This is default manifest', inst1.returnValues['out.app_output'])
 
-        self.assertTrue(inst1.destroy())
+        self.assertTrue(self.app.delete_instance(inst1.instanceId))
         self.assertTrue(rev.delete())

@@ -29,7 +29,7 @@ __email__ = "vkhomenko@qubell.com"
 
 
 
-class WorkflowInstance(base.BaseTestCasePrivate):
+class WorkflowInstance(base.BaseTestCase):
 
     @classmethod
     def setUpClass(cls):
