@@ -18,6 +18,7 @@ import os
 import sys
 import logging as log
 from qubellclient.private.platform import QubellPlatform, Context
+from qubellclient.private.manifest import Manifest
 
 
 """
@@ -42,7 +43,7 @@ user = os.environ.get('QUBELL_USER', 'user')
 password = os.environ.get('QUBELL_PASSWORD', 'password')
 api = os.environ.get('QUBELL_API', 'https://express.qubell.com')
 org = os.environ.get('QUBELL_ORG', 'organization')
-zone = os.environ.get('QUBELL_ZONE')
+zone = os.environ.get('QUBELL_ZONE','')
 
 provider = os.environ.get('PROVIDER', 'aws-ec2')
 region = os.environ.get('REGION', 'us-east-1')
@@ -104,17 +105,18 @@ def start():
             create_env(organization, z[0]['id'])
 
     create_env(organization)
+    create_launcher_apps(organization)
     print "ENV created"
 
 def create_env(organization, agent=None):
     print "creating ZONE: %s" % agent
 
 # Add services
-    key_service = organization.service(type='builtin:cobalt_secure_store', name='Keystore', zone=agent)
+    key_service = organization.service(type='builtin:cobalt_secure_store', name='Keystore'+zone, zone=agent)
     print "Keystore service %s initialized" % key_service.name
-    wf_service = organization.service(type='builtin:workflow_service', name='Workflow', parameters= {'configuration.policies': '{}'}, zone=agent)
+    wf_service = organization.service(type='builtin:workflow_service', name='Workflow'+zone, parameters= {'configuration.policies': '{}'}, zone=agent)
     print "Workflow service %s initialized" % wf_service.name
-    shared_service = organization.service(type='builtin:shared_instances_catalog', name='BaseTestSharedService', parameters= {'configuration.shared-instances': '{}'}, zone=agent)
+    shared_service = organization.service(type='builtin:shared_instances_catalog', name='BaseTestSharedService'+zone, parameters= {'configuration.shared-instances': '{}'}, zone=agent)
     print "Shared instance service %s initialized" % shared_service.name
 
 # Create independent environment
@@ -142,5 +144,24 @@ def create_env(organization, agent=None):
     environment.providerAdd(provider)
     print "Added provider %s" % provider.name
 
+def create_launcher_apps(org):
+    man = """
+application:
+  components:
+    empty:
+      type: cobalt.common.Constants
+      interfaces:
+        int1:
+          pin1: publish-signal(string)
+      configuration:
+        configuration.values:
+          int1.pin1: "Hello"
+"""
+
+    manifest = Manifest(content=man)
+    apps = ['marker', 'simple-cobalt', 'starter-java-web', 'webdriver-grid', 'hier-db', 'hier-main']
+    for app in apps:
+        print "creating app: %s" % app
+        org.application(name=app, manifest=manifest)
 
 start()
