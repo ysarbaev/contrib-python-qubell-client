@@ -59,7 +59,6 @@ class ThreeLevelHierarchicalAppTest(base.BaseTestCase):
 
     def tearDown(self):
         super(ThreeLevelHierarchicalAppTest, self).tearDown()
-        #self.environment.clean()
 
 
     @attr('smoke')

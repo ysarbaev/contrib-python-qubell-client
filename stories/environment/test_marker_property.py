@@ -35,12 +35,14 @@ class MarkerPropertyTest(base.BaseTestCase):
         assert cls.app
         cls.env = cls.organization.create_environment(name='MarkerPropertyTest-%s' % cls.prefix)
         assert cls.env
+        cls.env.clean()
 
     @classmethod
     def tearDownClass(cls):
         # TODO: BUG here https://github.com/qubell/vermilion/issues/2085
         #cls.env.delete()
         cls.app.delete()
+        #cls.delete_environment(cls.env.environmentId)
         super(MarkerPropertyTest, cls).tearDownClass()
 
 
@@ -68,12 +70,15 @@ class MarkerPropertyTest(base.BaseTestCase):
     def test_marker_property_usage(self):
         mnf = Manifest(file=os.path.join(os.path.dirname(__file__), "marker-property.yml")) #Todo: resolve paths
         self.app.upload(mnf)
+        self.env.set_backend(self.organization.zoneId)
+
         self.assertTrue(self.env.propertyAdd(name='sample-property-str', type='string', value='test-property-string'))
         self.assertTrue(self.env.propertyAdd(name='sample-property-int', type='int', value='42'))
         self.assertTrue(self.env.propertyAdd(name='sample-property-obj', type='object', value='aa:bb'))
         self.assertTrue(self.env.markerAdd('test-marker'))
 
         self.env.serviceAdd(self.wf_service)
+        self.env.serviceAdd(self.key_service)
 
         ins = self.app.launch(destroyInterval=300000, environmentId=self.env.environmentId)
         self.assertTrue(ins, "%s-%s: Instance failed to launch" % (self.prefix, self._testMethodName))
