@@ -92,7 +92,7 @@ class Instance(application.Application):
 
 
     def ready(self, timeout=3):  # Shortcut for convinience. Temeout = 3 min (ask timeout*6 times every 10 sec)
-        return self.waitForStatus(final='Running', accepted=['Requested', 'Executing', 'Unknown'], timeout=[timeout*6, 10, 1])
+        return self.waitForStatus(final='Running', accepted=['Launching', 'Requested', 'Executing', 'Unknown'], timeout=[timeout*6, 10, 1])
         # TODO: Unknown status  should be removed
 
         #TODO: not available

@@ -112,8 +112,7 @@ class Application(Organization):
         log.debug('RESPONSE: %s' % resp.text)
         if resp.status_code == 200:
             instance_id = resp.json()['id']
-            from qubellclient.public.instance import Instance
-            return Instance(context=self.context, id=instance_id)
+            return self.get_instance(id=instance_id)
         raise exceptions.ApiError('Unable to launch application id: %s, got error: %s' % (self.applicationId, resp.text))
 
     def get_instance(self, id):
