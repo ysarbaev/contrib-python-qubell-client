@@ -19,19 +19,24 @@ __license__ = "Apache"
 __version__ = "1.0.1"
 __email__ = "vkhomenko@qubell.com"
 
-from qubellclient.private.organization import Organization
-from qubellclient.private import exceptions
-import requests
 import logging as log
-import simplejson as json
 
-class Provider(Organization):
+import requests
+
+import application
+from qubell.api.private import exceptions
+
+
+class Revision(application.Application):
+    """
+    Base class for revision
+    """
 
     def __init__(self, context, id):
+        self.revisionId = id
         self.context = context
-        self.providerId = id
         my = self.json()
-        self.__dict__.update(my)
+        self.name = my['name']
 
     def __getattr__(self, key):
         resp = self.json()
@@ -40,20 +45,17 @@ class Provider(Organization):
         return resp[key] or False
 
     def json(self):
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/providers.json'
-        resp = requests.get(url, cookies=self.context.cookies, verify=False)
+        url = self.context.api+'/api/1/applications/'+self.context.applicationId+'/revisions'
+        resp = requests.get(url, auth=(self.context.user, self.context.password), verify=False)
         log.debug(resp.text)
         if resp.status_code == 200:
-            provider = [x for x in resp.json() if x['id'] == self.providerId]
-            if len(provider)>0:
-                return provider[0]
-        raise exceptions.ApiError('Unable to get provider %s properties, got error: %s' % (self.providerId, resp.text))
+            resp.json()
+            rev = [x for x in resp.json() if x['id'] == self.revisionId]
+            if len(rev)>0:
+                return rev[0]
+            raise exceptions.NotFoundError('Unable to find revision by id: %s' % self.revisionId)
+        raise exceptions.ApiError('Unable to get revision properties, got error: %s' % resp.text)
+
 
     def delete(self):
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/providers/'+self.providerId+'.json'
-        headers = {'Content-Type': 'application/json'}
-        resp = requests.delete(url, cookies=self.context.cookies, data=json.dumps({}), verify=False, headers=headers)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return True
-        raise exceptions.ApiError('Unable to delete provider %s, got error: %s' % (self.providerId, resp.text))
+        raise NotImplementedError

@@ -19,11 +19,14 @@ __license__ = "Apache"
 __version__ = "1.0.1"
 __email__ = "vkhomenko@qubell.com"
 
+import logging as log
+
 import requests
 import simplejson as json
-import logging as log
+
 from qubellclient.private.platform import QubellPlatform
 from qubellclient.private import exceptions
+
 
 class Organization(QubellPlatform):
 
@@ -72,7 +75,7 @@ class Organization(QubellPlatform):
     def get_application(self, id):
         log.info("Picking application: %s" % id)
         self.context.organizationId = self.organizationId
-        from application import Application
+        from qubell.api.private.application import Application
         return Application(self.context, id=id)
 
     def list_applications(self):
@@ -137,7 +140,7 @@ class Organization(QubellPlatform):
     def get_service(self, id):
         log.info("Picking service: %s" % id)
         self.context.organizationId = self.organizationId
-        from service import Service
+        from qubell.api.private.service import Service
         return Service(self.context, id=id)
 
     def list_services(self):
@@ -199,7 +202,7 @@ class Organization(QubellPlatform):
         raise exceptions.ApiError('Unable to get environments list, got error: %s' % resp.text)
 
     def get_environment(self, id):
-        from environment import Environment
+        from qubell.api.private.environment import Environment
         self.context.organizationId = self.organizationId
         self.context.environmentId = id
         return Environment(self.context, id)
@@ -257,7 +260,7 @@ class Organization(QubellPlatform):
         raise exceptions.ApiError('Unable to get providers list, got error: %s' % resp.text)
 
     def get_provider(self, id):
-        from provider import Provider
+        from qubell.api.private.provider import Provider
         self.context.organizationId = self.organizationId
         return Provider(context=self.context, id=id)
 

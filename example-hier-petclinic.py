@@ -22,9 +22,11 @@ __email__ = "vkhomenko@qubell.com"
 
 """ Example shows how to run hierarchical petclinic using qubellclient """
 
-from qubellclient.private.platform import QubellPlatform, Context
-from qubellclient.private.manifest import Manifest
 import requests
+
+from qubell.api.private.platform import QubellPlatform, Context
+from qubell.api.private.manifest import Manifest
+
 
 # Provide credentials and link to api to use
 context = Context(user="tester@qubell.com", password="password", api="https://api.qubell.com")

@@ -12,6 +12,7 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from qubell.api.private import application
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
@@ -20,10 +21,9 @@ __version__ = "1.0.1"
 __email__ = "vkhomenko@qubell.com"
 
 import logging as log
-import application
 import requests
 import simplejson as json
-from qubellclient.tools import retry
+from qubell.api.tools import retry
 
 
 

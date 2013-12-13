@@ -20,20 +20,21 @@ __version__ = "1.0.1"
 __email__ = "vkhomenko@qubell.com"
 
 import logging as log
-import application
+
 import requests
-from qubellclient.private import exceptions
+import simplejson as json
+
+from qubell.api.private.organization import Organization
+from qubell.api.private import exceptions
 
 
-
-class Revision(application.Application):
-    """
-    Base class for revision
-    """
+class Provider(Organization):
 
     def __init__(self, context, id):
-        self.revisionId = id
         self.context = context
+        self.providerId = id
+        my = self.json()
+        self.__dict__.update(my)
 
     def __getattr__(self, key):
         resp = self.json()
@@ -42,18 +43,20 @@ class Revision(application.Application):
         return resp[key] or False
 
     def json(self):
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/applications/'+self.context.applicationId+'/revisions/'+self.revisionId+'.json'
+        url = self.context.api+'/organizations/'+self.context.organizationId+'/providers.json'
         resp = requests.get(url, cookies=self.context.cookies, verify=False)
         log.debug(resp.text)
         if resp.status_code == 200:
-            resp.json()
-        raise exceptions.ApiError('Unable to get service properties, got error: %s' % resp.text)
+            provider = [x for x in resp.json() if x['id'] == self.providerId]
+            if len(provider)>0:
+                return provider[0]
+        raise exceptions.ApiError('Unable to get provider %s properties, got error: %s' % (self.providerId, resp.text))
 
     def delete(self):
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/applications/'+self.context.applicationId+'/revisions/'+self.revisionId+'.json'
-        resp = requests.delete(url, cookies=self.context.cookies, verify=False)
+        url = self.context.api+'/organizations/'+self.context.organizationId+'/providers/'+self.providerId+'.json'
+        headers = {'Content-Type': 'application/json'}
+        resp = requests.delete(url, cookies=self.context.cookies, data=json.dumps({}), verify=False, headers=headers)
         log.debug(resp.text)
-        self.rawRespose = resp
-        if resp.status_code==200:
+        if resp.status_code == 200:
             return True
-        raise exceptions.ApiError('Unable to delete revision, got error: %s' % resp.text)
+        raise exceptions.ApiError('Unable to delete provider %s, got error: %s' % (self.providerId, resp.text))

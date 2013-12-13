@@ -23,8 +23,8 @@ import os
 
 from stories import base
 from stories.base import attr
-from qubellclient.private.manifest import Manifest
-from qubellclient.private.instance import Instance
+from qubell.api.private.manifest import Manifest
+from qubell.api.private.instance import Instance
 
 
 class ThreeLevelHierappReconfiguration(base.BaseTestCase):

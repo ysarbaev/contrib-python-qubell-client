@@ -19,10 +19,11 @@ __license__ = "Apache"
 __version__ = "1.0.1"
 __email__ = "vkhomenko@qubell.com"
 
+import os
+
 from stories import base
 from stories.base import attr
-from qubellclient.private.manifest import Manifest
-import os
+from qubell.api.private.manifest import Manifest
 
 
 class HierarchicalAppTest(base.BaseTestCase):
