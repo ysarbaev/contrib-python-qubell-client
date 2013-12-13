@@ -16,7 +16,7 @@
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
-__version__ = "1.0.1"
+__version__ = "1.0.5"
 __email__ = "vkhomenko@qubell.com"
 
 import os
@@ -26,9 +26,9 @@ import testtools
 import nose.plugins.attrib
 
 from qubell.api.private.platform import QubellPlatform, Context
-from qubellclient.public.platform import QubellPlatform as QubellPlatformPublic
+from qubell.api.public.platform import QubellPlatform as QubellPlatformPublic
 from qubell.api.private.manifest import Manifest
-from qubellclient.tools import rand
+from qubell.api.tools import rand
 
 
 user = os.environ.get('QUBELL_USER')

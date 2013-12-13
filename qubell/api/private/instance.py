@@ -12,19 +12,19 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from qubell.api.private import application
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
-__version__ = "1.0.1"
+__version__ = "1.0.5"
 __email__ = "vkhomenko@qubell.com"
 
 import logging as log
 import requests
 import simplejson as json
-from qubell.api.tools import retry
 
+from qubell.api.tools import retry
+from qubell.api.private import application
 
 
 class Instance(application.Application):

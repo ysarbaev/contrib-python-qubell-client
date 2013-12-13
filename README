@@ -4,9 +4,9 @@ Python-qubell-client
 
 Repository contains:
 
-qubellclient/private - library to access qubell via dev api.
+qubell.api/private - library to access qubell via dev api.
 
-qubellclient/tests - tests in python unittests format. Primary goal is to test qubell platform functionality using different api's (now only private)
+qubell.api/tests - tests in python unittests format. Primary goal is to test qubell platform functionality using different api's (now only private)
 
 
 Pre-requisites
@@ -55,11 +55,11 @@ Running tests
 
 Run single test::
 
-    nosetests -s -v qubellclient.tests.instance.test_actions:BasicInstanceActionsTest.test_actions
+    nosetests -s -v qubell.api.tests.instance.test_actions:BasicInstanceActionsTest.test_actions
 
 Run all tests::
 
-    nosetests -s -v qubellclient/tests/
+    nosetests -s -v qubell.api/tests/
 
 or just::
 
@@ -72,9 +72,9 @@ Using client
 
 Create environment
 __________________
-Working example could be found in qubellclient/create_env.py. To use it, setup environment variables (see below) and run it::
+Working example could be found in qubell.api/create_env.py. To use it, setup environment variables (see below) and run it::
 
-	python qubellclient/create_env.py 
+	python qubell.api/create_env.py
 
 
 Building sandboxes
@@ -85,7 +85,7 @@ Organization
 ____________
 Creating organization is simple::
 
-	from qubellclient.private.platform import QubellPlatform, Context
+	from qubell.api.private.platform import QubellPlatform, Context
 
 	context = Context(user="tester@qubell.com", password="password", api="https://api.qubell.com")
 	platform = QubellPlatform(context=context)

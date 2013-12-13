@@ -12,13 +12,10 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from qubell.api.public import instance, revision
-
-
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
-__version__ = "1.0.1"
+__version__ = "1.0.5"
 __email__ = "vkhomenko@qubell.com"
 
 import logging as log
@@ -52,6 +49,8 @@ class Application(Organization):
         raise NotImplementedError
 
     def clean(self):
+        from qubell.api.public import instance, revision
+
         instances = self.instances
         if instances:
             for ins in instances:

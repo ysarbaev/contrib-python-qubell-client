@@ -17,7 +17,7 @@
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
-__version__ = "1.0.1"
+__version__ = "1.0.5"
 __email__ = "vkhomenko@qubell.com"
 
 import logging as log
@@ -26,7 +26,7 @@ import requests
 import simplejson as json
 
 from qubell.api.private.organization import Organization
-from qubell.api.private import exceptions, instance, revision
+from qubell.api.private import exceptions
 
 
 class Application(Organization):
@@ -61,6 +61,8 @@ class Application(Organization):
             return False
 
     def clean(self):
+        from qubell.api.private import instance, revision
+
         instances = self.instances
         if instances:
             for ins in instances:

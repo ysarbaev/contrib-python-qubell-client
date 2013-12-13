@@ -16,7 +16,7 @@
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
-__version__ = "1.0.1"
+__version__ = "1.0.5"
 __email__ = "vkhomenko@qubell.com"
 
 import logging as log
@@ -24,8 +24,8 @@ import logging as log
 import requests
 import simplejson as json
 
-from qubellclient.private.platform import QubellPlatform
-from qubellclient.private import exceptions
+from qubell.api.private.platform import QubellPlatform
+from qubell.api.private import exceptions
 
 
 class Organization(QubellPlatform):
