@@ -142,7 +142,7 @@ Application
 ___________
 We need manifest to create application::
 
-	manifest = Manifest(url="https://raw.github.com/qubell/docs/master/developer/examples/hierarchical-main.yml?login=vasichkin&token=19f0453adcc53ea22ff6def5d78bcf46")
+	manifest = Manifest(url="https://raw.github.com/qubell/contrib-python-qubell-client/master/qm/hierarchical-main.yml")
 
 	# Creating application
 	app = org.application(manifest=manifest, name='first_app')

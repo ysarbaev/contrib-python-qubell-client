@@ -73,8 +73,8 @@ def prepare_env(org):
 
 # Define manifest. We take example from documentation.
 # TODO: make manifests accessible from docs.qubell.com
-app_manifest = Manifest(url="https://raw.github.com/qubell/docs/master/developer/examples/hierarchical-main.yml?login=vasichkin&token=19f0453adcc53ea22ff6def5d78bcf46")
-db_manifest = Manifest(url="https://raw.github.com/qubell/docs/master/developer/examples/hierarchical-db.yml?login=vasichkin&token=58112a2065ad4ec7fbc5a38279947958")
+app_manifest = Manifest(url="https://raw.github.com/qubell/contrib-python-qubell-client/master/qm/hierarchical-main.yml")
+db_manifest = Manifest(url="https://raw.github.com/qubell/contrib-python-qubell-client/master/qm/hierarchical-db.yml")
 
 
 # Initialize our qubell platform

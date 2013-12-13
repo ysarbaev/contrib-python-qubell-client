@@ -1,0 +1,316 @@
+application:
+
+  configuration:
+    input.db-app-fork:                      qubell
+    input.db-app-branch:                    HEAD
+    input.web-app-fork:                     qubell
+    input.web-app-branch:                   HEAD
+    input.app-tier-size:                    "1"
+
+  bindings:
+    - [web.workflow, db]
+
+  interfaces:
+    manage:
+      scale-up:   bind(web.workflow#actions.scale-up)
+      scale-down: bind(web.workflow#actions.scale-down)
+      update:     bind(web.workflow#actions.update)
+    endpoint:
+      url:        bind(web.workflow#result.url)
+      ha:         bind(web.workflow#result.haproxy-url)
+    server:
+      db-hosts:  bind(db#output.db-hosts)
+      app-hosts: bind(web.workflow#result.app-hosts)
+      lb-hosts:  bind(web.workflow#result.lb-hosts)
+    input:
+      db-app-fork:      bind(db#input.app-fork)
+      db-app-branch:    bind(db#input.app-branch)
+      web-app-fork:     bind(web.workflow#input.app-fork)
+      web-app-branch:   bind(web.workflow#input.app-branch)
+      app-tier-size:    bind(web.workflow#input.app-tier-size)
+
+
+  components:
+
+    db:
+      type: reference.Submodule
+      configuration:
+        __locator.application-id: "5213711ee4b00b3e08a97602"
+
+      interfaces:
+        input:
+          app-fork: configuration(string)
+          app-branch: configuration(string)
+        output:
+          db-hosts: publish-signal(list<string>)
+
+    #FRONTEND COMPOSITE
+    web:
+      components:
+        workflow:
+          type: workflow.Instance
+          interfaces:
+            input:   # these are the input parameters that will be available to all workflows within the component
+              app-fork:      configuration(string)
+              app-branch:    configuration(string)
+              app-tier-size: configuration(string)
+            db-input:
+              db-hosts: consume-signal(list<string>)
+            result:  # these are the return values that will be visible on the UI and available for using by other components
+              app-hosts: publish-signal(list<string>)
+              lb-hosts:  publish-signal(list<string>)
+              url: publish-signal(string)
+              haproxy-url: publish-signal(string)
+            actions:
+              scale-up:      receive-command(int app-tier-size, string app-fork, string app-branch => list<string> app-hosts)
+              scale-down:    receive-command(int app-tier-size => list<string> app-hosts)
+              update:        receive-command(string app-fork, string app-branch)
+            keypair-store:
+              get-keypair:         send-command(string id => object privateKey)
+          required: [keypair-store, db-input]
+          configuration:
+            configuration.triggers: {}
+            configuration.workflows:
+              launch:
+                parameters:
+                   - app-tier-size: &app-size
+                      description: Number of servers in app tier
+                   - app-fork: &app-fork
+                      description: Source control fork
+                   - app-branch: &app-branch
+                      description: Source control branch
+                steps:
+                  #environment properties are required to get external db-host
+                  - get-env-props: &getEnvProps
+                      action: getEnvironmentProperties
+                      phase: get-env-props
+                      output:
+                        environment: result
+                  - app-tier: &growApp
+                      action: .compute.grow
+                      phase: growing-app
+                      parameters:
+                          roleName: app-node
+                          quantity: "{$.app-tier-size}"
+                      output:
+                          app-hosts: ips
+                  - lb-tier:
+                      action: .compute.grow
+                      phase: growing-lb
+                      parameters:
+                          roleName: lb-node
+                      output:
+                          lb-hosts: ips
+                  - lb-install:
+                      action: chefrun
+                      precedingPhases: [ growing-lb ]
+                      phase: install-lb
+                      parameters:
+                        roles: [ lb-node ]
+                        runList: ["recipe[haproxy]"]
+                        isSolo: true
+                        recipeUrl: "https://github.com/qubell/cookbooks/raw/0.2/cookbooks.tar.gz"
+                  - app: &appInstall
+                      action: .install.app
+                      precedingPhases: [ growing-lb, growing-app, get-env-props ]
+                      phase: deploy-app
+                      parameters:
+                        db-hosts: "{$.environment.db-input.db-hosts}"
+                        app-hosts: "{$.app-hosts}"
+                        app-fork: "{$.app-fork}"
+                        app-branch: "{$.app-branch}"
+                return:
+                  url:
+                    description: Url to the application
+                    value: "http://{$.lb-hosts[0]}" #check $.lb-tier~hosts[0]
+                  haproxy-url:
+                    description: Url to haproxy stats
+                    value: "http://{$.lb-tier~hosts[0]}:22002/"
+                  app-hosts: &returnAppHosts
+                    value: ${app-hosts}
+                  lb-hosts:
+                    value: ${lb-hosts}
+
+
+              # Scale up stole some steps from, Launch.
+              # Note: Not-using this as macro in launch, allows speed-up provisioning.
+              scale-up:
+                    parameters:
+                        - app-tier-size: *app-size
+                        - app-fork: *app-fork
+                        - app-branch: *app-branch
+
+                    steps:
+                        - get-env-props: *getEnvProps
+                        - app-tier: *growApp
+                        - app: *appInstall
+
+                    return:
+                        app-hosts: *returnAppHosts
+
+              scale-down:
+                    parameters:
+                        - app-tier-size: *app-size
+                    steps:
+                        - shrink-app-tier:
+                            action: destroyVms
+                            parameters:
+                              phase: "destroy"
+                              roleName: app-node
+                              quantity: "{$.app-tier-size}"
+
+                        - setup-lb:
+                            action: .setup.lb
+                            precedingPhases: [ destroy ]
+                            phase: setup-lb
+                            parameters:
+                               app-hosts: "{$.app-hosts}"
+
+                    return:
+                        app-hosts: *returnAppHosts
+
+
+              update:
+                    parameters:
+                        - app-fork: *app-fork
+                        - app-branch: *app-branch
+
+                    steps:
+                        - get-env-props: *getEnvProps
+                        - update-app:
+                            action: .deploy.app
+                            precedingPhases: [ get-env-props ]
+                            parameters:
+                              db-hosts: "{$.environment.db-input.db-hosts}"
+                              app-fork: "{$.app-fork}"
+                              app-branch: "{$.app-branch}"
+
+              .compute.grow:
+                parameters:
+                    - roleName:
+                        default: defaultRole
+                    - quantity:
+                        default: 1
+                    - identity:
+                        default: undefined
+                    - credential:
+                        default: undefined
+                steps:
+                  provision-vms:
+                    action: provisionVms
+                    parameters:
+                       roleName: "{$.roleName}"
+                       hardwareId: m1.small
+                       quantity: "{$.quantity}"
+                       retryCount: 1
+                       jcloudsProvider: aws-ec2
+                       jcloudsEndpoint: https://ec2.us-east-1.amazonaws.com
+                       jcloudsRegions: us-east-1
+                       jcloudsNodeNamePrefix: petclinic
+                       jcloudsIdentity: ${identity}
+                       jcloudsCredential: ${credential}
+                       vmIdentity: ubuntu
+                       imageId: us-east-1/ami-0fac7566
+                       ec2SecurityGroup: default
+                    output:
+                       hosts: ips
+                return:
+                  ips:
+                    value: ${hosts}
+
+
+              destroy:
+                steps:
+                  - destroy:
+                      action: undeployEnv
+
+              .deploy.app:
+                  parameters:
+                    - db-hosts:
+                        description: Database IP address
+                    - app-fork: *app-fork
+                    - app-branch: *app-branch
+                  steps:
+                    - deploy-app:
+                        action: chefrun
+                        phase: deploy-app
+                        parameters:
+                          roles: [ app-node ]
+                          runList: ["recipe[qubell::webapp]"]
+                          isSolo: true
+                          recipeUrl: "https://github.com/qubell/cookbooks/raw/0.2/cookbooks.tar.gz"
+                          jattrs:
+                            scm:
+                              provider: "git"
+                              repository: git://github.com/{$.app-fork}/starter-java-web.git
+                              revision: "{$.app-branch}"
+                            database:
+                              name: "petclinic"
+                              host: "{$.db-hosts}"
+                              user: "petclinic"
+                              password: "petclinic"
+
+              .setup.lb:
+                  parameters:
+                    - app-hosts:
+                        description: Application IP address
+                  steps:
+                    - setup-lb:
+                        action: chefrun
+                        parameters:
+                          roles: [ lb-node ]
+                          runList: ["recipe[qubell::lb]"]
+                          isSolo: true
+                          recipeUrl: "https://github.com/qubell/cookbooks/raw/0.2/cookbooks.tar.gz"
+                          jattrs:
+                            haproxy.rebalance:
+                              nodes: "{$.app-hosts}"
+
+              .install.app:
+                  parameters:
+                    - db-hosts:
+                        description: Database IP address
+                    - app-hosts:
+                        description: Application IP address
+                    - app-fork: *app-fork
+                    - app-branch: *app-branch
+                  steps:
+                    - install-app:
+                        action: chefrun
+                        phase: install-app
+                        parameters:
+                          roles: [ app-node ]
+                          runList: ["recipe[tomcat]"]
+                          isSolo: true
+                          recipeUrl: "https://github.com/qubell/cookbooks/raw/0.2/cookbooks.tar.gz"
+
+                    - deploy:
+                        action: .deploy.app
+                        phase: deploy-app
+                        precedingPhases: [ install-app ]
+                        parameters:
+                          db-hosts: "{$.db-hosts}"
+                          app-fork: "{$.app-fork}"
+                          app-branch: "{$.app-branch}"
+
+                    - setup-lb:
+                        action: .setup.lb
+                        precedingPhases: [ deploy-app ]
+                        phase: setup-lb
+                        parameters:
+                          app-hosts: "{$.app-hosts}"
+
+        wfService:
+          type: reference.Service
+          interfaces:
+            executor:
+              execute-workflow: receive-command(object request => object status => object status)
+              execute-command:  send-command(string interface, string command, map<string, object> arguments => map<string, object> response => map<string, object> response)
+        secureStore:
+          type: reference.Service
+          interfaces:
+            keypair-store:
+              get-keypair:         receive-command(string id => object privateKey)
+      bindings:
+        - [workflow, wfService]
+        - [workflow, secureStore]
