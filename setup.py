@@ -16,14 +16,15 @@ test_requires = [
     ]
 
 setup(name='qubell-api-python-client',
-      version='1.0.1',
+      version='1.0.2',
       description='Qubell platform client library',
       long_description=open('README.rst').read(),
       author='Vasyl Khomenko',
       author_email='vkhomenko@qubell.com',
-      license='LICENSE',
+      license=open('LICENSE').read(),
       url='https://github.com/qubell/contrib-python-qubell-client',
       packages=find_packages(exclude=['tests*']),
+      package_data={'': ['LICENSE', 'README.rst']},
       include_package_data=True,
       install_requires=install_requires,
       tests_require=test_requires,
