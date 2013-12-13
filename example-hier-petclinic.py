@@ -22,9 +22,11 @@ __email__ = "vkhomenko@qubell.com"
 
 """ Example shows how to run hierarchical petclinic using qubellclient """
 
-from qubellclient.private.platform import QubellPlatform, Context
-from qubellclient.private.manifest import Manifest
 import requests
+
+from qubell.api.private.platform import QubellPlatform, Context
+from qubell.api.private.manifest import Manifest
+
 
 # Provide credentials and link to api to use
 context = Context(user="tester@qubell.com", password="password", api="https://api.qubell.com")
@@ -71,8 +73,8 @@ def prepare_env(org):
 
 # Define manifest. We take example from documentation.
 # TODO: make manifests accessible from docs.qubell.com
-app_manifest = Manifest(url="https://raw.github.com/qubell/docs/master/developer/examples/hierarchical-main.yml?login=vasichkin&token=19f0453adcc53ea22ff6def5d78bcf46")
-db_manifest = Manifest(url="https://raw.github.com/qubell/docs/master/developer/examples/hierarchical-db.yml?login=vasichkin&token=58112a2065ad4ec7fbc5a38279947958")
+app_manifest = Manifest(url="https://raw.github.com/qubell/contrib-python-qubell-client/master/qm/hierarchical-main.yml")
+db_manifest = Manifest(url="https://raw.github.com/qubell/contrib-python-qubell-client/master/qm/hierarchical-db.yml")
 
 
 # Initialize our qubell platform

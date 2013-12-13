@@ -21,10 +21,13 @@ __version__ = "1.0.1"
 __email__ = "vkhomenko@qubell.com"
 
 import logging as log
+
 import requests
 import simplejson as json
-from qubellclient.private.organization import Organization
-from qubellclient.private import exceptions
+
+from qubell.api.private.organization import Organization
+from qubell.api.private import exceptions, instance, revision
+
 
 class Application(Organization):
     """
@@ -59,7 +62,6 @@ class Application(Organization):
 
     def clean(self):
         instances = self.instances
-        import instance
         if instances:
             for ins in instances:
                 obj = instance.Instance(context=self.context, id=ins['id'])
@@ -70,7 +72,6 @@ class Application(Organization):
                     assert obj.destroyed(timeout=10)
 
         revisions = self.revisions
-        import revision
         if revisions:
             for rev in revisions:
                 obj = revision.Revision(context=self.context, id=rev['id'])
@@ -125,7 +126,7 @@ class Application(Organization):
         raise exceptions.ApiError('Unable to launch application id: %s, got error: %s' % (self.applicationId, resp.text))
 
     def get_instance(self, id):
-        from qubellclient.private.instance import Instance
+        from qubell.api.private.instance import Instance
         return Instance(context=self.context, id=id)
 
     def delete_instance(self, id):
@@ -133,7 +134,7 @@ class Application(Organization):
         return ins.delete()
 
     def get_revision(self, id):
-        from qubellclient.private.revision import Revision
+        from qubell.api.private.revision import Revision
         self.context.applicationId = self.applicationId
         return Revision(context=self.context, id=id)
 

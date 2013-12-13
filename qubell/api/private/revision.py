@@ -20,10 +20,11 @@ __version__ = "1.0.1"
 __email__ = "vkhomenko@qubell.com"
 
 import logging as log
-import application
-import requests
-from qubellclient.private import exceptions
 
+import requests
+
+import application
+from qubell.api.private import exceptions
 
 
 class Revision(application.Application):
@@ -34,8 +35,6 @@ class Revision(application.Application):
     def __init__(self, context, id):
         self.revisionId = id
         self.context = context
-        my = self.json()
-        self.name = my['name']
 
     def __getattr__(self, key):
         resp = self.json()
@@ -44,17 +43,18 @@ class Revision(application.Application):
         return resp[key] or False
 
     def json(self):
-        url = self.context.api+'/api/1/applications/'+self.context.applicationId+'/revisions'
-        resp = requests.get(url, auth=(self.context.user, self.context.password), verify=False)
+        url = self.context.api+'/organizations/'+self.context.organizationId+'/applications/'+self.context.applicationId+'/revisions/'+self.revisionId+'.json'
+        resp = requests.get(url, cookies=self.context.cookies, verify=False)
         log.debug(resp.text)
         if resp.status_code == 200:
             resp.json()
-            rev = [x for x in resp.json() if x['id'] == self.revisionId]
-            if len(rev)>0:
-                return rev[0]
-            raise exceptions.NotFoundError('Unable to find revision by id: %s' % self.revisionId)
-        raise exceptions.ApiError('Unable to get revision properties, got error: %s' % resp.text)
-
+        raise exceptions.ApiError('Unable to get service properties, got error: %s' % resp.text)
 
     def delete(self):
-        raise NotImplementedError
+        url = self.context.api+'/organizations/'+self.context.organizationId+'/applications/'+self.context.applicationId+'/revisions/'+self.revisionId+'.json'
+        resp = requests.delete(url, cookies=self.context.cookies, verify=False)
+        log.debug(resp.text)
+        self.rawRespose = resp
+        if resp.status_code==200:
+            return True
+        raise exceptions.ApiError('Unable to delete revision, got error: %s' % resp.text)

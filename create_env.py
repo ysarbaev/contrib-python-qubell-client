@@ -17,8 +17,9 @@
 import os
 import sys
 import logging as log
-from qubellclient.private.platform import QubellPlatform, Context
-from qubellclient.private.manifest import Manifest
+from qubell.api.private.platform import QubellPlatform, Context
+from qubell.api.private.manifest import Manifest
+
 
 
 """

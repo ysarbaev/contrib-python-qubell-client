@@ -19,11 +19,10 @@ __license__ = "Apache"
 __version__ = "1.0.1"
 __email__ = "vkhomenko@qubell.com"
 
-
-
 import os
+
 from stories import base
-from qubellclient.private.manifest import Manifest
+from qubell.api.private.manifest import Manifest
 from stories.base import attr
 
 

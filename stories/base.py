@@ -19,14 +19,16 @@ __license__ = "Apache"
 __version__ = "1.0.1"
 __email__ = "vkhomenko@qubell.com"
 
+import os
+import logging as log
+
 import testtools
 import nose.plugins.attrib
-from qubellclient.private.platform import QubellPlatform, Context
+
+from qubell.api.private.platform import QubellPlatform, Context
 from qubellclient.public.platform import QubellPlatform as QubellPlatformPublic
-from qubellclient.private.manifest import Manifest
-import os
+from qubell.api.private.manifest import Manifest
 from qubellclient.tools import rand
-import logging as log
 
 
 user = os.environ.get('QUBELL_USER')
