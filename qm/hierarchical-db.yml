@@ -1,0 +1,137 @@
+application:
+  configuration:
+    input.app-fork:                      qubell
+    input.app-branch:                    HEAD
+  interfaces:
+    input:
+      app-fork: "bind(workflow#input.app-fork)"
+      app-branch: "bind(workflow#input.app-branch)"
+    output:
+      db-hosts: "bind(workflow#result.db-hosts)"
+  components:
+    workflow:
+      type: workflow.Instance
+      interfaces:
+        input:   # these are the input parameters that will be available to all workflows within the component
+          app-fork: configuration(string)
+          app-branch: configuration(string)
+        result:  # these are the return values that will be visible on the UI and available for using by other components
+          db-hosts: publish-signal(list<string>)
+        keypair-store:
+          get-keypair:         send-command(string id => object privateKey)
+      required: [keypair-store]
+      configuration:
+        configuration.triggers: {}
+        # This is the place to put your workflows, note that launch parameters have been moved to the input interface and
+        # configuration
+        configuration.workflows:
+          launch:
+            parameters:
+              - app-fork: &app-fork
+                  description: Source control fork
+              - app-branch: &app-branch
+                  description: Source control branch
+            steps:
+              - db-tier:
+                  action: .compute.grow
+                  parameters:
+                    roleName: db-node
+                  output:
+                    db-hosts: ips
+              - database:
+                  action: .deploy.db
+                  precedingPhases: [ provision ]
+                  phase: deploy-db
+                  parameters:
+                    app-fork: "{$.app-fork}"
+                    app-branch: "{$.app-branch}"
+            return:
+              db-hosts:
+                value: ${db-hosts}
+          .compute.grow:
+            parameters:
+              - roleName:
+                  default: defaultRole
+              - quantity:
+                  default: 1
+              - identity:
+                  default: undefined
+              - credential:
+                  default: undefined
+            steps:
+              provision-vms:
+                action: provisionVms
+                parameters:
+                  roleName: "{$.roleName}"
+                  hardwareId: m1.small
+                  quantity: "{$.quantity}"
+                  retryCount: 1
+                  jcloudsProvider: aws-ec2
+                  jcloudsEndpoint: https://ec2.us-east-1.amazonaws.com
+                  jcloudsRegions: us-east-1
+                  jcloudsNodeNamePrefix: petclinic
+                  jcloudsIdentity: ${identity}
+                  jcloudsCredential: ${credential}
+                  vmIdentity: ubuntu
+                  imageId: us-east-1/ami-0fac7566
+                  ec2SecurityGroup: default
+                output:
+                  hosts: ips
+            return:
+              ips:
+                value: ${hosts}
+          .deploy.db:
+            parameters:
+              - app-fork:
+                  default: undefined
+              - app-branch:
+                  default: undefined
+            steps:
+              - install-database:
+                  action: chefrun
+                  phase: install-db
+                  parameters:
+                    roles: [ db-node ]
+                    runList: ["recipe[mysql::server]"]
+                    isSolo: true
+                    recipeUrl: "https://github.com/qubell/cookbooks/raw/0.2/cookbooks.tar.gz"
+                    jattrs:
+                      mysql:
+                        server_root_password: e653e94ee8d064ec95ef5a1381c87a23
+                        server_repl_password: e653e94ee8d064ec95ef5a1381c87a23
+                        server_debian_password: e653e94ee8d064ec95ef5a1381c87a23
+              - deploy-database:
+                  action: chefrun
+                  phase: deploy-db
+                  precedingPhases: [ install-db ]
+                  parameters:
+                    roles: [ db-node ]
+                    runList: ["recipe[qubell::mysql]"]
+                    isSolo: true
+                    recipeUrl: "https://github.com/qubell/cookbooks/raw/0.2/cookbooks.tar.gz"
+                    jattrs:
+                        database:
+                          name: "petclinic"
+                          user: "jpetstore"
+                          password: "jpetstore"
+                          schema: "https://raw.github.com/{$.app-fork}/starter-java-web/{$.app-branch}/src/main/resources/db/mysql/petclinic-mysql-schema.sql"
+                          data:   "https://raw.github.com/{$.app-fork}/starter-java-web/{$.app-branch}/src/main/resources/db/mysql/petclinic-mysql-dataload.sql"
+          destroy:
+            steps:
+                - destroy:
+                    action: undeployEnv
+    wfService:
+      type: reference.Service
+      interfaces:
+        executor:
+          execute-workflow: receive-command(object request => object status => object status)
+          execute-command:  send-command(string interface, string command, map<string, object> arguments => map<string, object> response => map<string, object> response)
+    secureStore:
+      type: reference.Service
+      interfaces:
+        keypair-store:
+          get-keypair:         receive-command(string id => object privateKey)
+
+  bindings:
+      - [workflow, wfService]
+      - [workflow, secureStore]
