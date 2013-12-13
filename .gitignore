@@ -42,3 +42,9 @@ test_qubell_client
 .DS_Store
 .secure
 .universe
+
+# Idea project files
+*.iml
+*.ipr
+*.iws
+.idea/

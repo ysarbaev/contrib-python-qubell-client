@@ -22,8 +22,8 @@ __email__ = "vkhomenko@qubell.com"
 
 from stories import base
 from stories.base import attr
-from qubellclient.private.manifest import Manifest
-from qubellclient.private.organization import Organization
+from qubell.api.private.manifest import Manifest
+from qubell.api.private.organization import Organization
 
 
 mnf = Manifest(content="""

@@ -12,6 +12,7 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from qubell.api.public import instance, revision
 
 
 __author__ = "Vasyl Khomenko"
@@ -23,8 +24,8 @@ __email__ = "vkhomenko@qubell.com"
 import logging as log
 import requests
 import simplejson as json
-from qubellclient.public.organization import Organization
-from qubellclient.private import exceptions
+from qubell.api.public.organization import Organization
+from qubell.api.private import exceptions
 
 class Application(Organization):
     """
@@ -52,7 +53,6 @@ class Application(Organization):
 
     def clean(self):
         instances = self.instances
-        import instance
         if instances:
             for ins in instances:
                 obj = instance.Instance(context=self.context, id=ins['id'])
@@ -63,7 +63,6 @@ class Application(Organization):
                     assert obj.destroyed(timeout=10)
 
         revisions = self.revisions
-        import revision
         if revisions:
             for rev in revisions:
                 obj = revision.Revision(context=self.context, id=rev['id'])
@@ -112,12 +111,12 @@ class Application(Organization):
         log.debug('RESPONSE: %s' % resp.text)
         if resp.status_code == 200:
             instance_id = resp.json()['id']
-            from qubellclient.public.instance import Instance
+            from qubell.api.public.instance import Instance
             return Instance(context=self.context, id=instance_id)
         raise exceptions.ApiError('Unable to launch application id: %s, got error: %s' % (self.applicationId, resp.text))
 
     def get_instance(self, id):
-        from instance import Instance
+        from qubell.api.public.instance import Instance
         return Instance(context=self.context, id=id)
 
     def delete_instance(self, id):
@@ -125,7 +124,7 @@ class Application(Organization):
         return ins.delete()
 
     def get_revision(self, id):
-        from revision import Revision
+        from qubell.api.public.revision import Revision
         self.context.applicationId = self.applicationId
         return Revision(context=self.context, id=id)
 

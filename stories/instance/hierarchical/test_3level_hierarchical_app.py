@@ -19,13 +19,12 @@ __license__ = "Apache"
 __version__ = "1.0.1"
 __email__ = "vkhomenko@qubell.com"
 
-from time import sleep
+import os
 
 from stories import base
 from stories.base import attr
-from qubellclient.private.manifest import Manifest
-from qubellclient.private.instance import Instance
-import os
+from qubell.api.private.manifest import Manifest
+from qubell.api.private.instance import Instance
 
 
 class ThreeLevelHierarchicalAppTest(base.BaseTestCase):

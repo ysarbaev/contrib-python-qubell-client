@@ -15,14 +15,14 @@ test_requires = [
     'nose',
     ]
 
-setup(name='qubellclient',
+setup(name='qubell-api-python-client',
       version='0.1',
       description='Qubell platform client library',
       long_description=open('README.rst').read(),
       author='Vasyl Khomenko',
       author_email='vkhomenko@qubell.com',
       license='LICENSE',
-      url='https://github.com/vasichkin/contrib-python-qubell-client',
+      url='https://github.com/qubell/contrib-python-qubell-client',
       packages=find_packages(exclude=['tests*']),
       include_package_data=True,
       install_requires=install_requires,

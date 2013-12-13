@@ -19,11 +19,14 @@ __license__ = "Apache"
 __version__ = "1.0.1"
 __email__ = "vkhomenko@qubell.com"
 
-import requests
 import logging as log
-from qubellclient.private.organization import Organization
-from qubellclient.private import exceptions
+
+import requests
 import simplejson as json
+
+from qubell.api.private.organization import Organization
+from qubell.api.private import exceptions
+
 
 class Environment(Organization):
 

@@ -20,12 +20,13 @@ __version__ = "1.0.1"
 __email__ = "vkhomenko@qubell.com"
 
 import logging as log
-import application
+
 import requests
 import simplejson as json
-from qubellclient.private import exceptions
-from qubellclient.tools import retry
 
+import application
+from qubell.api.private import exceptions
+from qubellclient.tools import retry
 
 
 class Instance(application.Application):

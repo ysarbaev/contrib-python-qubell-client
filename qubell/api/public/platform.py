@@ -20,49 +20,32 @@ __version__ = "1.0.1"
 __email__ = "vkhomenko@qubell.com"
 
 import logging as log
+
 import requests
-import simplejson as json
-from qubellclient.private import exceptions
+
+from qubell.api.private import exceptions
+
 
 class QubellPlatform(object):
-
 
     def __init__(self, context, *args, **kwargs):
         self.context = context
 
     def authenticate(self):
-        url = self.context.api+'/signIn'
-        data = {
-            'email': self.context.user,
-            'password': self.context.password}
-        # Use session to eliminate accidental falls
-        rsession = requests.Session()
-        rsession.post(url=url, data=data, verify=False)
-        self.context.cookies = rsession.cookies
-        rsession.close()
-        if 'PLAY_SESSION' in self.context.cookies:
+        url = self.context.api+'/api/1/organizations'
+        resp = requests.get(url, auth=(self.context.user, self.context.password), verify=False)
+        log.debug(resp.text)
+        if 200 == resp.status_code:
             return True
         else:
             return False
 
-    def get_context(self):
-        return self.context
-
     def create_organization(self, name):
-        log.info("Creating organization: %s" % name)
-        url = self.context.api+'/organizations.json'
-        headers = {'Content-Type': 'application/json'}
-        payload = json.dumps({'editable': 'true',
-                              'name': name})
-        resp = requests.post(url, cookies=self.context.cookies, data=payload, verify=False, headers=headers)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return self.get_organization(resp.json()['id'])
-        raise exceptions.ApiError('Unable to create organization %s, got error: %s' % (name, resp.text))
+        raise NotImplementedError
 
     def get_organization(self, id):
         log.info("Picking organization: %s" % id)
-        from qubellclient.private.organization import Organization
+        from qubell.api.public.organization import Organization
         return Organization(self.context, id=id)
 
     def organization(self, id=None, name=None):
@@ -82,12 +65,12 @@ class QubellPlatform(object):
                 return self.create_organization(name)
 
     def list_organizations(self):
-        url = self.context.api+'/organizations.json'
-        resp = requests.get(url, cookies=self.context.cookies, verify=False)
+        url = self.context.api+'/api/1/organizations'
+        resp = requests.get(url, auth=(self.context.user, self.context.password), verify=False)
         log.debug(resp.text)
-        if resp.status_code == 200:
+        if 200 == resp.status_code:
             return resp.json()
-        raise exceptions.ApiError('Unable to get organizations list, got error: %s' % resp.text)
+        raise exceptions.ApiError('Unable to list organization, got error: %s' % resp.text)
 
 
     def rename_organization(self):
