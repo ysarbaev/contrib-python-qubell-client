@@ -16,7 +16,7 @@
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
-__version__ = "1.0.1"
+__version__ = "1.0.5"
 __email__ = "vkhomenko@qubell.com"
 
 import logging as log
@@ -24,9 +24,8 @@ import logging as log
 import requests
 import simplejson as json
 
-import application
-from qubell.api.private import exceptions
-from qubellclient.tools import retry
+from qubell.api.public import application, exceptions
+from qubell.api.tools import retry
 
 
 class Instance(application.Application):

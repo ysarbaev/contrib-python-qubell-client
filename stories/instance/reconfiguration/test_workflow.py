@@ -20,13 +20,13 @@ import os
 from stories import base
 from stories.base import attr
 from qubell.api.private.manifest import Manifest
-from qubellclient.tools import retry
+from qubell.api.tools import retry
 
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
-__version__ = "1.0.1"
+__version__ = "1.0.5"
 __email__ = "vkhomenko@qubell.com"
 
 

@@ -9,7 +9,7 @@ To add test, find existing test class that fits use-case or create new.
 
 Hello-world test::
 
-import qubellclient.tests.base as base
+import qubell.api.tests.base as base
 
 
 class FirstTest(base.BaseTestCasePrivate):
@@ -34,9 +34,9 @@ This test creates application, and launches instance. Waits until it 'Running', 
 Previous test could be written in more convenient way, using setups and teardowns::
 
 	import os
-	import qubellclient.tests.base as base
-	from qubellclient.private.manifest import Manifest
-	from qubellclient.tests.base import attr
+	import qubell.api.tests.base as base
+	from qubell.api.private.manifest import Manifest
+	from qubell.api.tests.base import attr
 
 
 	class BasicInstanceActionsTest(base.BaseTestCasePrivate):
