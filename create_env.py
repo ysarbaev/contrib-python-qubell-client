@@ -164,4 +164,12 @@ application:
         print "creating app: %s" % app
         org.application(name=app, manifest=manifest)
 
+    env = org.environment(name='default')
+    env.markerAdd('has-internet-access')
+    env.propertyAdd(name='sample-property-green', type='int', value='42')
+    env.propertyAdd(name='sample-property-red', type='string', value='sample-property red')
+    policy = {'action': 'provisionVms',
+              'parameter': 'vmIdentity',
+              'value': 'ubuntu'}
+    env.policyAdd(policy)
 start()
