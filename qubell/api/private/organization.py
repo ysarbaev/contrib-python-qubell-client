@@ -16,7 +16,7 @@
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
-__version__ = "1.0.6"
+__version__ = "1.0.8"
 __email__ = "vkhomenko@qubell.com"
 
 import logging as log
@@ -96,7 +96,12 @@ class Organization(QubellPlatform):
             appz = [app for app in self.list_applications() if app['name'] == name]
             # app found by name
             if len(appz):
-                return self.get_application(appz[0]['id']) # pick first
+                app = self.get_application(appz[0]['id']) # pick first
+                if manifest:
+                    app.upload(manifest)
+                    return self.get_application(app.applicationId)
+                else:
+                    return app
             else:
                 return self.create_application(name, manifest)
         else:

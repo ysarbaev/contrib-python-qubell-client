@@ -16,7 +16,7 @@
 __author__ = "Anton Panasenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
-__version__ = "1.0.6"
+__version__ = "1.0.8"
 __email__ = "apanasenko@qubell.com"
 
 import unittest
@@ -36,17 +36,17 @@ def values(names):
             instance = args[1]
 
             def findReturnValues(rvalues):
-                for value in rvalues.keys():
-                    if isinstance(rvalues[value], dict):
-                        findReturnValues(rvalues[value])
-                    elif isinstance(rvalues[value], unicode):
-                        v = yaml.load(rvalues[value])
-                        if not isinstance(v, dict) and value in names.keys():
-                            kwargs.update({names[value]: rvalues[value]})
-                        elif isinstance(v, dict):
-                            findReturnValues(v)
-                    elif value in names.keys():
-                        kwargs.update({names[value]: rvalues[value]})
+                for k, v in rvalues.iteritems():
+                    if isinstance(v, dict):
+                        findReturnValues(v)
+                    elif isinstance(v, unicode):
+                        value = yaml.load(v)
+                        if not isinstance(value, dict) and k in names.keys():
+                            kwargs.update({names[k]: value})
+                        elif isinstance(value, dict):
+                            findReturnValues(value)
+                    elif k in names.keys():
+                        kwargs.update({names[k]: v})
 
             findReturnValues(instance.returnValues)
 
@@ -200,7 +200,7 @@ class SandBox(object):
         provider["id"] = cloud.providerId
 
     def __application(self, app):
-        manifest = Manifest(url=app["url"])
+        manifest = Manifest(**{k: v for k, v in app.iteritems() if k in ["content", "url", "file"]})
         application = self.organization.application(manifest=manifest, name=app["name"])
         app["id"] = application.applicationId
 

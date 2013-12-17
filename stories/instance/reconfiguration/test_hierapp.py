@@ -16,7 +16,7 @@
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
-__version__ = "1.0.6"
+__version__ = "1.0.8"
 __email__ = "vkhomenko@qubell.com"
 
 import os
