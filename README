@@ -4,16 +4,10 @@ Python-qubell-client
 
 Repository contains:
 
-<<<<<<< Updated upstream:README
-qubell.api/private - library to access qubell via dev api.
-
-qubell.api/tests - tests in python unittests format. Primary goal is to test qubell platform functionality using different api's (now only private)
-=======
 qubell/api/private - library to access qubell via dev (non-stable) api.
 qubell/api/public - library to access qubell via public (stable) api.
 
 stories - tests in python unittests format. Primary goal is to test qubell platform functionality using different api's
->>>>>>> Stashed changes:README.rst
 
 
 Pre-requisites
@@ -44,7 +38,8 @@ QUBELL_API - url to qubell platform
 QUBELL_ORG - name of organization to use. Will be created if not exists.
 
 If you atend to create environment, you will also need:
-PROVIDER, REGION, JCLOUDS_IDENTITY, JCLOUDS_CREDENTIALS - credentials for amazon ec2. (will create provider)
+PROVIDER, REGION, JCLOUDS_IDENTITY, JCLOUDS_CREDENTIALS - credentials for amazon ec2. (to create provider)
+By default Amazon ec2 used (in us-east zone)
 
 ::
 
@@ -60,6 +55,10 @@ PROVIDER, REGION, JCLOUDS_IDENTITY, JCLOUDS_CREDENTIALS - credentials for amazon
 Running tests
 =============
 
+First you need prepare environment (create provider, services, etc) It could be done via portal or by running script::
+
+    python create_env.py
+
 Run single test::
 
     nosetests -s -v stories.instance.test_actions:BasicInstanceActionsTest.test_workflow_launch
@@ -72,19 +71,22 @@ or just::
 
     nosetests
 
+
 Using client
 ============
 
-Create environment
-__________________
-Working example could be found in qubell.api/create_env.py. To use it, setup environment variables (see below) and run it::
 
-	python qubell.api/create_env.py
+Creating environment
+__________________
+Package contains script to setup environment in qubell platform. To use it, set environment variables (see below) and run it::
+
+	python create_env.py
 
 
 Building sandboxes
 __________________
 Sandboxes in qubell platform could be created on different levels. Maximum isolated sandbox could be achieved by separate organization (with it's own environments, users and application). 
+
 
 Organization
 ____________
@@ -98,7 +100,13 @@ Creating organization is simple::
 
 After executing this code, organization "test-org" would be created (if not exists) or initialized (if exists)
 
-Now we need to create environment in organization.
+    try:
+        org = platform.get_organization(id="123")
+    except:
+        org = platform.create_organization(name="test-org")
+
+Or you can create organization using this code.
+
 
 Environment
 ___________
@@ -151,6 +159,12 @@ We need manifest to create application::
 
 	# Creating application
 	app = org.application(manifest=manifest, name='first_app')
+
+or
+    try:
+        app = org.get_application(id="111")
+    except:
+        org.create_application(manifest=manifest, name='first_app')
 
 
 Application would be crated.
