@@ -48,3 +48,5 @@ test_qubell_client
 *.ipr
 *.iws
 .idea/
+test_qubell_client
+contrib-cli-launcher

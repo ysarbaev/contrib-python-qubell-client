@@ -4,9 +4,16 @@ Python-qubell-client
 
 Repository contains:
 
+<<<<<<< Updated upstream:README
 qubell.api/private - library to access qubell via dev api.
 
 qubell.api/tests - tests in python unittests format. Primary goal is to test qubell platform functionality using different api's (now only private)
+=======
+qubell/api/private - library to access qubell via dev (non-stable) api.
+qubell/api/public - library to access qubell via public (stable) api.
+
+stories - tests in python unittests format. Primary goal is to test qubell platform functionality using different api's
+>>>>>>> Stashed changes:README.rst
 
 
 Pre-requisites
@@ -36,8 +43,8 @@ QUBELL_USER, QUBELL_PASSWORD - user to access qubell
 QUBELL_API - url to qubell platform
 QUBELL_ORG - name of organization to use. Will be created if not exists.
 
+If you atend to create environment, you will also need:
 PROVIDER, REGION, JCLOUDS_IDENTITY, JCLOUDS_CREDENTIALS - credentials for amazon ec2. (will create provider)
-QUBELL_NEW - if you want to create new environment while tests run
 
 ::
 
@@ -55,17 +62,15 @@ Running tests
 
 Run single test::
 
-    nosetests -s -v qubell.api.tests.instance.test_actions:BasicInstanceActionsTest.test_actions
+    nosetests -s -v stories.instance.test_actions:BasicInstanceActionsTest.test_workflow_launch
 
 Run all tests::
 
-    nosetests -s -v qubell.api/tests/
+    nosetests -s -v stories
 
 or just::
 
     nosetests
-
-
 
 Using client
 ============
