@@ -40,7 +40,16 @@ def values(names):
                     if isinstance(v, dict):
                         findReturnValues(v)
                     elif isinstance(v, unicode):
-                        value = yaml.load(v)
+                        #TODO fix return values
+                        try:
+                            value = yaml.safe_load(v)
+                        except Exception:
+                            import re
+                            try:
+                                value = yaml.safe_load(re.sub(r': ([:/?a-zA-Z_0-9-\.]+)', r': "\1"', v))
+                            except Exception:
+                                value = None
+
                         if not isinstance(value, dict) and k in names.keys():
                             kwargs.update({names[k]: value})
                         elif isinstance(value, dict):
