@@ -92,10 +92,10 @@ Organization
 ____________
 Creating organization is simple::
 
-	from qubell.api.private.platform import QubellPlatform, Context
+	from qubell.api.private.platform import QubellPlatform, Auth
 
-	context = Context(user="tester@qubell.com", password="password", api="https://api.qubell.com")
-	platform = QubellPlatform(context=context)
+	auth = Auth(user="tester@qubell.com", password="password", tenant="https://api.qubell.com")
+	platform = QubellPlatform(auth=auth)
 	org = platform.organization(name="test-org")
 
 After executing this code, organization "test-org" would be created (if not exists) or initialized (if exists)
