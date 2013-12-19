@@ -32,7 +32,7 @@ from qubell.api.private import exceptions
 class Service(Organization):
 
     def __init__(self, context, id):
-        self.context = context
+        self.auth = context
         self.serviceId = id
         my = self.json()
         self.name = my['name']
@@ -46,8 +46,8 @@ class Service(Organization):
         return resp[key] or False
 
     def json(self):
-        url = self.context.api+'/api/1/services/'+self.serviceId
-        resp = requests.get(url, auth=(self.context.user, self.context.password), verify=False)
+        url = self.auth.api+'/api/1/services/'+self.serviceId
+        resp = requests.get(url, auth=(self.auth.user, self.auth.password), verify=False)
         log.debug(resp.text)
         if resp.status_code == 200:
             return resp.json()
@@ -58,12 +58,12 @@ class Service(Organization):
         raise NotImplementedError
 
     def modify(self, parameters):
-        url = self.context.api+'/api/1/services/'+self.serviceId
+        url = self.auth.api+'/api/1/services/'+self.serviceId
         headers = {'Content-Type': 'application/json'}
         payload = {#'id': self.serviceId,
                    'name': self.name,
                    'parameters': parameters}
-        resp = requests.put(url, auth=(self.context.user, self.context.password), data=json.dumps(payload), verify=False, headers=headers)
+        resp = requests.put(url, auth=(self.auth.user, self.auth.password), data=json.dumps(payload), verify=False, headers=headers)
         log.debug(resp.request.body)
         log.debug(resp.text)
         if resp.status_code == 200:

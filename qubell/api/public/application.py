@@ -37,9 +37,9 @@ class Application(Organization):
         return ret
 
     def __init__(self, context, id):
-        self.context = context
+        self.auth = context
         self.applicationId = id
-        self.context.applicationId = id
+        self.auth.applicationId = id
 
         my = self.json()
         self.name = my['name']
@@ -54,7 +54,7 @@ class Application(Organization):
         instances = self.instances
         if instances:
             for ins in instances:
-                obj = instance.Instance(context=self.context, id=ins['id'])
+                obj = instance.Instance(context=self.auth, id=ins['id'])
                 st = obj.status
                 if st not in ['Destroyed', 'Destroying', 'Launching', 'Executing']: # Tests could fail and we can get any statye here
                     log.info("Destroying instance %s" % obj.name)
@@ -64,13 +64,13 @@ class Application(Organization):
         revisions = self.revisions
         if revisions:
             for rev in revisions:
-                obj = revision.Revision(context=self.context, id=rev['id'])
+                obj = revision.Revision(context=self.auth, id=rev['id'])
                 obj.delete()
         return True
 
     def json(self, key=None):
-        url = self.context.api+'/api/1/organizations/'+self.context.organizationId+'/applications'
-        resp = requests.get(url, auth=(self.context.user, self.context.password), verify=False)
+        url = self.auth.api+'/api/1/organizations/'+self.auth.organizationId+'/applications'
+        resp = requests.get(url, auth=(self.auth.user, self.auth.password), verify=False)
         log.debug(resp.text)
         if resp.status_code == 200:
             org = [x for x in resp.json() if x['id'] == self.applicationId]
@@ -87,9 +87,9 @@ class Application(Organization):
 
     def upload(self, manifest):
         log.info("Uploading manifest")
-        url = self.context.api+'/api/1/applications/'+self.applicationId+'/manifest'
+        url = self.auth.api+'/api/1/applications/'+self.applicationId+'/manifest'
         headers = {'Content-Type': 'application/x-yaml'}
-        resp = requests.put(url, auth=(self.context.user, self.context.password), data=manifest.content, verify=False, headers=headers)
+        resp = requests.put(url, auth=(self.auth.user, self.auth.password), data=manifest.content, verify=False, headers=headers)
         log.debug(resp.text)
         if resp.status_code == 200:
             self.manifest = manifest
@@ -97,12 +97,12 @@ class Application(Organization):
         raise exceptions.ApiError('Unable to upload manifest to application id: %s, got error: %s' % (self.applicationId, resp.text))
 
     def launch(self, **argv):
-        url = self.context.api+'/api/1/applications/'+self.applicationId+'/launch'
+        url = self.auth.api+'/api/1/applications/'+self.applicationId+'/launch'
         headers = {'Content-Type': 'application/json'}
         #if not 'environmentId' in argv.keys():
         #    argv['environmentId'] = self.context.environmentId
         data = json.dumps(argv)
-        resp = requests.post(url, auth=(self.context.user, self.context.password), data=data, verify=False, headers=headers)
+        resp = requests.post(url, auth=(self.auth.user, self.auth.password), data=data, verify=False, headers=headers)
 
         log.debug('--- APPLICATION LAUNCH REQUEST ---')
         log.debug('REQUEST HEADERS: %s' % resp.request.headers)
@@ -115,7 +115,7 @@ class Application(Organization):
 
     def get_instance(self, id):
         from qubell.api.public.instance import Instance
-        return Instance(context=self.context, id=id)
+        return Instance(context=self.auth, id=id)
 
     def delete_instance(self, id):
         ins = self.get_instance(id)
@@ -123,13 +123,13 @@ class Application(Organization):
 
     def get_revision(self, id):
         from qubell.api.public.revision import Revision
-        self.context.applicationId = self.applicationId
-        return Revision(context=self.context, id=id)
+        self.auth.applicationId = self.applicationId
+        return Revision(context=self.auth, id=id)
 
 
     def list_revisions(self):
-        url = self.context.api+'/api/1/applications/'+self.applicationId+'/revisions'
-        resp = requests.get(url, auth=(self.context.user, self.context.password), verify=False)
+        url = self.auth.api+'/api/1/applications/'+self.applicationId+'/revisions'
+        resp = requests.get(url, auth=(self.auth.user, self.auth.password), verify=False)
         log.debug(resp.text)
         if resp.status_code == 200:
             return resp.json()

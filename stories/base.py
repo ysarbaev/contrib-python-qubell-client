@@ -25,7 +25,7 @@ import logging as log
 import testtools
 import nose.plugins.attrib
 
-from qubell.api.private.platform import QubellPlatform, Context
+from qubell.api.private.platform import QubellPlatform, Auth
 from qubell.api.public.platform import QubellPlatform as QubellPlatformPublic
 from qubell.api.private.manifest import Manifest
 from qubell.api.tools import rand
@@ -66,11 +66,11 @@ class BaseTestCase(testtools.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.prefix = prefix or rand()
-        cls.context = Context(user=user, password=password, api=api)
+        cls.context = Auth(user=user, password=password, tenant=api)
         cls.context_public = cls.context
 
     # Initialize platform and check access
-        cls.platform = QubellPlatform(context=cls.context)
+        cls.platform = QubellPlatform(cls.context)
         assert cls.platform.authenticate()
 
         cls.platform_public = QubellPlatformPublic(context=cls.context_public)

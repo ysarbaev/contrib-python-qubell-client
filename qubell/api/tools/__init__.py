@@ -22,6 +22,7 @@ __email__ = "vkhomenko@qubell.com"
 from random import randrange
 import time
 import os
+import logging as log
 
 def rand():
     return str(randrange(1000, 9999))
@@ -48,3 +49,31 @@ def retry(tries=5, delay=3, backoff=2):
             return False
         return f_retry
     return deco_retry
+
+def waitForStatus(instance, final='Running', accepted=['Requested'], timeout=[20, 10, 1]):
+    log.debug('Waiting status: %s' % final)
+    import time #TODO: We have to wait, because privious status takes time to change to new one
+    time.sleep(10)
+    @retry(*timeout) # ask status 20 times every 10 sec.
+    def waiter():
+        cur_status = instance.status
+        if cur_status in final:
+            log.info('Got status: %s, continue' % cur_status)
+            return True
+        elif cur_status in accepted:
+            log.info('Current status: %s, waiting...' % cur_status)
+            return False
+        else:
+            log.error('Got unexpected instance status: %s' % cur_status)
+            return True # Let retry exit
+
+    waiter()
+    # We here, means we reached timeout or got status we are waiting for.
+    # Check it again to be sure
+
+    cur_status = instance.status
+    log.info('Final status: %s' % cur_status)
+    if cur_status in final:
+        return True
+    else:
+        return False
