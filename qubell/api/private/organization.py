@@ -24,18 +24,18 @@ import logging as log
 import requests
 import simplejson as json
 
-from qubell.api.private.platform import QubellPlatform
+from qubell.api.private.manifest import Manifest
 from qubell.api.private import exceptions
 
 
 class Organization(object):
 
     def __init__(self, auth, id):
-        self.applications = {}
-        self.environments = {}
-        self.services = {}
-        self.providers = {}
-        self.zones = {}
+        self.applications = []
+        self.environments = []
+        self.services = []
+        self.providers = []
+        self.zones = []
 
         self.organizationId = id
         self.auth = auth
@@ -55,6 +55,20 @@ class Organization(object):
             return resp.json()
         raise exceptions.ApiError('Unable to get organization by id %s, got error: %s' % (self.organizationId, resp.text))
 
+    def restore(self, config):
+        for serv in config.pop('services',[]):
+            self.get_or_create_service(id=serv.pop('id', None), name=serv.pop('name'), type=serv.pop('type', None))
+        for prov in config.get('providers', []):
+            self.get_or_create_provider(id=prov.pop('id', None), name=prov.pop('name'), parameters=prov)
+        for env in config.pop('environments',[]):
+            restored_env = self.get_or_create_environment(id=env.pop('id', None), name=env.pop('name', 'default'),zone=env.pop('zone', None), default=env.pop('default', False))
+            restored_env.clean()
+            restored_env.restore(env)
+        for app in config.pop('applications'):
+            mnf = app.pop('manifest', None)
+            restored_app = self.get_or_create_application(id=app.pop('id', None), manifest=Manifest(**mnf), name=app.pop('name'))
+            restored_app.restore(app)
+
 ### APPLICATION
     def create_application(self, name, manifest):
         log.info("Creating application: %s" % name)
@@ -63,14 +77,16 @@ class Organization(object):
         resp = requests.post(url, files={'path': manifest.content}, data={'manifestSource': 'upload', 'name': name}, verify=False, cookies=self.auth.cookies)
         log.debug(resp.text)
         if resp.status_code == 200:
-            return self.get_application(resp.json()['id'])
+            app = self.get_application(resp.json()['id'])
+            app.manifest = manifest
+            return app
         raise exceptions.ApiError('Unable to create application %s, got error: %s' % (name, resp.text))
 
     def get_application(self, id):
         log.info("Picking application: %s" % id)
         from qubell.api.private.application import Application
         app = Application(auth=self.auth, organization=self, id=id)
-        self.applications.update({app.name:app})
+        self.applications.append(app)
         return app
 
     def list_applications(self):
@@ -148,7 +164,7 @@ class Organization(object):
         log.info("Picking service: %s" % id)
         from qubell.api.private.service import Service
         serv = Service(self.auth, organization=self, id=id)
-        self.services.update({serv.name:serv})
+        self.services.append(serv)
         return serv
 
     def list_services(self):
@@ -218,7 +234,7 @@ class Organization(object):
     def get_environment(self, id):
         from qubell.api.private.environment import Environment
         env = Environment(self.auth, self, id)
-        self.environments.update({env.name:env})
+        self.environments.append(env)
         return env
 
     def delete_environment(self, id):
@@ -243,6 +259,14 @@ class Organization(object):
 
     def environment(self, id=None, name=None, zone=None, default=False):
         return self.get_or_create_environment(id=id, name=name, zone=zone, default=default)
+
+    def get_default_environment(self):
+        envs = self.list_environments()
+        defaults = [x for x in envs if x['isDefault']==True]
+        if len(defaults):
+            envId = defaults[0]['id'] # If we had several default environments, pick first
+            return self.get_environment(id=envId)
+        raise exceptions.NotFoundError('Unable to get default environment')
 
     def set_default_environment(self, id):
         url = self.auth.api+'/organizations/'+self.organizationId+'/defaultEnvironment.json'
@@ -279,7 +303,7 @@ class Organization(object):
     def get_provider(self, id):
         from qubell.api.private.provider import Provider
         prov = Provider(self.auth, organization=self, id=id)
-        self.providers.update({prov.name:prov})
+        self.providers.append(prov)
         return prov
 
     def delete_provider(self, id):
@@ -323,7 +347,7 @@ class Organization(object):
     def get_zone(self, id):
         from qubell.api.private.zone import Zone
         zone = Zone(self.auth, organization=self, id=id)
-        self.zones.update({zone.name:zone})
+        self.zones.append(zone)
         return zone
 
     def get_default_zone(self):

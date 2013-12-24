@@ -35,21 +35,29 @@ class Application(object):
     """
 
     def __init__(self, organization, auth, id):
-        self.instances = {}
-        self.revisions = {}
+        self.instances = []
+        self.revisions = []
         self.auth = auth
         self.organization = organization
         self.applicationId = id
+        self.defaultEnvironment = self.organization.get_default_environment()
 
         my = self.json()
         self.name = my['name']
-        self.manifest = my['manifest']
+
 
     def __parse(self, values):
         ret = {}
         for val in values:
             ret[val['id']] = val['value']
         return ret
+
+    def restore(self, config):
+        for instance in config.pop('instances',[]):
+            launched = self.get_or_launch_instance(id=instance.pop('id', None), name=instance.pop('name'), **instance)
+            assert launched.ready()
+
+        #TODO: Think how to restore revisions
 
     def delete(self):
         log.info("Removing application: %s" % self.name)
@@ -96,11 +104,14 @@ class Application(object):
         return resp[key] or False
 
 # INSTANCE
-    def launch(self, **argv):
+    def launch(self, environment=None, **argv):
         url = self.auth.api+'/organizations/'+self.organization.organizationId+'/applications/'+self.applicationId+'/launch.json'
         headers = {'Content-Type': 'application/json'}
-        if not 'environmentId' in argv.keys():
-            argv['environmentId'] = self.auth.environmentId
+        if environment:
+            argv['environmentId'] = environment.environmentId
+        elif not 'environmentId' in argv.keys():
+            argv['environmentId'] = self.defaultEnvironment.environmentId
+
         data = json.dumps(argv)
         resp = requests.post(url, cookies=self.auth.cookies, data=data, verify=False, headers=headers)
 
@@ -117,13 +128,19 @@ class Application(object):
     def get_instance(self, id):
         from qubell.api.private.instance import Instance
         instance = Instance(auth=self.auth, application=self, id=id)
-        self.instances.update({instance.name:instance})
+        self.instances.append(instance)
         return instance
 
     def delete_instance(self, id):
-        ins = self.get_instance(id)
-        del self.instances[ins.name]
-        return ins.delete()
+        instance = self.get_instance(id)
+        del self.instances[instance]
+        return instance.delete()
+
+    def get_or_launch_instance(self, id=None, **kwargs):
+        if id:
+            return self.get_instance(id)
+        else:
+            return self.launch(**kwargs)
 
 # REVISION
     def get_revision(self, id):

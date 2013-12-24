@@ -34,15 +34,40 @@ class Environment(object):
         self.environmentId = id
         self.auth = auth
         self.organization = organization
-        self.auth.environmentId = self.environmentId
         my = self.json()
         self.name = my['name']
+        self.services = []
+        self.policies = []
+        self.markers = []
+        self.properties = []
+        self.providers = []
 
     def __getattr__(self, key):
         resp = self.json()
         if not resp.has_key(key):
             raise exceptions.NotFoundError('Cannot get property %s' % key)
         return resp[key] or False
+
+    def restore(self, config):
+        for marker in config.pop('markers', []):
+            self.markerAdd(marker)
+        for policy in config.pop('policies', []):
+            self.policyAdd(policy)
+        for property in config.pop('properties', []):
+            self.propertyAdd(**property)
+        for provider in config.pop('providers', []):
+            prov = self.organization.get_or_create_provider(id=provider.pop('id', None), name=provider.pop('name'), parameters=provider)
+            self.providerAdd(prov)
+        for service in config.pop('services', []):
+            serv = self.organization.get_or_create_service(id=service.pop('id', None), name=service.pop('name'), type=service.pop('type', None))
+            self.serviceAdd(serv)
+            if serv.type == 'builtin:cobalt_secure_store':
+                # TODO: We do not need to regenerate key every time. Find better way.
+                myenv = self.organization.get_environment(self.environmentId)
+                myenv.policyAdd(
+                    {"action": "provisionVms",
+                     "parameter": "publicKeyId",
+                     "value": serv.regenerate()['id']})
 
     def json(self):
         url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'.json'
@@ -81,6 +106,7 @@ class Environment(object):
         resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
         log.debug(resp.text)
         if resp.status_code == 200:
+            self.services.append(service)
             return resp.json()
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 
@@ -96,6 +122,7 @@ class Environment(object):
         resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
         log.debug(resp.text)
         if resp.status_code == 200:
+            self.services.pop(service)
             return resp.json()
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 
@@ -109,6 +136,7 @@ class Environment(object):
         resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
         log.debug(resp.text)
         if resp.status_code == 200:
+            self.markers.append(marker)
             return resp.json()
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 
@@ -123,9 +151,9 @@ class Environment(object):
         resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
         log.debug(resp.text)
         if resp.status_code == 200:
+            self.markers.pop(marker)
             return resp.json()
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
-
 
 
     def propertyAdd(self, name, type, value):
@@ -138,6 +166,7 @@ class Environment(object):
         resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
         log.debug(resp.text)
         if resp.status_code == 200:
+            self.properties.append({'name': name, 'type': type, 'value': value})
             return resp.json()
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 
@@ -155,6 +184,8 @@ class Environment(object):
         resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
         log.debug(resp.text)
         if resp.status_code == 200:
+            # TODO: make removal
+            #self.properties.pop(name)
             return resp.json()
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 
@@ -175,9 +206,6 @@ class Environment(object):
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 
 
-    def __getattr__(self, item):
-        return self.json()[item]
-
     def policyAdd(self, new):
         data = self.json()
         data['policies'].append(new)
@@ -188,6 +216,7 @@ class Environment(object):
         resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
         log.debug(resp.text)
         if resp.status_code == 200:
+            self.policies.append(new)
             return resp.json()
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 
@@ -202,6 +231,7 @@ class Environment(object):
         resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
         log.debug(resp.text)
         if resp.status_code == 200:
+            self.providers.append(provider)
             return resp.json()
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 

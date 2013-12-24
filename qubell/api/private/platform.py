@@ -29,7 +29,7 @@ from qubell.api.private import exceptions
 class QubellPlatform(object):
 
     def __init__(self, auth):
-        self.organizations = {}
+        self.organizations = []
         self.auth = auth
         self.user = auth.user
         self.password = auth.password
@@ -69,7 +69,7 @@ class QubellPlatform(object):
         log.info("Picking organization: %s" % id)
         from qubell.api.private.organization import Organization
         org = Organization(self.auth, id=id)
-        self.organizations.update({org.name:org})
+        self.organizations.append(org)
         return org
 
     def get_or_create_organization(self, id=None, name=None):
@@ -106,6 +106,11 @@ class QubellPlatform(object):
 
     def delete_organization(self):
         raise NotImplementedError('Api does not support organization deletion')
+
+    def restore(self, config):
+        for org in config.pop('organizations', []):
+            restored_org = self.get_or_create_organization(id=org.get('id'), name=org.get('name'))
+            restored_org.restore(org)
 
 
 class Auth(object):
