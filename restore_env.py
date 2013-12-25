@@ -94,4 +94,3 @@ print "Restoring env: %s" % env
 platform.restore(cfg)
 print "Restore finished"
 
-
