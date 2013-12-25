@@ -46,6 +46,8 @@ organizations:
   services:
   - name: BaseTestSharedService
     type: builtin:shared_instances_catalog
+    parameters:
+      configuration.shared-instances: '{}'
   - name: Workflow
     type: builtin:workflow_service
   - name: Keystore

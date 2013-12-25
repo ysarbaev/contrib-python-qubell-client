@@ -122,7 +122,7 @@ class Environment(object):
         resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
         log.debug(resp.text)
         if resp.status_code == 200:
-            self.services.pop(service)
+            self.services.remove(service)
             return resp.json()
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 
@@ -151,7 +151,7 @@ class Environment(object):
         resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
         log.debug(resp.text)
         if resp.status_code == 200:
-            self.markers.pop(marker)
+            self.markers.remove(marker)
             return resp.json()
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 
@@ -220,6 +220,8 @@ class Environment(object):
             return resp.json()
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 
+    def policyRemove(self):
+        raise NotImplementedError
 
     def providerAdd(self, provider):
         data = self.json()
@@ -234,6 +236,9 @@ class Environment(object):
             self.providers.append(provider)
             return resp.json()
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
+
+    def providerRemove(self):
+        raise NotImplementedError
 
     def set_backend(self, zone):
         data = self.json()

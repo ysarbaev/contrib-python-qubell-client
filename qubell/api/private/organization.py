@@ -99,6 +99,7 @@ class Organization(object):
 
     def delete_application(self, id):
         app = self.get_application(id)
+        self.applications.remove(app)
         return app.delete()
 
     def get_or_create_application(self, id=None, manifest=None, name=None):
@@ -245,6 +246,7 @@ class Organization(object):
 
     def delete_environment(self, id):
         env = self.get_environment(id)
+        self.environments.remove(env)
         return env.delete()
 
     def get_or_create_environment(self, id=None, name=None, zone=None, default=False):
@@ -314,6 +316,7 @@ class Organization(object):
 
     def delete_provider(self, id):
         prov = self.get_provider(id)
+        self.providers.remove(prov)
         return prov.delete()
 
     def get_or_create_provider(self,id=None, name=None, parameters=None):

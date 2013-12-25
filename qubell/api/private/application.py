@@ -144,7 +144,7 @@ class Application(object):
 
     def delete_instance(self, id):
         instance = self.get_instance(id)
-        del self.instances[instance]
+        self.instances.remove(instance)
         return instance.delete()
 
     def get_or_launch_instance(self, id=None, **kwargs):
@@ -184,7 +184,7 @@ class Application(object):
 
     def delete_revision(self, id):
         rev = self.get_revision(id)
-        del self.revisions[rev.name]
+        self.revisions.remove(rev.name)
         rev.delete()
 
 # MANIFEST
