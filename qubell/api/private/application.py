@@ -68,6 +68,17 @@ class Application(object):
             return True
         raise exceptions.ApiError('Unable to delete application: %s' % resp.text)
 
+    def update(self, **kwargs):
+        log.info("Updating application: %s" % self.name)
+        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/applications/'+self.applicationId+'.json'
+        headers = {'Content-Type': 'application/json'}
+        data = json.dumps(kwargs)
+        resp = requests.put(url, headers=headers, verify=False, data=data, cookies=self.auth.cookies)
+        log.debug(resp.text)
+        if resp.status_code == 200:
+            return resp.json()
+        raise exceptions.ApiError('Unable to update application %s, got error: %s' % (self.name, resp.text))
+
     def clean(self):
         #TODO: Needs refactor
         from qubell.api.private import instance, revision
@@ -184,11 +195,9 @@ class Application(object):
         payload = json.dumps({})
         resp = requests.post(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
         log.debug(resp.text)
-        self.rawRespose = resp
         if resp.status_code == 200:
             return resp.json()
-        else:
-            return False
+        raise exceptions.ApiError('Unable to get manifest, got error: %s' % resp.text)
 
     def upload(self, manifest):
         log.info("Uploading manifest")
@@ -198,6 +207,4 @@ class Application(object):
         if resp.status_code == 200:
             self.manifest = manifest
             return resp.json()
-        else:
-            log.error('Cannot upload manifest: %s' % resp.content)
-            return False
+        raise exceptions.ApiError('Unable to upload manifest, got error: %s' % resp.text)

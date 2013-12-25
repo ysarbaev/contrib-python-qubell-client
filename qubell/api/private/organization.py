@@ -66,7 +66,7 @@ class Organization(object):
             restored_env.restore(env)
         for app in config.pop('applications'):
             mnf = app.pop('manifest', None)
-            restored_app = self.get_or_create_application(id=app.pop('id', None), manifest=Manifest(**mnf), name=app.pop('name'))
+            restored_app = self.application(id=app.pop('id', None), manifest=Manifest(**mnf), name=app.pop('name'))
             restored_app.restore(app)
 
 ### APPLICATION
@@ -123,11 +123,17 @@ class Organization(object):
                 return self.create_application(name, manifest)
 
     def application(self, id=None, manifest=None, name=None):
-        """ Creates or modify application
+        """ Creates, picks or modify application
         """
-        # TODO: Modify app if differs
-        return self.get_or_create_application(id=id, manifest=manifest, name=name)
-
+        if id:
+            app = self.get_application()
+            if name: app.update(name=name)
+            if manifest:
+                app.upload(manifest=manifest)
+        elif name:
+            app = self.get_or_create_application(id=id, manifest=manifest, name=name)
+            if manifest: app.upload(manifest=manifest)
+        return app
 
 ### SERVICE
     def create_service(self, name, type, parameters={}, zone=None):
