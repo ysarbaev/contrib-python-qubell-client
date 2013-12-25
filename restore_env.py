@@ -54,7 +54,7 @@ credentials = os.environ.get('JCLOUDS_CREDENTIALS')
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
-__version__ = "1.0.6"
+__version__ = "1.0.9"
 __email__ = "vkhomenko@qubell.com"
 
 
@@ -71,7 +71,8 @@ cloud_access = {
 
 # Qubell access info
 auth = Auth(user=user, password=password, tenant=api)
-env_path=os.path.join(os.path.dirname(__file__), 'env-for-tests.yml')
+#env_path=os.path.join(os.path.dirname(__file__), 'env-for-tests.yml')
+env_path=os.path.join(os.path.dirname(__file__), 'petclinic-ide.env')
 env_file=open(env_path)
 cfg = yaml.load(env_file)
 
