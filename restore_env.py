@@ -15,10 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import sys
 import yaml
 from qubell.api.private.platform import QubellPlatform, Auth
-
-
 
 
 """
@@ -39,10 +38,12 @@ python create_env.py
 
 """
 
+default_env = os.path.join(os.path.dirname(__file__), 'env-for-tests.yml')
+
 user = os.environ.get('QUBELL_USER', 'user')
 password = os.environ.get('QUBELL_PASSWORD', 'password')
 api = os.environ.get('QUBELL_API', 'https://express.qubell.com')
-org = os.environ.get('QUBELL_ORG', 'organization')
+org = os.environ.get('QUBELL_ORG', None)
 zone = os.environ.get('QUBELL_ZONE','')
 
 provider = os.environ.get('PROVIDER', 'aws-ec2')
@@ -71,20 +72,25 @@ cloud_access = {
 
 # Qubell access info
 auth = Auth(user=user, password=password, tenant=api)
-#env_path=os.path.join(os.path.dirname(__file__), 'env-for-tests.yml')
-env_path=os.path.join(os.path.dirname(__file__), 'petclinic-ide.env')
-env_file=open(env_path)
+env = None
+if len(sys.argv)>1:
+    env = sys.argv[1]
+else:
+    env = default_env
+
+env_file=open(env)
 cfg = yaml.load(env_file)
 
 # Get cloud access info
 cfg['organizations'][0].update({'providers': [cloud_access]})
-cfg['organizations'][0].update({'name':org})
+if org: cfg['organizations'][0].update({'name':org})
 
 platform = QubellPlatform(auth=auth)
 
 assert platform.authenticate()
 print "Authorization passed"
 
+print "Restoring env: %s" % env
 platform.restore(cfg)
 print "Restore finished"
 
