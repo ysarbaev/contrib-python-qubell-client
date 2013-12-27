@@ -16,7 +16,7 @@
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
-__version__ = "1.0.8"
+__version__ = "1.0.9"
 __email__ = "vkhomenko@qubell.com"
 
 import logging as log
@@ -26,38 +26,40 @@ import simplejson as json
 
 from qubell.api.private import exceptions
 
-
 class QubellPlatform(object):
 
-
-    def __init__(self, context, *args, **kwargs):
-        self.context = context
+    def __init__(self, auth):
+        self.organizations = []
+        self.auth = auth
+        self.user = auth.user
+        self.password = auth.password
+        self.tenant = auth.tenant
 
     def authenticate(self):
-        url = self.context.api+'/signIn'
+        url = self.auth.api+'/signIn'
         data = {
-            'email': self.context.user,
-            'password': self.context.password}
+            'email': self.auth.user,
+            'password': self.auth.password}
         # Use session to eliminate accidental falls
         rsession = requests.Session()
         rsession.post(url=url, data=data, verify=False)
-        self.context.cookies = rsession.cookies
+        self.auth.cookies = rsession.cookies
         rsession.close()
-        if 'PLAY_SESSION' in self.context.cookies:
+        if 'PLAY_SESSION' in self.auth.cookies:
             return True
         else:
             return False
 
     def get_context(self):
-        return self.context
+        return self.auth
 
     def create_organization(self, name):
         log.info("Creating organization: %s" % name)
-        url = self.context.api+'/organizations.json'
+        url = self.auth.api+'/organizations.json'
         headers = {'Content-Type': 'application/json'}
         payload = json.dumps({'editable': 'true',
                               'name': name})
-        resp = requests.post(url, cookies=self.context.cookies, data=payload, verify=False, headers=headers)
+        resp = requests.post(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
         log.debug(resp.text)
         if resp.status_code == 200:
             return self.get_organization(resp.json()['id'])
@@ -66,10 +68,11 @@ class QubellPlatform(object):
     def get_organization(self, id):
         log.info("Picking organization: %s" % id)
         from qubell.api.private.organization import Organization
-        return Organization(self.context, id=id)
+        org = Organization(self.auth, id=id)
+        self.organizations.append(org)
+        return org
 
-    def organization(self, id=None, name=None):
-        """ Smart object. Will create organization or pick one, if exists"""
+    def get_or_create_organization(self, id=None, name=None):
         if name:
             orgz = [org for org in self.list_organizations() if org['name'] == name]
             # Org found by name
@@ -84,9 +87,14 @@ class QubellPlatform(object):
             else:
                 return self.create_organization(name)
 
+    def organization(self, id=None, name=None):
+        """ Smart object. Will create organization, modify or pick one"""
+        # TODO: Modify if parameters differs
+        return self.get_or_create_organization(id, name)
+
     def list_organizations(self):
-        url = self.context.api+'/organizations.json'
-        resp = requests.get(url, cookies=self.context.cookies, verify=False)
+        url = self.auth.api+'/organizations.json'
+        resp = requests.get(url, cookies=self.auth.cookies, verify=False)
         log.debug(resp.text)
         if resp.status_code == 200:
             return resp.json()
@@ -99,9 +107,17 @@ class QubellPlatform(object):
     def delete_organization(self):
         raise NotImplementedError('Api does not support organization deletion')
 
+    def restore(self, config):
+        for org in config.pop('organizations', []):
+            restored_org = self.get_or_create_organization(id=org.get('id'), name=org.get('name'))
+            restored_org.restore(org)
 
-class Context(object):
-    def __init__(self, user, password, api):
+
+class Auth(object):
+    def __init__(self, user, password, tenant):
         self.user = user
         self.password = password
-        self.api = api
+        self.tenant = tenant
+
+        # TODO: parse tenant to generate api url
+        self.api = tenant

@@ -16,7 +16,7 @@
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
-__version__ = "1.0.8"
+__version__ = "1.0.9"
 __email__ = "vkhomenko@qubell.com"
 
 import logging as log
@@ -28,13 +28,14 @@ from qubell.api.private.organization import Organization
 from qubell.api.private import exceptions
 
 
-class Provider(Organization):
+class Provider(object):
 
-    def __init__(self, context, id):
-        self.context = context
+    def __init__(self, auth, organization, id):
+        self.auth = auth
         self.providerId = id
+        self.organization = organization
         my = self.json()
-        self.__dict__.update(my)
+        #self.__dict__.update(my)
 
     def __getattr__(self, key):
         resp = self.json()
@@ -43,8 +44,8 @@ class Provider(Organization):
         return resp[key] or False
 
     def json(self):
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/providers.json'
-        resp = requests.get(url, cookies=self.context.cookies, verify=False)
+        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/providers.json'
+        resp = requests.get(url, cookies=self.auth.cookies, verify=False)
         log.debug(resp.text)
         if resp.status_code == 200:
             provider = [x for x in resp.json() if x['id'] == self.providerId]
@@ -53,9 +54,9 @@ class Provider(Organization):
         raise exceptions.ApiError('Unable to get provider %s properties, got error: %s' % (self.providerId, resp.text))
 
     def delete(self):
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/providers/'+self.providerId+'.json'
+        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/providers/'+self.providerId+'.json'
         headers = {'Content-Type': 'application/json'}
-        resp = requests.delete(url, cookies=self.context.cookies, data=json.dumps({}), verify=False, headers=headers)
+        resp = requests.delete(url, cookies=self.auth.cookies, data=json.dumps({}), verify=False, headers=headers)
         log.debug(resp.text)
         if resp.status_code == 200:
             return True

@@ -16,7 +16,7 @@
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
-__version__ = "1.0.8"
+__version__ = "1.0.9"
 __email__ = "vkhomenko@qubell.com"
 
 import os
@@ -79,7 +79,7 @@ class ThreeLevelHierappReconfiguration(base.BaseTestCase):
         non_shared_rev = self.parent.create_revision(name='non-shared-child', instance=parent_instance)
 
 
-        middle_instance = Instance(self.context, id=parent_instance.submodules[0]['id']) # initialize middle instance (we can only get id from parent)
+        middle_instance = self.middle_child.get_instance(id=parent_instance.submodules[0]['id']) # initialize middle instance (we can only get id from parent)
 
         # Ensure we use non shared instance
         self.assertEqual(middle_instance.submodules[0]['status'], 'Running')
@@ -121,7 +121,7 @@ class ThreeLevelHierappReconfiguration(base.BaseTestCase):
         self.assertTrue(parent_instance.ready(), "Instance failed to reconfigure")
         self.assertEqual(parent_instance.submodules[0]['status'], 'Running')
         # Check we use non-shared last child again
-        last_instance = Instance(self.context, id=middle_instance.submodules[0]['id'])
+        last_instance = self.middle_child.get_instance(id=middle_instance.submodules[0]['id'])
         self.assertTrue(last_instance.ready())
         self.assertEqual(middle_instance.submodules[0]['status'], 'Running')
         self.assertNotEqual(middle_instance.submodules[0]['id'], self.last_child_instance.instanceId)

@@ -16,7 +16,7 @@
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
-__version__ = "1.0.8"
+__version__ = "1.0.9"
 __email__ = "vkhomenko@qubell.com"
 
 import logging as log
@@ -33,7 +33,7 @@ class Revision(application.Application):
 
     def __init__(self, context, id):
         self.revisionId = id
-        self.context = context
+        self.auth = context
         my = self.json()
         self.name = my['name']
 
@@ -44,8 +44,8 @@ class Revision(application.Application):
         return resp[key] or False
 
     def json(self):
-        url = self.context.api+'/api/1/applications/'+self.context.applicationId+'/revisions'
-        resp = requests.get(url, auth=(self.context.user, self.context.password), verify=False)
+        url = self.auth.api+'/api/1/applications/'+self.auth.applicationId+'/revisions'
+        resp = requests.get(url, auth=(self.auth.user, self.auth.password), verify=False)
         log.debug(resp.text)
         if resp.status_code == 200:
             resp.json()

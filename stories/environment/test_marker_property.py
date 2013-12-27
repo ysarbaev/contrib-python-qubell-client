@@ -16,7 +16,7 @@
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
-__version__ = "1.0.8"
+__version__ = "1.0.9"
 __email__ = "vkhomenko@qubell.com"
 
 import os
@@ -71,7 +71,7 @@ class MarkerPropertyTest(base.BaseTestCase):
     def test_marker_property_usage(self):
         mnf = Manifest(file=os.path.join(os.path.dirname(__file__), "marker-property.yml")) #Todo: resolve paths
         self.app.upload(mnf)
-        self.env.set_backend(self.organization.zoneId)
+        self.env.set_backend(self.organization.zone)
 
         self.assertTrue(self.env.propertyAdd(name='sample-property-str', type='string', value='test-property-string'))
         self.assertTrue(self.env.propertyAdd(name='sample-property-int', type='int', value='42'))

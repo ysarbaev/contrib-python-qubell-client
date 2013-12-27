@@ -16,7 +16,7 @@
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
-__version__ = "1.0.8"
+__version__ = "1.0.9"
 __email__ = "vkhomenko@qubell.com"
 
 import logging as log
@@ -30,7 +30,7 @@ from qubell.api.private import exceptions
 class Organization(QubellPlatform):
 
     def __init__(self, context, id):
-        self.context = context
+        self.auth = context
         self.organizationId = id
 
         my = self.json()
@@ -50,8 +50,8 @@ class Organization(QubellPlatform):
         return resp[key] or False
 
     def json(self):
-        url = self.context.api+'/api/1/organizations'
-        resp = requests.get(url, auth=(self.context.user, self.context.password), verify=False)
+        url = self.auth.api+'/api/1/organizations'
+        resp = requests.get(url, auth=(self.auth.user, self.auth.password), verify=False)
         log.debug(resp.text)
         if resp.status_code == 200:
             org = [x for x in resp.json() if x['id'] == self.organizationId]
@@ -66,16 +66,16 @@ class Organization(QubellPlatform):
 
     def get_application(self, id):
         log.info("Picking application: %s" % id)
-        self.context.organizationId = self.organizationId
+        self.auth.organizationId = self.organizationId
         from qubell.api.public.application import Application
-        return Application(self.context, id=id)
+        return Application(self.auth, id=id)
 
     def delete_application(self, id):
         raise NotImplementedError
 
     def list_applications(self):
-        url = self.context.api+'/api/1/organizations/'+self.organizationId+'/applications'
-        resp = requests.get(url, auth=(self.context.user, self.context.password), verify=False)
+        url = self.auth.api+'/api/1/organizations/'+self.organizationId+'/applications'
+        resp = requests.get(url, auth=(self.auth.user, self.auth.password), verify=False)
         log.debug(resp.text)
         if resp.status_code == 200:
             return resp.json()
@@ -112,16 +112,16 @@ class Organization(QubellPlatform):
 
     def get_service(self, id):
         log.info("Picking service: %s" % id)
-        self.context.organizationId = self.organizationId
+        self.auth.organizationId = self.organizationId
         from qubell.api.public.service import Service
-        return Service(self.context, id=id)
+        return Service(self.auth, id=id)
 
     def list_services(self):
         raise NotImplementedError
 
     def list_service(self, id):
-        url = self.context.api+'/api/1/services/'+id
-        resp = requests.get(url, auth=(self.context.user, self.context.password), verify=False)
+        url = self.auth.api+'/api/1/services/'+id
+        resp = requests.get(url, auth=(self.auth.user, self.auth.password), verify=False)
         log.debug(resp.text)
         if resp.status_code == 200:
             return resp.json()
@@ -152,8 +152,8 @@ class Organization(QubellPlatform):
         raise NotImplementedError
 
     def list_environments(self):
-        url = self.context.api+'/api/1/organizations/'+self.organizationId+'/environments'
-        resp = requests.get(url, auth=(self.context.user, self.context.password), verify=False)
+        url = self.auth.api+'/api/1/organizations/'+self.organizationId+'/environments'
+        resp = requests.get(url, auth=(self.auth.user, self.auth.password), verify=False)
         log.debug(resp.text)
         if resp.status_code == 200:
             return resp.json()
@@ -161,9 +161,9 @@ class Organization(QubellPlatform):
 
     def get_environment(self, id):
         from qubell.api.public.environment import Environment
-        self.context.organizationId = self.organizationId
-        self.context.environmentId = id
-        return Environment(self.context, id)
+        self.auth.organizationId = self.organizationId
+        self.auth.environmentId = id
+        return Environment(self.auth, id)
 
     def delete_environment(self, id):
         raise NotImplementedError
@@ -196,8 +196,8 @@ class Organization(QubellPlatform):
 
     def get_provider(self, id):
         from qubell.api.public.provider import Provider
-        self.context.organizationId = self.organizationId
-        return Provider(context=self.context, id=id)
+        self.auth.organizationId = self.organizationId
+        return Provider(context=self.auth, id=id)
 
     def delete_provider(self, id):
         raise NotImplementedError

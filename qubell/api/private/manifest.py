@@ -16,7 +16,7 @@
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
-__version__ = "1.0.8"
+__version__ = "1.0.9"
 __email__ = "vkhomenko@qubell.com"
 
 import requests
@@ -31,21 +31,19 @@ class Manifest(object):
     def __init__(self, name=None, content=None, url=None, file=None):
         self.name = name
         if url:
-            self.source = url
+            self.url = url
             self.content = requests.get(url).content
         elif content:
             self.source = 'Text'
             self.content = content
         elif file:
             if os.path.exists(file):
-                self.source = file
+                self.file = file
             elif os.path.exists(os.path.join(os.path.dirname(__file__), file)):
-                self.source = os.path.join(os.path.dirname(__file__), file)
+                self.file = os.path.join(os.path.dirname(__file__), file)
             else:
                 exit("No manifest found: %s " % self.name)
-
-
-            self.content = open(self.source, 'r').read()
+            self.content = open(self.file, 'r').read()
 
     def patch(self, path, value):
         """ Set specified value to yaml path.

@@ -16,7 +16,7 @@
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
-__version__ = "1.0.8"
+__version__ = "1.0.9"
 __email__ = "vkhomenko@qubell.com"
 
 import logging as log
@@ -25,15 +25,16 @@ import requests
 import simplejson as json
 import yaml
 
-from qubell.api.private.organization import Organization
 from qubell.api.private import exceptions
 
 
-class Service(Organization):
+class Service(object):
 
-    def __init__(self, context, id):
-        self.context = context
+    def __init__(self, auth, organization, id):
+        self.auth = auth
         self.serviceId = id
+        self.organization = organization
+
         my = self.json()
         self.name = my['name']
         self.type = my['typeId']
@@ -47,23 +48,23 @@ class Service(Organization):
 
     # TODO: should be separate class
     def regenerate(self):
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/services/'+self.serviceId+'/keys/generate.json'
+        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/services/'+self.serviceId+'/keys/generate.json'
         headers = {'Content-Type': 'application/json'}
-        resp = requests.post(url, cookies=self.context.cookies, data=json.dumps({}), verify=False, headers=headers)
+        resp = requests.post(url, cookies=self.auth.cookies, data=json.dumps({}), verify=False, headers=headers)
         log.debug(resp.text)
         if resp.status_code == 200:
             return resp.json()
         raise exceptions.ApiError('Unable to regenerate key: %s' % resp.text)
 
     def modify(self, parameters):
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/services/'+self.serviceId+'.json'
+        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/services/'+self.serviceId+'.json'
         headers = {'Content-Type': 'application/json'}
         payload = {#'id': self.serviceId,
                    'name': self.name,
                    'typeId': self.type,
                    'zoneId': self.zone,
                    'parameters': parameters}
-        resp = requests.put(url, cookies=self.context.cookies, data=json.dumps(payload), verify=False, headers=headers)
+        resp = requests.put(url, cookies=self.auth.cookies, data=json.dumps(payload), verify=False, headers=headers)
         log.debug(resp.request.body)
         log.debug(resp.text)
         if resp.status_code == 200:
@@ -99,8 +100,8 @@ class Service(Organization):
         return yaml.safe_load(params['configuration.shared-instances'])
 
     def json(self):
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/services.json'
-        resp = requests.get(url, cookies=self.context.cookies, verify=False)
+        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/services.json'
+        resp = requests.get(url, cookies=self.auth.cookies, verify=False)
         log.debug(resp.text)
         if resp.status_code == 200:
             service = [x for x in resp.json() if x['id'] == self.serviceId]
@@ -109,9 +110,9 @@ class Service(Organization):
         raise exceptions.ApiError('Unable to get service properties, got error: %s' % resp.text)
 
     def delete(self):
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/services/'+self.serviceId+'.json'
+        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/services/'+self.serviceId+'.json'
         headers = {'Content-Type': 'application/json'}
-        resp = requests.delete(url, cookies=self.context.cookies, data=json.dumps({}), verify=False, headers=headers)
+        resp = requests.delete(url, cookies=self.auth.cookies, data=json.dumps({}), verify=False, headers=headers)
         log.debug(resp.text)
         if resp.status_code == 200:
             return True

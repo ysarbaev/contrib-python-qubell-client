@@ -24,12 +24,12 @@ __email__ = "vkhomenko@qubell.com"
 
 import requests
 
-from qubell.api.private.platform import QubellPlatform, Context
+from qubell.api.private.platform import QubellPlatform, Auth
 from qubell.api.private.manifest import Manifest
 
 
 # Provide credentials and link to api to use
-context = Context(user="tester@qubell.com", password="password", api="https://api.qubell.com")
+context = Auth(user="tester@qubell.com", password="password", tenant="https://api.qubell.com")
 
 # Amazon's credentials. Needed to setup environment
 KEY =        "AAAA"

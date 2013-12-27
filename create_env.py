@@ -17,7 +17,7 @@
 import os
 import sys
 import logging as log
-from qubell.api.private.platform import QubellPlatform, Context
+from qubell.api.private.platform import QubellPlatform, Auth
 from qubell.api.private.manifest import Manifest
 
 
@@ -55,7 +55,7 @@ credentials = os.environ.get('JCLOUDS_CREDENTIALS')
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
-__version__ = "1.0.8"
+__version__ = "1.0.9"
 __email__ = "vkhomenko@qubell.com"
 
 
@@ -89,10 +89,10 @@ def start():
         sys.exit(1)
 
 # Setup access
-    context = Context(user=user, password=password, api=api)
+    auth = Auth(user=user, password=password, tenant=api)
 
 # Initialize platform and check access
-    platform = QubellPlatform(context=context)
+    platform = QubellPlatform(auth=auth)
     assert platform.authenticate()
     print "Authorization passed"
 # Initialize organization

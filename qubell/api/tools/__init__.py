@@ -16,12 +16,15 @@
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
-__version__ = "1.0.8"
+__version__ = "1.0.9"
 __email__ = "vkhomenko@qubell.com"
 
 from random import randrange
+import yaml
 import time
 import os
+import logging as log
+from qubell.api.private.platform import Auth
 
 def rand():
     return str(randrange(1000, 9999))
@@ -48,3 +51,88 @@ def retry(tries=5, delay=3, backoff=2):
             return False
         return f_retry
     return deco_retry
+
+def waitForStatus(instance, final='Running', accepted=['Requested'], timeout=[20, 10, 1]):
+    log.debug('Waiting status: %s' % final)
+    import time #TODO: We have to wait, because privious status takes time to change to new one
+    time.sleep(10)
+    @retry(*timeout) # ask status 20 times every 10 sec.
+    def waiter():
+        cur_status = instance.status
+        if cur_status in final:
+            log.info('Got status: %s, continue' % cur_status)
+            return True
+        elif cur_status in accepted:
+            log.info('Current status: %s, waiting...' % cur_status)
+            return False
+        else:
+            log.error('Got unexpected instance status: %s' % cur_status)
+            return True # Let retry exit
+
+    waiter()
+    # We here, means we reached timeout or got status we are waiting for.
+    # Check it again to be sure
+
+    cur_status = instance.status
+    log.info('Final status: %s' % cur_status)
+    if cur_status in final:
+        return True
+    else:
+        return False
+
+def dump(node):
+    """ Dump initialized object structure to yaml
+    """
+
+    from qubell.api.private.platform import Auth, QubellPlatform
+    from qubell.api.private.organization import Organization
+    from qubell.api.private.application import Application
+    from qubell.api.private.instance import Instance
+    from qubell.api.private.revision import Revision
+    from qubell.api.private.provider import Provider
+    from qubell.api.private.environment import Environment
+    from qubell.api.private.service import Service
+    from qubell.api.private.zone import Zone
+    from qubell.api.private.manifest import Manifest
+
+    # Exclude keys from dump
+    # Format: { 'ClassName': ['fields', 'to', 'exclude']}
+    exclusion_list = {
+        Auth: ['cookies'],
+        QubellPlatform:['auth', ],
+        Organization: ['auth', 'organizationId', 'zone'],
+        Application: ['auth', 'applicationId', 'organization'],
+        Instance: ['auth', 'instanceId', 'application'],
+        Manifest: ['name', 'content'],
+        Revision: ['auth', 'revisionId'],
+        Provider: ['auth', 'providerId', 'organization'],
+        Environment: ['auth', 'environmentId', 'organization'],
+        Service: ['auth', 'organization', 'zone', 'serviceId'],
+        Zone: ['auth', 'zoneId', 'organization'],
+    }
+
+    def obj_presenter(dumper, obj):
+        for x in exclusion_list.keys():
+            if isinstance(obj, x): # Find class
+                fields = obj.__dict__.copy()
+                for excl_item in exclusion_list[x]:
+                    try:
+                        fields.pop(excl_item)
+                    except:
+                        print 'No item %s in object %s' % (excl_item, x)
+                return dumper.represent_mapping('tag:yaml.org,2002:map', fields)
+        return dumper.represent_mapping('tag:yaml.org,2002:map', obj.__dict__)
+
+
+    noalias_dumper = yaml.dumper.Dumper
+    noalias_dumper.ignore_aliases = lambda self, data: True
+
+    yaml.add_representer(unicode, lambda dumper, value: dumper.represent_scalar(u'tag:yaml.org,2002:str', value))
+    yaml.add_multi_representer(object, obj_presenter)
+    serialized = yaml.dump(node, default_flow_style=False, Dumper=noalias_dumper)
+    return serialized
+
+def full_dump(org):
+    """ TODO:  Dump all that reports by api
+    """
+    pass

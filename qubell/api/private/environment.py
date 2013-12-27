@@ -16,7 +16,7 @@
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
-__version__ = "1.0.8"
+__version__ = "1.0.9"
 __email__ = "vkhomenko@qubell.com"
 
 import logging as log
@@ -28,14 +28,19 @@ from qubell.api.private.organization import Organization
 from qubell.api.private import exceptions
 
 
-class Environment(Organization):
+class Environment(object):
 
-    def __init__(self, context, id):
+    def __init__(self, auth, organization, id):
         self.environmentId = id
-        self.context = context
-        self.context.environmentId = self.environmentId
+        self.auth = auth
+        self.organization = organization
         my = self.json()
         self.name = my['name']
+        self.services = []
+        self.policies = []
+        self.markers = []
+        self.properties = []
+        self.providers = []
 
     def __getattr__(self, key):
         resp = self.json()
@@ -43,29 +48,48 @@ class Environment(Organization):
             raise exceptions.NotFoundError('Cannot get property %s' % key)
         return resp[key] or False
 
+    def restore(self, config):
+        for marker in config.pop('markers', []):
+            self.markerAdd(marker)
+        for policy in config.pop('policies', []):
+            self.policyAdd(policy)
+        for property in config.pop('properties', []):
+            self.propertyAdd(**property)
+        for provider in config.pop('providers', []):
+            prov = self.organization.get_or_create_provider(id=provider.pop('id', None), name=provider.pop('name'), parameters=provider)
+            self.providerAdd(prov)
+        for service in config.pop('services', []):
+            serv = self.organization.get_or_create_service(id=service.pop('id', None), name=service.pop('name'), type=service.pop('type', None))
+            self.serviceAdd(serv)
+            if serv.type == 'builtin:cobalt_secure_store':
+                # TODO: We do not need to regenerate key every time. Find better way.
+                myenv = self.organization.get_environment(self.environmentId)
+                myenv.policyAdd(
+                    {"action": "provisionVms",
+                     "parameter": "publicKeyId",
+                     "value": serv.regenerate()['id']})
+
     def json(self):
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/environments/'+self.environmentId+'.json'
-        resp = requests.get(url, cookies=self.context.cookies, verify=False)
+        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'.json'
+        resp = requests.get(url, cookies=self.auth.cookies, verify=False)
         log.debug(resp.text)
-        self.rawRespose = resp
         if resp.status_code == 200:
             return resp.json()
         raise exceptions.ApiError('Unable to get environment properties, got error: %s' % resp.text)
 
     def delete(self):
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/environments/'+self.environmentId+'.json'
+        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'.json'
         headers = {'Content-Type': 'application/json'}
-        resp = requests.delete(url, cookies=self.context.cookies, data=json.dumps({}), verify=False, headers=headers)
+        resp = requests.delete(url, cookies=self.auth.cookies, data=json.dumps({}), verify=False, headers=headers)
         log.debug(resp.text)
         if resp.status_code == 200:
             return True
         raise exceptions.ApiError('Unable to delete environment %s, got error: %s' % (self.environmentId, resp.text))
 
     def servicesAvailable(self):
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/environments/'+self.environmentId+'/availableServices.json'
-        resp = requests.get(url, cookies=self.context.cookies, verify=False)
+        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'/availableServices.json'
+        resp = requests.get(url, cookies=self.auth.cookies, verify=False)
         log.debug(resp.text)
-        self.rawRespose = resp
         if resp.status_code == 200:
             return resp.json()
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
@@ -76,13 +100,13 @@ class Environment(Organization):
         data['serviceIds'].append(service.serviceId)
         data['services'].append(service.json())
 
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/environments/'+self.environmentId+'.json'
+        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'.json'
         payload = json.dumps(data)
         headers = {'Content-Type': 'application/json'}
-        resp = requests.put(url, cookies=self.context.cookies, data=payload, verify=False, headers=headers)
+        resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
         log.debug(resp.text)
-        self.rawRespose = resp
         if resp.status_code == 200:
+            self.services.append(service)
             return resp.json()
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 
@@ -92,13 +116,13 @@ class Environment(Organization):
         data['serviceIds'].remove(service.serviceId)
         data['services'].remove(service.json())
 
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/environments/'+self.environmentId+'.json'
+        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'.json'
         payload = json.dumps(data)
         headers = {'Content-Type': 'application/json'}
-        resp = requests.put(url, cookies=self.context.cookies, data=payload, verify=False, headers=headers)
+        resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
         log.debug(resp.text)
-        self.rawRespose = resp
         if resp.status_code == 200:
+            self.services.remove(service)
             return resp.json()
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 
@@ -106,13 +130,13 @@ class Environment(Organization):
         data = self.json()
         data['markers'].append({'name': marker})
 
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/environments/'+self.environmentId+'.json'
+        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'.json'
         payload = json.dumps(data)
         headers = {'Content-Type': 'application/json'}
-        resp = requests.put(url, cookies=self.context.cookies, data=payload, verify=False, headers=headers)
+        resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
         log.debug(resp.text)
-        self.rawRespose = resp
         if resp.status_code == 200:
+            self.markers.append(marker)
             return resp.json()
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 
@@ -121,29 +145,28 @@ class Environment(Organization):
         data = self.json()
         data['markers'].remove({'name': marker})
 
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/environments/'+self.environmentId+'.json'
+        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'.json'
         payload = json.dumps(data)
         headers = {'Content-Type': 'application/json'}
-        resp = requests.put(url, cookies=self.context.cookies, data=payload, verify=False, headers=headers)
+        resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
         log.debug(resp.text)
-        self.rawRespose = resp
         if resp.status_code == 200:
+            self.markers.remove(marker)
             return resp.json()
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
-
 
 
     def propertyAdd(self, name, type, value):
         data = self.json()
         data['properties'].append({'name': name, 'type': type, 'value': value})
 
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/environments/'+self.environmentId+'.json'
+        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'.json'
         payload = json.dumps(data)
         headers = {'Content-Type': 'application/json'}
-        resp = requests.put(url, cookies=self.context.cookies, data=payload, verify=False, headers=headers)
+        resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
         log.debug(resp.text)
-        self.rawRespose = resp
         if resp.status_code == 200:
+            self.properties.append({'name': name, 'type': type, 'value': value})
             return resp.json()
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 
@@ -155,13 +178,14 @@ class Environment(Organization):
             log.error('Unable to remove property %s. Not found.' % name)
         data['properties'].remove(property[0])
 
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/environments/'+self.environmentId+'.json'
+        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'.json'
         payload = json.dumps(data)
         headers = {'Content-Type': 'application/json'}
-        resp = requests.put(url, cookies=self.context.cookies, data=payload, verify=False, headers=headers)
+        resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
         log.debug(resp.text)
-        self.rawRespose = resp
         if resp.status_code == 200:
+            # TODO: make removal
+            #self.properties.pop(name)
             return resp.json()
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 
@@ -172,56 +196,57 @@ class Environment(Organization):
         data['serviceIds'] = []
         data['services'] = []
 
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/environments/'+self.environmentId+'.json'
+        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'.json'
         payload = json.dumps(data)
         headers = {'Content-Type': 'application/json'}
-        resp = requests.put(url, cookies=self.context.cookies, data=payload, verify=False, headers=headers)
+        resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
         log.debug(resp.text)
-        self.rawRespose = resp
         if resp.status_code == 200:
             return resp.json()
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 
-
-    def __getattr__(self, item):
-        return self.json()[item]
 
     def policyAdd(self, new):
         data = self.json()
         data['policies'].append(new)
 
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/environments/'+self.environmentId+'.json'
+        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'.json'
         payload = json.dumps(data)
         headers = {'Content-Type': 'application/json'}
-        resp = requests.put(url, cookies=self.context.cookies, data=payload, verify=False, headers=headers)
+        resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
         log.debug(resp.text)
-        self.rawRespose = resp
         if resp.status_code == 200:
+            self.policies.append(new)
             return resp.json()
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 
+    def policyRemove(self):
+        raise NotImplementedError
 
     def providerAdd(self, provider):
         data = self.json()
         data.update({'providerId': provider.providerId})
 
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/environments/'+self.environmentId+'.json'
+        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'.json'
         payload = json.dumps(data)
         headers = {'Content-Type': 'application/json'}
-        resp = requests.put(url, cookies=self.context.cookies, data=payload, verify=False, headers=headers)
+        resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
         log.debug(resp.text)
-        self.rawRespose = resp
         if resp.status_code == 200:
+            self.providers.append(provider)
             return resp.json()
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 
+    def providerRemove(self):
+        raise NotImplementedError
+
     def set_backend(self, zone):
         data = self.json()
-        data.update({'backend': zone})
-        url = self.context.api+'/organizations/'+self.context.organizationId+'/environments/'+self.environmentId+'.json'
+        data.update({'backend': zone.zoneId})
+        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'.json'
         payload = json.dumps(data)
         headers = {'Content-Type': 'application/json'}
-        resp = requests.put(url, cookies=self.context.cookies, data=payload, verify=False, headers=headers)
+        resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
         log.debug(resp.text)
         if resp.status_code == 200:
             return resp.json()

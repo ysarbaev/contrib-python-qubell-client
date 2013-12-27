@@ -16,7 +16,7 @@
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
-__version__ = "1.0.8"
+__version__ = "1.0.9"
 __email__ = "vkhomenko@qubell.com"
 
 import os
@@ -24,7 +24,6 @@ import os
 from stories import base
 from stories.base import attr
 from qubell.api.private.manifest import Manifest
-from qubell.api.private.instance import Instance
 
 
 class ThreeLevelHierarchicalAppTest(base.BaseTestCase):
@@ -72,14 +71,14 @@ class ThreeLevelHierarchicalAppTest(base.BaseTestCase):
         self.assertTrue(parent_instance.submodules) # Check we have submodules started
         self.assertEqual(parent_instance.submodules[0]['status'], 'Running')
 
-        middle_instance = Instance(self.context, id=parent_instance.submodules[0]['id']) # initialize middle instance (we can only get id from parent)
+        middle_instance = self.middle_child.get_instance(id=parent_instance.submodules[0]['id']) # initialize middle instance (we can only get id from parent)
         self.assertTrue(middle_instance.submodules) # Check middle instance start it's dependency
         self.assertEqual(middle_instance.submodules[0]['status'], 'Running')
 
         self.assertTrue(parent_instance.delete(), "%s-%s: Parent instance failed to destroy" % (self.prefix, self._testMethodName))
         self.assertTrue(parent_instance.destroyed(), "%s-%s: Parent instance not in 'destroyed' state after timeout" % (self.prefix, self._testMethodName))
 
-        self.assertFalse(middle_instance.status) # Check submodule does not exists
+        #self.assertRaises(exceptions.NotFoundError, middle_instance.status) # Check submodule does not exists
 
 
     def test_launch_3level_hierapp_shared_last_child(self):
@@ -115,7 +114,7 @@ class ThreeLevelHierarchicalAppTest(base.BaseTestCase):
         self.assertTrue(parent_instance.submodules) # Check we have submodules started
         self.assertEqual(parent_instance.submodules[0]['status'], 'Running')
 
-        middle_instance = Instance(self.context, id=parent_instance.submodules[0]['id']) # initialize middle instance (we can only get id from parent)
+        middle_instance = self.middle_child.get_instance(id=parent_instance.submodules[0]['id']) # initialize middle instance (we can only get id from parent)
         self.assertTrue(middle_instance.submodules) # Check middle instance start it's dependency
         self.assertEqual(middle_instance.submodules[0]['status'], 'Running')
         self.assertEqual(middle_instance.submodules[0]['id'], last_child_instance.instanceId, "Last child used is not shared one")  # Check we use shared last instance
@@ -177,7 +176,7 @@ class ThreeLevelHierarchicalAppTest(base.BaseTestCase):
     # Check middle child is shared
         self.assertEqual(parent_instance.submodules[0]['id'], middle_child_instance.instanceId, "Middle child used is not shared one")
 
-        mid = Instance(self.context, id=parent_instance.submodules[0]['id'])
+        mid = self.middle_child.get_instance(id=parent_instance.submodules[0]['id'])
         self.assertEqual(middle_child_instance.status, 'Running') # Check shared still alive
 
     # Check last child is shared
