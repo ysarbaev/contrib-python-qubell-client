@@ -128,21 +128,21 @@ def create_env(organization, agent=None):
     print "Setting default env"
 
 # Add services to environment
-    environment.serviceAdd(key_service)
+    environment.add_service(key_service)
     print "Added keystore service"
-    environment.serviceAdd(wf_service)
+    environment.add_service(wf_service)
     print "Added workflow service"
-    environment.serviceAdd(shared_service)
+    environment.add_service(shared_service)
     print "Added shared service"
 
-    environment.policyAdd(
+    environment.add_policy(
         {"action": "provisionVms",
          "parameter": "publicKeyId",
          "value": key_service.regenerate()['id']})
     print "Keystore generated key"
 # Add cloud provider
     provider = organization.provider(name='test-provider', parameters=cloud_access)
-    environment.providerAdd(provider)
+    environment.add_provider(provider)
     print "Added provider %s" % provider.name
 
 def create_launcher_apps(org):
@@ -166,11 +166,11 @@ application:
         org.application(name=app, manifest=manifest)
 
     env = org.environment(name='default')
-    env.markerAdd('has-internet-access')
-    env.propertyAdd(name='sample-property-green', type='int', value='42')
-    env.propertyAdd(name='sample-property-red', type='string', value='sample-property red')
+    env.add_marker('has-internet-access')
+    env.add_property(name='sample-property-green', type='int', value='42')
+    env.add_property(name='sample-property-red', type='string', value='sample-property red')
     policy = {'action': 'provisionVms',
               'parameter': 'vmIdentity',
               'value': 'ubuntu'}
-    env.policyAdd(policy)
+    env.add_policy(policy)
 start()

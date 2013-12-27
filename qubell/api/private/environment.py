@@ -50,21 +50,21 @@ class Environment(object):
 
     def restore(self, config):
         for marker in config.pop('markers', []):
-            self.markerAdd(marker)
+            self.add_marker(marker)
         for policy in config.pop('policies', []):
-            self.policyAdd(policy)
+            self.add_policy(policy)
         for property in config.pop('properties', []):
-            self.propertyAdd(**property)
+            self.add_property(**property)
         for provider in config.pop('providers', []):
             prov = self.organization.get_or_create_provider(id=provider.pop('id', None), name=provider.pop('name'), parameters=provider)
-            self.providerAdd(prov)
+            self.add_provider(prov)
         for service in config.pop('services', []):
             serv = self.organization.get_or_create_service(id=service.pop('id', None), name=service.pop('name'), type=service.pop('type', None))
-            self.serviceAdd(serv)
+            self.add_service(serv)
             if serv.type == 'builtin:cobalt_secure_store':
                 # TODO: We do not need to regenerate key every time. Find better way.
                 myenv = self.organization.get_environment(self.environmentId)
-                myenv.policyAdd(
+                myenv.add_policy(
                     {"action": "provisionVms",
                      "parameter": "publicKeyId",
                      "value": serv.regenerate()['id']})
@@ -86,7 +86,7 @@ class Environment(object):
             return True
         raise exceptions.ApiError('Unable to delete environment %s, got error: %s' % (self.environmentId, resp.text))
 
-    def servicesAvailable(self):
+    def list_available_services(self):
         url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'/availableServices.json'
         resp = requests.get(url, cookies=self.auth.cookies, verify=False)
         log.debug(resp.text)
@@ -95,7 +95,7 @@ class Environment(object):
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 
 
-    def serviceAdd(self, service):
+    def add_service(self, service):
         data = self.json()
         data['serviceIds'].append(service.serviceId)
         data['services'].append(service.json())
@@ -111,7 +111,7 @@ class Environment(object):
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 
 
-    def serviceRemove(self, service):
+    def remove_service(self, service):
         data = self.json()
         data['serviceIds'].remove(service.serviceId)
         data['services'].remove(service.json())
@@ -126,7 +126,7 @@ class Environment(object):
             return resp.json()
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 
-    def markerAdd(self, marker):
+    def add_marker(self, marker):
         data = self.json()
         data['markers'].append({'name': marker})
 
@@ -141,7 +141,7 @@ class Environment(object):
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 
 
-    def markerRemove(self, marker):
+    def remove_marker(self, marker):
         data = self.json()
         data['markers'].remove({'name': marker})
 
@@ -156,7 +156,7 @@ class Environment(object):
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 
 
-    def propertyAdd(self, name, type, value):
+    def add_property(self, name, type, value):
         data = self.json()
         data['properties'].append({'name': name, 'type': type, 'value': value})
 
@@ -171,7 +171,7 @@ class Environment(object):
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 
 
-    def propertyRemove(self, name):
+    def remove_property(self, name):
         data = self.json()
         property = [p for p in data['properties'] if p['name'] == name]
         if len(property)<1:
@@ -206,7 +206,7 @@ class Environment(object):
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 
 
-    def policyAdd(self, new):
+    def add_policy(self, new):
         data = self.json()
         data['policies'].append(new)
 
@@ -220,10 +220,10 @@ class Environment(object):
             return resp.json()
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 
-    def policyRemove(self):
+    def remove_policy(self):
         raise NotImplementedError
 
-    def providerAdd(self, provider):
+    def add_provider(self, provider):
         data = self.json()
         data.update({'providerId': provider.providerId})
 
@@ -237,7 +237,7 @@ class Environment(object):
             return resp.json()
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 
-    def providerRemove(self):
+    def remove_provider(self):
         raise NotImplementedError
 
     def set_backend(self, zone):

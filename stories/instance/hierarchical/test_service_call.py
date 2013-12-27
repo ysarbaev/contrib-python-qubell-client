@@ -89,7 +89,7 @@ class ServiceCallTestApp(base.BaseTestCase):
 
         # Instance ready. Execute workflow with servicecall
 
-        parent_instance.runWorkflow(name='actions.child_servicecall')
+        parent_instance.run_workflow(name='actions.child_servicecall')
         self.assertTrue(parent_instance.ready(), "Parent instance failed to execute servicall workflow")
         sleep(10)
         self.assertEqual('child Update launched', parent_instance.returnValues['parent_out.child_workflow_status'])
@@ -123,7 +123,7 @@ class ServiceCallTestApp(base.BaseTestCase):
 
     # Instance ready. Execute workflow with servicecall
 
-        parent_instance.runWorkflow(name='actions.child_servicecall')
+        parent_instance.run_workflow(name='actions.child_servicecall')
         self.assertTrue(parent_instance.ready(), "Parent instance failed to execute servicall workflow")
         sleep(10)
         self.assertEqual('child Update launched', parent_instance.returnValues['parent_out.child_workflow_status'])

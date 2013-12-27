@@ -184,10 +184,10 @@ class SandBox(object):
     def __service(self, environment, service_data):
         service = self.organization.service(type=service_data["type"], name=service_data["name"],
                                             parameters=(service_data["parameters"] or "{}"))
-        environment.serviceAdd(service)
+        environment.add_service(service)
         if 'builtin:cobalt_secure_store' in service_data["type"]:
             key_id = service.regenerate()['id']
-            environment.policyAdd({
+            environment.add_policy({
                 "action": "provisionVms",
                 "parameter": "publicKeyId",
                 "value": key_id
@@ -196,7 +196,7 @@ class SandBox(object):
 
     def __cloud_account(self, environment, provider):
         cloud = self.organization.provider(parameters=provider, name=provider["name"])
-        environment.providerAdd(cloud)
+        environment.add_provider(cloud)
         provider["id"] = cloud.providerId
 
     def __application(self, app):
