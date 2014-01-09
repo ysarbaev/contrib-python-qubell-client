@@ -12,11 +12,12 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from qubell.api.public import application
 
 __author__ = "Anton Panasenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
-__version__ = "1.0.11"
+
 __email__ = "apanasenko@qubell.com"
 
 import unittest
@@ -74,10 +75,10 @@ def workflow(name, parameters=None, timeout=10):
             self = args[0]
             instance = args[1]
 
-            assert instance.runWorkflow(name, parameters)
+            assert instance.run_workflow(name, parameters)
             if not instance.ready(timeout):
                 self.fail(
-                    "Instance %s don't ready after run workflow: %s with parameters %s and timeout %s".format(
+                    "Instance %s don't ready after run workflow: %s with parameters %s and timeout %s" % (
                         instance.instanceId, name, parameters, timeout
                     )
                 )
@@ -207,12 +208,16 @@ class BaseTestCase(unittest.TestCase):
                     environment_id = cls.organization.environment(name=env).id
                     instance = cls.organization.application(name=app['name']).launch(environmentId=environment_id)
                     cls.instances.append(instance)
-                    cls.sandbox.sandbox["instances"].append({"id": instance.instanceId, "name": instance.name})
+                    cls.sandbox.sandbox["instances"].append({
+                        "id": instance.instanceId,
+                        "name": instance.name,
+                        "applicationId":  app['id']
+                    })
 
         for instance in cls.instances:
             if not instance.ready(timeout=timeout):
                 cls.sandbox.clean()
-                assert False, "Instance %s don't ready".format(instance.instanceId)
+                assert False, "Instance %s don't ready" % instance.instanceId
 
     @classmethod
     def tearDownClass(cls):
@@ -278,7 +283,7 @@ class SandBox(object):
                 self.__cloud_account(environment, provider)
 
             for police in env.get('policies', []):
-                environment.policyAdd(police)
+                environment.add_policy(police)
 
             for app in self.sandbox["applications"]:
                 self.__application(app)
@@ -289,13 +294,22 @@ class SandBox(object):
 
     def clean(self, timeout=3):
         log.info("cleaning sandbox...")
-        for instanceData in self.sandbox['instances']:
-            instance = Instance(context=self.platform.context, id=instanceData["id"])
-            instance.destroy()
+
+        def destroy(instances):
+            instances = []
+            for instanceData in instances:
+                application = self.organization.get_application(instanceData['applicationId'])
+                instance = application.get_instance(instanceData['id'])
+                instance.destroy()
+                instances.append(instance)
+            return instances
+
+        for instance in destroy(self.sandbox['instances']):
             if not instance.destroyed(timeout):
                 log.error(
-                    "Instance was not destroyed properly {0}: {1}".format(instanceData["id"], instanceData["name"])
+                    "Instance was not destroyed properly {0}: {1}", (instance.id, instance.name)
                 )
+
         log.info("sandbox cleaned")
 
     def __check_environment_name(self, name):

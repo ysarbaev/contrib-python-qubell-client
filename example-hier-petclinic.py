@@ -17,7 +17,6 @@
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
-__version__ = "1.0.11"
 __email__ = "vkhomenko@qubell.com"
 
 """ Example shows how to run hierarchical petclinic using qubellclient """

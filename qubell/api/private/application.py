@@ -17,7 +17,6 @@
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
-__version__ = "1.0.11"
 __email__ = "vkhomenko@qubell.com"
 
 import logging as log
@@ -79,25 +78,18 @@ class Application(object):
             return resp.json()
         raise exceptions.ApiError('Unable to update application %s, got error: %s' % (self.name, resp.text))
 
-    def clean(self):
-        #TODO: Needs refactor
-        from qubell.api.private import instance, revision
+    def clean(self, timeout=3):
+        for ins in self.instances:
+            st = ins.status
+            if st not in ['Destroyed', 'Destroying', 'Launching', 'Executing']: # Tests could fail and we can get any statye here
+                log.info("Destroying instance %s" % ins.name)
+                ins.delete()
+                assert ins.destroyed(timeout=timeout)
+                self.instances.remove(ins)
 
-        instances = self.instances
-        if instances:
-            for ins in instances:
-                obj = instance.Instance(context=self.auth, id=ins['id'])
-                st = obj.status
-                if st not in ['Destroyed', 'Destroying', 'Launching', 'Executing']: # Tests could fail and we can get any statye here
-                    log.info("Destroying instance %s" % obj.name)
-                    obj.delete()
-                    assert obj.destroyed(timeout=10)
-
-        revisions = self.revisions
-        if revisions:
-            for rev in revisions:
-                obj = revision.Revision(context=self.auth, id=rev['id'])
-                obj.delete()
+        for rev in self.revisions:
+            self.revisions.remove(rev)
+            rev.delete()
         return True
 
     def json(self):
