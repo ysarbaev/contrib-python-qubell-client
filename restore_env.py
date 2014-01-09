@@ -38,13 +38,13 @@ python create_env.py
 
 """
 
-default_env = os.path.join(os.path.dirname(__file__), 'env-for-tests.yml')
+default_env = os.path.join(os.path.dirname(__file__), 'default.env')
 
 user = os.environ.get('QUBELL_USER', 'user')
 password = os.environ.get('QUBELL_PASSWORD', 'password')
 api = os.environ.get('QUBELL_API', 'https://express.qubell.com')
 org = os.environ.get('QUBELL_ORG', None)
-zone = os.environ.get('QUBELL_ZONE','')
+zone = os.environ.get('QUBELL_ZONE', '')
 
 provider = os.environ.get('PROVIDER', 'aws-ec2')
 region = os.environ.get('REGION', 'us-east-1')
@@ -78,12 +78,13 @@ if len(sys.argv)>1:
 else:
     env = default_env
 
-env_file=open(env)
+env_file = open(env)
 cfg = yaml.load(env_file)
 
 # Get cloud access info
 cfg['organizations'][0].update({'providers': [cloud_access]})
-if org: cfg['organizations'][0].update({'name':org})
+if org:
+    cfg['organizations'][0].update({'name': org})
 
 platform = QubellPlatform(auth=auth)
 
@@ -93,5 +94,4 @@ print "Authorization passed"
 print "Restoring env: %s" % env
 platform.restore(cfg)
 print "Restore finished"
-
 

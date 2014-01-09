@@ -176,7 +176,7 @@ class WorkflowInstance(base.BaseTestCase):
         reconfigured_inst = self.reconf(src, dst)
         self.assertTrue(reconfigured_inst.ready())
 
-        reconfigured_inst.runWorkflow(name='action.gogogo')
+        reconfigured_inst.run_workflow(name='action.gogogo')
         self.assertTrue(reconfigured_inst.ready())
 
         @retry(5,2,1)
@@ -209,11 +209,11 @@ class WorkflowInstance(base.BaseTestCase):
         self.assertTrue('action.stop' in [x['name'] for x in reconfigured_inst.availableWorkflows])
         self.assertTrue('action.gogo_new' in [x['name'] for x in reconfigured_inst.availableWorkflows])
 
-        reconfigured_inst.runWorkflow(name='action.gogo_new')
+        reconfigured_inst.run_workflow(name='action.gogo_new')
         self.assertTrue(reconfigured_inst.ready())
         self.assertEqual("Action GOGO-NEW launched", reconfigured_inst.returnValues['out.new_output'])
 
-        reconfigured_inst.runWorkflow(name='action.stop')
+        reconfigured_inst.run_workflow(name='action.stop')
         self.assertTrue(reconfigured_inst.ready())
         self.assertEqual("Action STOP launched", reconfigured_inst.returnValues['out.new_output'])
 

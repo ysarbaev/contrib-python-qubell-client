@@ -87,7 +87,7 @@ class BasicInstanceActionsTest(base.BaseTestCase):
         '''
 
         self.assertEqual("This is default manifest", self.instance.returnValues['out.app_output'])
-        self.instance.runWorkflow(name='action.default')
+        self.instance.run_workflow(name='action.default')
         self.assertTrue(self.instance.ready(), 'Failed to execute workflow.')
         self.assertEqual('Action WF launched', self.instance.returnValues['out.app_output'])
 

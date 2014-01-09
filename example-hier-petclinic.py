@@ -48,9 +48,9 @@ def prepare_env(org):
     # Add services to environment
     env = org.environment(name='default')
     env.clean()
-    env.serviceAdd(key_service)
-    env.serviceAdd(wf_service)
-    env.policyAdd(
+    env.add_service(key_service)
+    env.add_service(wf_service)
+    env.add_policy(
         {"action": "provisionVms",
          "parameter": "publicKeyId",
          "value": key_service.regenerate()['id']})
@@ -67,7 +67,7 @@ def prepare_env(org):
       "jcloudsRegions": "us-east-1"
     }
     prov = org.provider(access)
-    env.providerAdd(prov)
+    env.add_provider(prov)
     return org.organizationId
 
 
@@ -137,7 +137,7 @@ assert parse_csv(ha_resp)['act'] == '1'
 print 'Checking num of nodes in haproxy: 1'
 
 # Now launch scale-up
-instance.runWorkflow(name='manage.scale-up')
+instance.run_workflow(name='manage.scale-up')
 print "Executing manage.scale-up..."
 assert instance.ready(15)
 print "Instance Ready"
@@ -155,7 +155,7 @@ print 'Checking num of nodes in haproxy: 2'
 
 
 # launch scale-down
-instance.runWorkflow(name='manage.scale-down')
+instance.run_workflow(name='manage.scale-down')
 print "Executing manage.scale-down..."
 assert instance.ready(15)
 print "Instance Ready"

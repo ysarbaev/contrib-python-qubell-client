@@ -60,7 +60,7 @@ class InstanceStatusTest(base.BaseTestCase):
     def test_non_propogated_fail_is_local(self):
         # No errors at beginning
         self.assertFalse(self.instance.errorMessage)
-        self.instance.runWorkflow(name='action.local_fail')
+        self.instance.run_workflow(name='action.local_fail')
 
         self.assertTrue(self.instance.ready(), 'Failed to execute workflow.')
         self.assertEqual('Running', self.instance.status)
@@ -70,7 +70,7 @@ class InstanceStatusTest(base.BaseTestCase):
     def test_propogated_fail_is_global(self):
         # No errors at beginning
         self.assertFalse(self.instance.errorMessage)
-        self.instance.runWorkflow(name='action.global_fail')
+        self.instance.run_workflow(name='action.global_fail')
 
         self.assertTrue(self.instance.waitForStatus(final='Failed', accepted=['Requested', 'Executing', 'Unknown']), 'Got wrong status: Running. Should be: Failed')
         self.assertEqual('Failed', self.instance.status)
@@ -79,10 +79,10 @@ class InstanceStatusTest(base.BaseTestCase):
 
     def test_propogated_success_is_global(self):
         # Make Failed status at beginning
-        self.instance.runWorkflow(name='action.global_fail')
+        self.instance.run_workflow(name='action.global_fail')
         self.assertTrue(self.instance.waitForStatus(final='Failed', accepted=['Requested', 'Executing', 'Unknown']), 'Got wrong status: Running. Should be: Failed')
 
-        self.instance.runWorkflow(name='action.global_success')
+        self.instance.run_workflow(name='action.global_success')
 
         self.assertTrue(self.instance.ready(), 'Instance should get Running status')
         self.assertEqual('Running', self.instance.status)
@@ -92,10 +92,10 @@ class InstanceStatusTest(base.BaseTestCase):
 
     def test_non_propogated_success_is_local(self):
         # Make Failed status at beginning
-        self.instance.runWorkflow(name='action.global_fail')
+        self.instance.run_workflow(name='action.global_fail')
         self.assertTrue(self.instance.waitForStatus(final='Failed', accepted=['Requested', 'Executing', 'Unknown']), 'Got wrong status: Running. Should be: Failed')
 
-        self.instance.runWorkflow(name='action.local_success')
+        self.instance.run_workflow(name='action.local_success')
         self.assertTrue(self.instance.waitForStatus(final='Failed', accepted=['Requested', 'Executing', 'Unknown', 'Running']), 'Got wrong status: Running. Should be: Failed')
 
         self.assertEqual('Failed', self.instance.status)

@@ -4,6 +4,7 @@ Python-qubell-client
 
 Repository contains:
 
+
 qubell/api/private - library to access qubell via dev (non-stable) api.
 qubell/api/public - library to access qubell via public (stable) api.
 
@@ -38,6 +39,7 @@ QUBELL_API - url to qubell platform
 QUBELL_ORG - name of organization to use. Will be created if not exists.
 
 If you atend to create environment, you will also need:
+
 PROVIDER, REGION, JCLOUDS_IDENTITY, JCLOUDS_CREDENTIALS - credentials for amazon ec2. (to create provider)
 By default Amazon ec2 used (in us-east zone)
 
