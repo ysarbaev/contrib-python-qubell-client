@@ -296,13 +296,13 @@ class SandBox(object):
         log.info("cleaning sandbox...")
 
         def destroy(instances):
-            instances = []
+            return_instances = []
             for instanceData in instances:
                 application = self.organization.get_application(instanceData['applicationId'])
                 instance = application.get_instance(instanceData['id'])
                 instance.destroy()
                 instances.append(instance)
-            return instances
+            return return_instances
 
         for instance in destroy(self.sandbox['instances']):
             if not instance.destroyed(timeout):
