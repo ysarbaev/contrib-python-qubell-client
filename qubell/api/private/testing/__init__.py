@@ -301,7 +301,7 @@ class SandBox(object):
                 application = self.organization.get_application(instanceData['applicationId'])
                 instance = application.get_instance(instanceData['id'])
                 instance.destroy()
-                instances.append(instance)
+                return_instances.append(instance)
             return return_instances
 
         for instance in destroy(self.sandbox['instances']):
