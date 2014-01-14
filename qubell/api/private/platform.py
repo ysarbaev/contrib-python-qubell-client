@@ -27,7 +27,7 @@ from qubell.api.private import exceptions
 
 class QubellPlatform(object):
 
-    def __init__(self, context, auth=None):
+    def __init__(self, context=None, auth=None):
         self.organizations = []
         self.auth = auth or context
         self.user = self.auth.user
