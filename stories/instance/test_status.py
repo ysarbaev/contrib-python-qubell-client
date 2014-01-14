@@ -22,6 +22,7 @@ import os
 
 from stories import base
 from qubell.api.private.manifest import Manifest
+from qubell.api.tools import waitForStatus
 
 
 class InstanceStatusTest(base.BaseTestCase):
@@ -71,15 +72,15 @@ class InstanceStatusTest(base.BaseTestCase):
         self.assertFalse(self.instance.errorMessage)
         self.instance.run_workflow(name='action.global_fail')
 
-        self.assertTrue(self.instance.waitForStatus(final='Failed', accepted=['Requested', 'Executing', 'Unknown']), 'Got wrong status: Running. Should be: Failed')
-        self.assertEqual('Failed', self.instance.status)
+        self.assertTrue(waitForStatus(self.instance, final='Error', accepted=['Requested', 'Executing', 'Unknown']), 'Got wrong status: Running. Should be: Error')
+        self.assertEqual('Error', self.instance.status)
         # Now we should see error message while instance got status running
         self.assertTrue(self.instance.errorMessage)
 
     def test_propogated_success_is_global(self):
         # Make Failed status at beginning
         self.instance.run_workflow(name='action.global_fail')
-        self.assertTrue(self.instance.waitForStatus(final='Failed', accepted=['Requested', 'Executing', 'Unknown']), 'Got wrong status: Running. Should be: Failed')
+        self.assertTrue(waitForStatus(self.instance, final='Error', accepted=['Requested', 'Executing', 'Unknown']), 'Got wrong status: Running. Should be: Error')
 
         self.instance.run_workflow(name='action.global_success')
 
@@ -92,10 +93,10 @@ class InstanceStatusTest(base.BaseTestCase):
     def test_non_propogated_success_is_local(self):
         # Make Failed status at beginning
         self.instance.run_workflow(name='action.global_fail')
-        self.assertTrue(self.instance.waitForStatus(final='Failed', accepted=['Requested', 'Executing', 'Unknown']), 'Got wrong status: Running. Should be: Failed')
+        self.assertTrue(waitForStatus(self.instance, final='Error', accepted=['Requested', 'Executing', 'Unknown']), 'Got wrong status: Running. Should be: Error')
 
         self.instance.run_workflow(name='action.local_success')
-        self.assertTrue(self.instance.waitForStatus(final='Failed', accepted=['Requested', 'Executing', 'Unknown', 'Running']), 'Got wrong status: Running. Should be: Failed')
+        self.assertTrue(waitForStatus(self.instance, final='Error', accepted=['Requested', 'Executing', 'Unknown', 'Running']), 'Got wrong status: Running. Should be: Error')
 
-        self.assertEqual('Failed', self.instance.status)
+        self.assertEqual('Error', self.instance.status)
         self.assertTrue(self.instance.errorMessage)

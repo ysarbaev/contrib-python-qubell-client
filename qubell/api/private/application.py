@@ -149,7 +149,7 @@ class Application(object):
     def get_revision(self, id):
         from qubell.api.private.revision import Revision
         rev = Revision(auth=self.auth, application=self, id=id)
-        self.revisions.update({rev.name: rev})
+        self.revisions.append(rev)
         return rev
 
     def list_revisions(self):
@@ -157,7 +157,7 @@ class Application(object):
 
     def create_revision(self, name, instance, parameters=[], version=None):
         if not version:
-            version=self.get_manifest()['version']
+            version=self.get_manifest()['manifestVersion']
         url = self.auth.api+'/organizations/'+self.organization.organizationId+'/applications/'+self.applicationId+'/revisions.json'
         headers = {'Content-Type': 'application/json'}
         payload = json.dumps({ 'name': name,

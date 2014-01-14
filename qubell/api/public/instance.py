@@ -99,7 +99,7 @@ class Instance(application.Application):
     def destroyed(self, timeout=3):  # Shortcut for convinience. Temeout = 3 min (ask timeout*6 times every 10 sec)
         return self.waitForStatus(final='Destroyed', accepted=['Destroying', 'Running'], timeout=[timeout*6, 10, 1])
 
-    def runWorkflow(self, name, parameters={}):
+    def run_workflow(self, name, parameters={}):
         log.info("Running workflow %s" % name)
         url = self.auth.api+'/api/1/instances/'+self.instanceId+'/'+name
         headers = {'Content-Type': 'application/json'}
@@ -111,7 +111,7 @@ class Instance(application.Application):
         raise exceptions.ApiError('Unable to run workflow %s, got error: %s' % (name, resp.text))
 
 
-    def getManifest(self):
+    def get_manifest(self):
         raise NotImplementedError
 
 

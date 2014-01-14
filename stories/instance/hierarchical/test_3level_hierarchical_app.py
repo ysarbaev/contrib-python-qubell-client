@@ -48,14 +48,10 @@ class ThreeLevelHierarchicalAppTest(base.BaseTestCase):
 
     @classmethod
     def tearDownClass(cls):
-        super(ThreeLevelHierarchicalAppTest, cls).tearDownClass()
-
         cls.parent.delete()
         cls.middle_child.delete()
         cls.last_child.delete()
-
-    def tearDown(self):
-        super(ThreeLevelHierarchicalAppTest, self).tearDown()
+        super(ThreeLevelHierarchicalAppTest, cls).tearDownClass()
 
 
     @attr('smoke')

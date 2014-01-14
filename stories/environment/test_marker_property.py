@@ -86,7 +86,7 @@ class MarkerPropertyTest(base.BaseTestCase):
 
         out = ins.returnValues
         self.assertEqual(out['output.str'], 'test-property-string')
-        self.assertEqual(out['output.int'], '42')
+        self.assertEqual(out['output.int'], 42)
         self.assertEqual(out['output.obj'], 'aa:bb')
 
         # TODO: instance should be destroyed before properties removed, otherwise it will be in inconsistent state and

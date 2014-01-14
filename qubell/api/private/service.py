@@ -74,11 +74,11 @@ class Service(object):
         params = self.json()['parameters']
         if params.has_key('configuration.shared-instances'):
             old = yaml.safe_load(params['configuration.shared-instances'])
-            old[revision.revisionId.split('-')[0]] = instance.instanceId
-            params['configuration.shared-instances'] = yaml.safe_dump(old, default_flow_style=False)
-            self.modify(params)
         else:
-            raise exceptions.ApiError('Unable to add shared instance %s to service %s' % (instance.name, self.name))
+            old = {}
+        old[revision.revisionId.split('-')[0]] = instance.instanceId
+        params['configuration.shared-instances'] = yaml.safe_dump(old, default_flow_style=False)
+        self.modify(params)
 
     def remove_shared_instance(self, instance=None, revision=None):
         params = self.json()['parameters']
@@ -92,7 +92,7 @@ class Service(object):
             params['configuration.shared-instances'] = yaml.safe_dump(old, default_flow_style=False)
             self.modify(params)
         else:
-            raise exceptions.ApiError('Unable to add shared instance %s to service %s' % (instance.name, self.name))
+            raise exceptions.ApiError('Unable to remove shared instance %s from service %s. No shared instances configured.' % (instance.name, self.name))
 
     def list_shared_instances(self):
         params = self.json()['parameters']

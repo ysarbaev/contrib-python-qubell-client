@@ -93,4 +93,4 @@ class Constants(base.BaseTestCase):
         reconfigured_inst = self.reconf(src, dst)
         self.assertTrue(reconfigured_inst.ready())
 
-        self.assertEqual("42", reconfigured_inst.returnValues['return.foo'])
+        self.assertEqual(42, reconfigured_inst.returnValues['return.foo'])
