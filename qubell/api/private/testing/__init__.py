@@ -197,7 +197,7 @@ class BaseTestCase(unittest.TestCase):
             cls.prepare(cls.__name__, cls.timeout())
 
     @classmethod
-    def prepare(cls, organization, timeout=15):
+    def prepare(cls, organization, timeout=30):
         cls.sandbox = SandBox(cls.platform, cls.environment(organization))
         cls.organization = cls.sandbox.make()
 
@@ -292,7 +292,7 @@ class SandBox(object):
 
         return self.organization
 
-    def clean(self, timeout=3):
+    def clean(self, timeout=10):
         log.info("cleaning sandbox...")
 
         def destroy(instances):
@@ -307,7 +307,7 @@ class SandBox(object):
         for instance in destroy(self.sandbox['instances']):
             if not instance.destroyed(timeout):
                 log.error(
-                    "Instance was not destroyed properly {0}: {1}", (instance.id, instance.name)
+                    "Instance was not destroyed properly {0}: {1}", instance.id, instance.name
                 )
 
         log.info("sandbox cleaned")
