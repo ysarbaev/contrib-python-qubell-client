@@ -31,6 +31,7 @@ class Manifest(object):
         self.name = name
         if url:
             self.url = url
+            self.source = url
             self.content = requests.get(url).content
         elif content:
             self.source = 'Text'
@@ -43,6 +44,8 @@ class Manifest(object):
             else:
                 exit("No manifest found: %s " % self.name)
             self.content = open(self.file, 'r').read()
+            self.source = self.file
+
 
     def patch(self, path, value):
         """ Set specified value to yaml path.

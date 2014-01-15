@@ -35,8 +35,8 @@ class Application(Organization):
             ret[val['id']] = val['value']
         return ret
 
-    def __init__(self, context, id):
-        self.auth = context
+    def __init__(self, auth, id):
+        self.auth = auth
         self.applicationId = id
         self.auth.applicationId = id
 
@@ -53,7 +53,7 @@ class Application(Organization):
         instances = self.instances
         if instances:
             for ins in instances:
-                obj = instance.Instance(context=self.auth, id=ins['id'])
+                obj = instance.Instance(auth=self.auth, id=ins['id'])
                 st = obj.status
                 if st not in ['Destroyed', 'Destroying', 'Launching', 'Executing']: # Tests could fail and we can get any statye here
                     log.info("Destroying instance %s" % obj.name)
@@ -63,12 +63,12 @@ class Application(Organization):
         revisions = self.revisions
         if revisions:
             for rev in revisions:
-                obj = revision.Revision(context=self.auth, id=rev['id'])
+                obj = revision.Revision(auth=self.auth, id=rev['id'])
                 obj.delete()
         return True
 
     def json(self, key=None):
-        url = self.auth.api+'/api/1/organizations/'+self.auth.organizationId+'/applications'
+        url = self.auth.tenant+'/api/1/organizations/'+self.auth.organizationId+'/applications'
         resp = requests.get(url, auth=(self.auth.user, self.auth.password), verify=False)
         log.debug(resp.text)
         if resp.status_code == 200:
@@ -86,7 +86,7 @@ class Application(Organization):
 
     def upload(self, manifest):
         log.info("Uploading manifest")
-        url = self.auth.api+'/api/1/applications/'+self.applicationId+'/manifest'
+        url = self.auth.tenant+'/api/1/applications/'+self.applicationId+'/manifest'
         headers = {'Content-Type': 'application/x-yaml'}
         resp = requests.put(url, auth=(self.auth.user, self.auth.password), data=manifest.content, verify=False, headers=headers)
         log.debug(resp.text)
@@ -96,7 +96,7 @@ class Application(Organization):
         raise exceptions.ApiError('Unable to upload manifest to application id: %s, got error: %s' % (self.applicationId, resp.text))
 
     def launch(self, **argv):
-        url = self.auth.api+'/api/1/applications/'+self.applicationId+'/launch'
+        url = self.auth.tenant+'/api/1/applications/'+self.applicationId+'/launch'
         headers = {'Content-Type': 'application/json'}
         #if not 'environmentId' in argv.keys():
         #    argv['environmentId'] = self.context.environmentId
@@ -114,7 +114,7 @@ class Application(Organization):
 
     def get_instance(self, id):
         from qubell.api.public.instance import Instance
-        return Instance(context=self.auth, id=id)
+        return Instance(auth=self.auth, id=id)
 
     def delete_instance(self, id):
         ins = self.get_instance(id)
@@ -123,11 +123,11 @@ class Application(Organization):
     def get_revision(self, id):
         from qubell.api.public.revision import Revision
         self.auth.applicationId = self.applicationId
-        return Revision(context=self.auth, id=id)
+        return Revision(auth=self.auth, id=id)
 
 
     def list_revisions(self):
-        url = self.auth.api+'/api/1/applications/'+self.applicationId+'/revisions'
+        url = self.auth.tenant+'/api/1/applications/'+self.applicationId+'/revisions'
         resp = requests.get(url, auth=(self.auth.user, self.auth.password), verify=False)
         log.debug(resp.text)
         if resp.status_code == 200:

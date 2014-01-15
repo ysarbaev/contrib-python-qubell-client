@@ -27,12 +27,13 @@ from qubell.api.private import exceptions
 
 class QubellPlatform(object):
 
-    def __init__(self, context, *args, **kwargs):
-        self.context = context
+    def __init__(self, context=None, auth=None):
+        self.auth = auth or context
+        self.tenant = self.auth.tenant
 
     def authenticate(self):
-        url = self.context.api+'/api/1/organizations'
-        resp = requests.get(url, auth=(self.context.user, self.context.password), verify=False)
+        url = self.tenant+'/api/1/organizations'
+        resp = requests.get(url, auth=(self.auth.user, self.auth.password), verify=False)
         log.debug(resp.text)
         if 200 == resp.status_code:
             return True
@@ -45,7 +46,7 @@ class QubellPlatform(object):
     def get_organization(self, id):
         log.info("Picking organization: %s" % id)
         from qubell.api.public.organization import Organization
-        return Organization(self.context, id=id)
+        return Organization(self.auth, id=id)
 
     def organization(self, id=None, name=None):
         """ Smart object. Will create organization or pick one, if exists"""
@@ -64,8 +65,8 @@ class QubellPlatform(object):
                 return self.create_organization(name)
 
     def list_organizations(self):
-        url = self.context.api+'/api/1/organizations'
-        resp = requests.get(url, auth=(self.context.user, self.context.password), verify=False)
+        url = self.tenant+'/api/1/organizations'
+        resp = requests.get(url, auth=(self.auth.user, self.auth.password), verify=False)
         log.debug(resp.text)
         if 200 == resp.status_code:
             return resp.json()
@@ -79,8 +80,10 @@ class QubellPlatform(object):
         raise NotImplementedError('Api does not support organization deletion')
 
 
-class Context(object):
-    def __init__(self, user, password, api):
+class Auth(object):
+    def __init__(self, user, password, tenant):
         self.user = user
         self.password = password
-        self.api = api
+        self.tenant = tenant
+        self.api = tenant
+

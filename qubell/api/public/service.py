@@ -30,8 +30,8 @@ from qubell.api.private import exceptions
 
 class Service(Organization):
 
-    def __init__(self, context, id):
-        self.auth = context
+    def __init__(self, auth, id):
+        self.auth = auth
         self.serviceId = id
         my = self.json()
         self.name = my['name']
@@ -45,7 +45,7 @@ class Service(Organization):
         return resp[key] or False
 
     def json(self):
-        url = self.auth.api+'/api/1/services/'+self.serviceId
+        url = self.auth.tenant+'/api/1/services/'+self.serviceId
         resp = requests.get(url, auth=(self.auth.user, self.auth.password), verify=False)
         log.debug(resp.text)
         if resp.status_code == 200:
@@ -57,7 +57,7 @@ class Service(Organization):
         raise NotImplementedError
 
     def modify(self, parameters):
-        url = self.auth.api+'/api/1/services/'+self.serviceId
+        url = self.auth.tenant+'/api/1/services/'+self.serviceId
         headers = {'Content-Type': 'application/json'}
         payload = {#'id': self.serviceId,
                    'name': self.name,

@@ -30,9 +30,9 @@ class Revision(application.Application):
     Base class for revision
     """
 
-    def __init__(self, context, id):
+    def __init__(self, auth, id):
         self.revisionId = id
-        self.auth = context
+        self.auth = auth
         my = self.json()
         self.name = my['name']
 
@@ -43,7 +43,7 @@ class Revision(application.Application):
         return resp[key] or False
 
     def json(self):
-        url = self.auth.api+'/api/1/applications/'+self.auth.applicationId+'/revisions'
+        url = self.auth.tenant+'/api/1/applications/'+self.auth.applicationId+'/revisions'
         resp = requests.get(url, auth=(self.auth.user, self.auth.password), verify=False)
         log.debug(resp.text)
         if resp.status_code == 200:

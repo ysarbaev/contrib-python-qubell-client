@@ -38,16 +38,16 @@ class Instance(application.Application):
             ret[val['id']] = val['value']
         return ret
 
-    def __init__(self, context, id=None):
+    def __init__(self, auth, id=None):
         self.instanceId = id
-        self.auth = context
+        self.auth = auth
         self.auth.instanceId = self.instanceId
         self.name = self.name
         self._status = 'Init'
 
     def json(self):
 
-        url = self.auth.api+'/api/1/instances/'+self.instanceId
+        url = self.auth.tenant+'/api/1/instances/'+self.instanceId
         resp = requests.get(url, auth=(self.auth.user, self.auth.password), verify=False)
         log.debug(resp.text)
         if resp.status_code == 200:
@@ -101,7 +101,7 @@ class Instance(application.Application):
 
     def run_workflow(self, name, parameters={}):
         log.info("Running workflow %s" % name)
-        url = self.auth.api+'/api/1/instances/'+self.instanceId+'/'+name
+        url = self.auth.tenant+'/api/1/instances/'+self.instanceId+'/'+name
         headers = {'Content-Type': 'application/json'}
         payload = json.dumps(parameters)
         resp = requests.post(url, auth=(self.auth.user, self.auth.password), data=payload, verify=False, headers=headers)
