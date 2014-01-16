@@ -26,15 +26,18 @@ To use this script, setup environmnt variables or modify defauls (see bellow)
 
 Environment variables:
 QUBELL_USER, QUBELL_PASSWORD - user to access qubell
-QUBELL_API - url to qubell platform
-QUBELL_ORG - name of organization to use. Will be created if not exists.
+QUBELL_TENANT - url to qubell platform
+QUBELL_ORGANIZATION - name of organization to use. Will be created if not exists.
 
 PROVIDER, REGION, JCLOUDS_IDENTITY, JCLOUDS_CREDENTIALS - credentials for amazon ec2. (will create provider)
 
 
 To run script, set up environment variables and run script by:
 
-python create_env.py
+python restore_env.py envfile.env
+or
+./restore_env.py
+Will use default.env
 
 """
 
@@ -43,7 +46,7 @@ default_env = os.path.join(os.path.dirname(__file__), 'default.env')
 user = os.environ.get('QUBELL_USER', 'user')
 password = os.environ.get('QUBELL_PASSWORD', 'password')
 tenant = os.environ.get('QUBELL_TENANT', 'https://express.qubell.com')
-org = os.environ.get('QUBELL_ORG', None)
+org = os.environ.get('QUBELL_ORGANIZATION', None)
 zone = os.environ.get('QUBELL_ZONE', '')
 
 provider = os.environ.get('PROVIDER', 'aws-ec2')

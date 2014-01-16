@@ -35,8 +35,8 @@ Configuration
 
 To configure tests, set up environment variables:
 QUBELL_USER, QUBELL_PASSWORD - user to access qubell
-QUBELL_API - url to qubell platform
-QUBELL_ORG - name of organization to use. Will be created if not exists.
+QUBELL_TENANT - url to qubell platform (https://express.qubell.com)
+QUBELL_ORGANIZATION - name of organization to use. Will be created if not exists.
 
 If you atend to create environment, you will also need:
 
@@ -45,10 +45,10 @@ By default Amazon ec2 used (in us-east zone)
 
 ::
 
-	export QUBELL_API="http://qubell.com"
+	export QUBELL_TENANT="https://express.qubell.com"
 	export QUBELL_USER="user@gmail.com"
 	export QUBELL_PASSWORD="password"
-	export QUBELL_ORG="my-org"
+	export QUBELL_ORGANIZATION="my-org"
 
 	export JCLOUDS_IDENTITY="FFFFFFFFF"
 	export JCLOUDS_CREDENTIALS="FFFFFFFFFF"
