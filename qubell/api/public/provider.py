@@ -29,8 +29,8 @@ from qubell.api.private import exceptions
 
 class Provider(Organization):
 
-    def __init__(self, context, id):
-        self.auth = context
+    def __init__(self, auth, id):
+        self.auth = auth
         self.providerId = id
         my = self.json()
         self.__dict__.update(my)
@@ -42,7 +42,7 @@ class Provider(Organization):
         return resp[key] or False
 
     def json(self):
-        url = self.auth.api+'/organizations/'+self.auth.organizationId+'/providers.json'
+        url = self.auth.tenant+'/organizations/'+self.auth.organizationId+'/providers.json'
         resp = requests.get(url, cookies=self.auth.cookies, verify=False)
         log.debug(resp.text)
         if resp.status_code == 200:
@@ -52,7 +52,7 @@ class Provider(Organization):
         raise exceptions.ApiError('Unable to get provider %s properties, got error: %s' % (self.providerId, resp.text))
 
     def delete(self):
-        url = self.auth.api+'/organizations/'+self.auth.organizationId+'/providers/'+self.providerId+'.json'
+        url = self.auth.tenant+'/organizations/'+self.auth.organizationId+'/providers/'+self.providerId+'.json'
         headers = {'Content-Type': 'application/json'}
         resp = requests.delete(url, cookies=self.auth.cookies, data=json.dumps({}), verify=False, headers=headers)
         log.debug(resp.text)

@@ -42,7 +42,7 @@ default_env = os.path.join(os.path.dirname(__file__), 'default.env')
 
 user = os.environ.get('QUBELL_USER', 'user')
 password = os.environ.get('QUBELL_PASSWORD', 'password')
-api = os.environ.get('QUBELL_API', 'https://express.qubell.com')
+tenant = os.environ.get('QUBELL_TENANT', 'https://express.qubell.com')
 org = os.environ.get('QUBELL_ORG', None)
 zone = os.environ.get('QUBELL_ZONE', '')
 
@@ -70,7 +70,7 @@ cloud_access = {
     }
 
 # Qubell access info
-auth = Auth(user=user, password=password, tenant=api)
+auth = Auth(user=user, password=password, tenant=tenant)
 env = None
 if len(sys.argv)>1:
     env = sys.argv[1]
