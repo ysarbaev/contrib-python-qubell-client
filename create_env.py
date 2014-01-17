@@ -31,7 +31,7 @@ QUBELL_USER, QUBELL_PASSWORD - user to access qubell
 QUBELL_TENANT - url to qubell platform
 QUBELL_ORGANIZATION - name of organization to use. Will be created if not exists.
 
-PROVIDER, REGION, JCLOUDS_IDENTITY, JCLOUDS_CREDENTIALS - credentials for amazon ec2. (will create provider)
+PROVIDER_TYPE, PROVIDER_REGION, PROVIDER_IDENTITY, PROVIDER_CREDENTIALS - credentials for amazon ec2. (will create provider)
 
 
 To run script, set up environment variables and run script by:
@@ -46,10 +46,10 @@ tenant = os.environ.get('QUBELL_TENANT', 'https://express.qubell.com')
 org = os.environ.get('QUBELL_ORGANIZATION', 'organization')
 zone = os.environ.get('QUBELL_ZONE','')
 
-provider = os.environ.get('PROVIDER', 'aws-ec2')
-region = os.environ.get('REGION', 'us-east-1')
-identity = os.environ.get('JCLOUDS_IDENTITY')
-credentials = os.environ.get('JCLOUDS_CREDENTIALS')
+provider = os.environ.get('PROVIDER_TYPE', 'aws-ec2')
+region = os.environ.get('PROVIDER_REGION', 'us-east-1')
+identity = os.environ.get('PROVIDER_IDENTITY')
+credentials = os.environ.get('PROVIDER_CREDENTIALS')
 
 
 __author__ = "Vasyl Khomenko"
