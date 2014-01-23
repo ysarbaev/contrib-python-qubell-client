@@ -31,7 +31,7 @@ QUBELL_USER, QUBELL_PASSWORD - user to access qubell
 QUBELL_TENANT - url to qubell platform
 QUBELL_ORGANIZATION - name of organization to use. Will be created if not exists.
 
-PROVIDER_TYPE, PROVIDER_REGION, PROVIDER_IDENTITY, PROVIDER_CREDENTIALS - credentials for amazon ec2. (will create provider)
+PROVIDER_TYPE, PROVIDER_REGION, PROVIDER_IDENTITY, PROVIDER_CREDENTIAL - credentials for amazon ec2. (will create provider)
 
 
 To run script, set up environment variables and run script by:
@@ -49,7 +49,7 @@ zone = os.environ.get('QUBELL_ZONE','')
 provider = os.environ.get('PROVIDER_TYPE', 'aws-ec2')
 region = os.environ.get('PROVIDER_REGION', 'us-east-1')
 identity = os.environ.get('PROVIDER_IDENTITY')
-credentials = os.environ.get('PROVIDER_CREDENTIALS')
+credentials = os.environ.get('PROVIDER_CREDENTIAL')
 
 
 __author__ = "Vasyl Khomenko"
