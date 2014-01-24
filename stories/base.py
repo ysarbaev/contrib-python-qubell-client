@@ -33,15 +33,15 @@ from qubell.api.tools import rand
 user = os.environ.get('QUBELL_USER')
 password = os.environ.get('QUBELL_PASSWORD')
 tenant = os.environ.get('QUBELL_TENANT')
-org = os.environ.get('QUBELL_ORG')
+org = os.environ.get('QUBELL_ORGANIZATION')
 prefix = os.environ.get('QUBELL_PREFIX')
 zone = os.environ.get('QUBELL_ZONE', '')
 new_env = os.environ.get('QUBELL_NEW')
 
 if not user: log.error('No username provided. Set QUBELL_USER env')
 if not password: log.error('No password provided. Set QUBELL_PASSWORD env')
-if not tenant: log.error('No tenant url provided. Set QUBELL_API env')
-if not org: log.error('No organization name provided. Set QUBELL_ORG env')
+if not tenant: log.error('No tenant url provided. Set QUBELL_TENANT env')
+if not org: log.error('No organization name provided. Set QUBELL_ORGANIZATION env')
 
 def attr(*args, **kwargs):
     """A decorator which applies the nose and testtools attr decorator
@@ -65,7 +65,7 @@ class BaseTestCase(testtools.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.prefix = prefix or rand()
-        cls.context = Auth(user=user, password=password, tenant=api)
+        cls.context = Auth(user=user, password=password, tenant=tenant)
         cls.context_public = cls.context
 
     # Initialize platform and check access

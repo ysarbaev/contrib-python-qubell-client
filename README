@@ -35,23 +35,25 @@ Configuration
 
 To configure tests, set up environment variables:
 QUBELL_USER, QUBELL_PASSWORD - user to access qubell
-QUBELL_API - url to qubell platform
-QUBELL_ORG - name of organization to use. Will be created if not exists.
+QUBELL_TENANT - url to qubell platform (https://express.qubell.com)
+QUBELL_ORGANIZATION - name of organization to use. Will be created if not exists.
 
 If you atend to create environment, you will also need:
 
-PROVIDER, REGION, JCLOUDS_IDENTITY, JCLOUDS_CREDENTIALS - credentials for amazon ec2. (to create provider)
+PROVIDER_TYPE, PROVIDER_REGION, PROVIDER_IDENTITY, PROVIDER_CREDENTIAL - credentials for amazon ec2. (to create provider)
 By default Amazon ec2 used (in us-east zone)
 
 ::
 
-	export QUBELL_API="http://qubell.com"
+	export QUBELL_TENANT="https://express.qubell.com"
 	export QUBELL_USER="user@gmail.com"
 	export QUBELL_PASSWORD="password"
-	export QUBELL_ORG="my-org"
+	export QUBELL_ORGANIZATION="my-org"
 
-	export JCLOUDS_IDENTITY="FFFFFFFFF"
-	export JCLOUDS_CREDENTIALS="FFFFFFFFFF"
+	export PROVIDER_TYPE="aws-ec2"
+	export PROVIDER_REGION="us-east-1"
+	export PROVIDER_IDENTITY="FFFFFFFFF"
+	export PROVIDER_CREDENTIAL="FFFFFFFFFF"
 
 
 Running tests
@@ -59,7 +61,7 @@ Running tests
 
 First you need prepare environment (create provider, services, etc) It could be done via portal or by running script::
 
-    python create_env.py
+    python restore_env.py
 
 Run single test::
 
