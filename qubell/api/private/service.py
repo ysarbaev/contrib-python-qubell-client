@@ -34,10 +34,10 @@ class Service(object):
         self.serviceId = id
         self.organization = organization
 
-        my = self.json()
-        self.name = my['name']
-        self.type = my['typeId']
-        self.zone = my['zoneId']
+        #my = self.json()
+        #self.name = my['name']
+        #self.type = my['typeId']
+        #self.zone = my['zoneId']
 
     def __getattr__(self, key):
         resp = self.json()
@@ -71,6 +71,9 @@ class Service(object):
         raise exceptions.ApiError('Unable to modify service %s: %s' % (self.name, resp.text))
 
     def add_shared_instance(self, revision, instance):
+        pass
+        """
+        # Not available yet
         params = self.json()['parameters']
         if params.has_key('configuration.shared-instances'):
             old = yaml.safe_load(params['configuration.shared-instances'])
@@ -79,8 +82,12 @@ class Service(object):
         old[revision.revisionId.split('-')[0]] = instance.instanceId
         params['configuration.shared-instances'] = yaml.safe_dump(old, default_flow_style=False)
         self.modify(params)
+        """
 
     def remove_shared_instance(self, instance=None, revision=None):
+        pass
+        """
+        # Not available yet
         params = self.json()['parameters']
         if params.has_key('configuration.shared-instances'):
             old = yaml.safe_load(params['configuration.shared-instances'])
@@ -93,12 +100,14 @@ class Service(object):
             self.modify(params)
         else:
             raise exceptions.ApiError('Unable to remove shared instance %s from service %s. No shared instances configured.' % (instance.name, self.name))
+        """
 
     def list_shared_instances(self):
         params = self.json()['parameters']
         return yaml.safe_load(params['configuration.shared-instances'])
 
     def json(self):
+        """
         url = self.auth.api+'/organizations/'+self.organization.organizationId+'/services.json'
         resp = requests.get(url, cookies=self.auth.cookies, verify=False)
         log.debug(resp.text)
@@ -107,6 +116,15 @@ class Service(object):
             if len(service)>0:
                 return service[0]
         raise exceptions.ApiError('Unable to get service properties, got error: %s' % resp.text)
+        """
+
+        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/instances/'+self.serviceId+'.json'
+        resp = requests.get(url, cookies=self.auth.cookies, data="{}", verify=False)
+        log.debug(resp.text)
+        if resp.status_code == 200:
+            return resp.json()
+        raise exceptions.NotFoundError('Unable to get service properties, got error: %s' % resp.text)
+
 
     def delete(self):
         url = self.auth.api+'/organizations/'+self.organization.organizationId+'/services/'+self.serviceId+'.json'

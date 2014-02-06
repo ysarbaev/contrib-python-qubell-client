@@ -134,6 +134,9 @@ class Application(object):
         self.instances.append(instance)
         return instance
 
+    def list_instances(self):
+        return self.json()['instances']
+
     def delete_instance(self, id):
         instance = self.get_instance(id)
         self.instances.remove(instance)
@@ -144,6 +147,7 @@ class Application(object):
             return self.get_instance(id)
         else:
             return self.launch(**kwargs)
+
 
 # REVISION
     def get_revision(self, id):

@@ -40,6 +40,7 @@ class Instance(object):
 
     def __init__(self, auth, application, id):
         self.instanceId = id
+        self.serviceId = id
         self.application = application
         self.auth = auth
         self.auth.instanceId = self.instanceId
@@ -110,6 +111,16 @@ class Instance(object):
         if resp.status_code == 200:
             return resp.json()
         raise exceptions.ApiError('Unable to reconfigure instance, got error: %s' % resp.text)
+
+    def convert_to_service(self):
+        url = self.auth.api+'/organizations/'+self.application.organizationId+'/instances/'+self.instanceId+'/convertToService.json'
+        headers = {'Content-Type': 'application/json'}
+        payload = json.dumps({})
+        resp = requests.post(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
+        log.debug(resp.text)
+        if resp.status_code == 200:
+            return resp.json()
+        raise exceptions.ApiError('Unable convert to service, got error: %s' % resp.text)
 
 
     def delete(self):

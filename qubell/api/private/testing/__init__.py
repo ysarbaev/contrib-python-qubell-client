@@ -30,6 +30,44 @@ from qubell.api.private.instance import Instance
 from qubell.api.private.manifest import Manifest
 
 
+from requests import api
+from requests import sessions
+
+import time
+import logging
+import re
+logger = logging.getLogger("qubell.routes")
+logging.getLogger("requests.packages.urllib3.connectionpool").setLevel(logging.WARN)
+
+def nicer(url):
+    """
+    Converts 'https://secure.dev.qubell.com/organizations/52f0f242e4b0defa5da4808e/environments/52f0f242e4b0defa5da4808f.json'
+    To '/organizations/__/environments/__.json'
+    """
+    withoutdomain = url[url.find("/", 8):]  # 8 == len("https://")
+    id_pattern="[A-Fa-f0-9]{24}"
+    snips = re.split(id_pattern, withoutdomain)
+    return "__".join(snips)
+
+def requestWithInfo(method, url, **kwargs):
+    session = sessions.Session()
+    start = time.time()
+    cache = session.request(method=method, url=url, **kwargs)
+    end = time.time()
+    elapsed = int((end-start)*1000.0)
+    logfun = logger.info
+    if 1000 > elapsed >= 10000:
+        logfun = logger.warn
+    elif elapsed > 10000:
+        logfun = logger.error
+
+    logfun(' {0} {1} took {2} ms'.format(method.upper(), nicer(url), elapsed))
+    return cache
+
+api.request = requestWithInfo
+
+
+
 def values(names):
     def wrapper(func):
         @wraps(func)
@@ -78,7 +116,7 @@ def workflow(name, parameters=None, timeout=10):
             assert instance.run_workflow(name, parameters)
             if not instance.ready(timeout):
                 self.fail(
-                    "Instance %s don't ready after run workflow: %s with parameters %s and timeout %s" % (
+                    "Instance %s isn't ready in appropriate time: %s with parameters %s and timeout %s" % (
                         instance.instanceId, name, parameters, timeout
                     )
                 )
@@ -156,17 +194,22 @@ class BaseTestCase(unittest.TestCase):
         import re
         if cls.environments:
             envs = {}
+            servs = []
             for name, value in cls.environments.items():
-                envs.update({str(re.sub("[^a-zA-Z0-9_]", "", name)): value})
+                key = str(re.sub("[^a-zA-Z0-9_]", "", name))
+                envs.update({key: value})
+                #servs.append({"type": 'builtin:cobalt_secure_store', "name": 'Credentials service for '+key, "parameters": "{}"})
+                #servs.append({"type": 'builtin:workflow_service', "name": 'Workflow service for '+key, "parameters": {'configuration.policies': '{}'}})
+
         else:
             envs = {"default": {}}
 
+        servs = [{"type": 'builtin:cobalt_secure_store', "name": 'Default credentials service', "parameters": "{}"},
+                 {"type": 'builtin:workflow_service', "name": 'Default workflow service', "parameters": {'configuration.policies': '{}'}}]
+
         return {
             "organization": {"name": organization},
-            "services": [
-                {"type": 'builtin:cobalt_secure_store', "name": 'Keystore', "parameters": "{}"},
-                {"type": 'builtin:workflow_service', "name": 'Workflow', "parameters": {'configuration.policies': '{}'}}
-            ],
+            "services": servs,
             "instances": [],
             "cloudAccounts": [{
                                   "name": cls.parameters['provider_name'],
@@ -198,6 +241,8 @@ class BaseTestCase(unittest.TestCase):
 
     @classmethod
     def prepare(cls, organization, timeout=30):
+        import pprint
+        pprint.pprint(cls.environment(organization))
         cls.sandbox = SandBox(cls.platform, cls.environment(organization))
         cls.organization = cls.sandbox.make()
 
@@ -217,7 +262,7 @@ class BaseTestCase(unittest.TestCase):
         for instance in cls.instances:
             if not instance.ready(timeout=timeout):
                 cls.sandbox.clean()
-                assert False, "Instance %s don't ready" % instance.instanceId
+                assert False, "Instance %s not ready after timeout" % instance.instanceId
 
     @classmethod
     def tearDownClass(cls):
@@ -249,6 +294,7 @@ class SandBox(object):
     def __service(self, environment, service_data):
         service = self.organization.service(type=service_data["type"], name=service_data["name"],
                                             parameters=(service_data["parameters"] or "{}"))
+
         environment.add_service(service)
         if 'builtin:cobalt_secure_store' in service_data["type"]:
             key_id = service.regenerate()['id']

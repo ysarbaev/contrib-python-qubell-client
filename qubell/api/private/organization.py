@@ -61,7 +61,7 @@ class Organization(object):
             self.get_or_create_provider(id=prov.pop('id', None), name=prov.pop('name'), parameters=prov)
         for env in config.pop('environments',[]):
             restored_env = self.get_or_create_environment(id=env.pop('id', None), name=env.pop('name', 'default'),zone=env.pop('zone', None), default=env.pop('default', False))
-            restored_env.clean()
+            #restored_env.clean()
             restored_env.restore(env)
         for app in config.pop('applications'):
             mnf = app.pop('manifest', None)
@@ -74,6 +74,7 @@ class Organization(object):
         url = self.auth.api+'/organizations/'+self.organizationId+'/applications.json'
 
         resp = requests.post(url, files={'path': manifest.content}, data={'manifestSource': 'upload', 'name': name}, verify=False, cookies=self.auth.cookies)
+        log.debug(resp.request)
         log.debug(resp.text)
         if resp.status_code == 200:
             app = self.get_application(resp.json()['id'])
@@ -136,35 +137,43 @@ class Organization(object):
         return app
 
 ### SERVICE
-    def create_service(self, name, type, parameters={}, zone=None):
+    def create_service(self, name, type, parameters={}, zone=None, environment='default'):
         log.info("Creating service: %s" % name)
-        if not zone:
-            zone = self.zone.zoneId
-        data = {'name': name,
-                'typeId': type,
-                'zoneId': zone,
-                'parameters': parameters}
+        if 'builtin:shared_instances_catalog' in type:
+            return self.create_shared_service(name=name, instances={}, zone=zone, environment=environment)
+        elif 'builtin:workflow_service' in type:
+            return self.create_workflow_service(name=name, policies={}, zone=zone, environment=environment)
+        elif 'builtin:cobalt_secure_store' in type:
+            return self.create_keystore_service(name=name, parameters={}, zone=zone, environment=environment)
+        else:
+            raise exceptions.ApiError('Unable to create service of unknown type %s' % type)
 
-        url = self.auth.api+'/organizations/'+self.organizationId+'/services.json'
-        headers = {'Content-Type': 'application/json'}
-        resp = requests.post(url, cookies=self.auth.cookies, data=json.dumps(data), verify=False, headers=headers)
-        log.debug(resp.request.body)
-        log.debug(resp.text)
+    def create_keystore_service(self, name='generated-keystore', parameters={}, zone=None, environment='default'):
+        environment=self.get_environment_by_name(environment)
+        apps = [x for x in self.list_applications() if x['name'] == 'Secure Vault 2.0']
+        assert len(apps)
+        ksapp = self.get_application(id=apps[0]['id'])
+        srv = ksapp.launch(instanceName=name, asService=True, destroyInterval='-1', parameters={}, environmentId=environment.id)
+        srv.convert_to_service()
+        return self.get_service(srv.instanceId)
 
-        if resp.status_code == 200:
-            return self.get_service(resp.json()['id'])
-        raise exceptions.ApiError('Unable to create service %s, got error: %s' % (name, resp.text))
+    def create_workflow_service(self, name='generated-workflow', policies={}, zone=None, environment='default'):
+        environment=self.get_environment_by_name(environment)
+        apps = [x for x in self.list_applications() if x['name'] == 'Workflow Service']
+        assert len(apps)
+        wsapp = self.get_application(id=apps[0]['id'])
+        srv = wsapp.launch(instanceName=name, asService=True, destroyInterval='-1',parameters={}, environmentId=environment.id)
+        srv.convert_to_service()
+        return self.get_service(srv.instanceId)
 
-    def create_keystore_service(self, name='generated-keystore', parameters={}, zone=None):
-        return self.create_service(name=name, type='builtin:cobalt_secure_store', parameters=parameters, zone=zone)
-
-    def create_workflow_service(self, name='generated-workflow', policies={}, zone=None):
-        parameters = {'configuration.policies': json.dumps(policies)}
-        return self.create_service(name=name, type='builtin:workflow_service', parameters=parameters, zone=zone)
-
-    def create_shared_service(self, name='generated-shared', instances={}, zone=None):
-        parameters = {'configuration.shared-instances': json.dumps(instances)}
-        return self.create_service(name=name, type='builtin:shared_instances_catalog', parameters=parameters, zone=zone)
+    def create_shared_service(self, name='generated-shared', instances={}, zone=None, environment='default'):
+        environment=self.get_environment_by_name(environment)
+        apps = [x for x in self.list_applications() if x['name'] == 'Shared Instances Catalog']
+        assert len(apps)
+        scapp = self.get_application(id=apps[0]['id'])
+        srv = scapp.launch(instanceName=name, asService=True, submodules={}, destroyInterval='-1', parameters={'configuration.shared-instances':'{}'}, environmentId=environment.id)
+        srv.convert_to_service()
+        return self.get_service(srv.instanceId)
 
     def get_service(self, id):
         log.info("Picking service: %s" % id)
@@ -173,41 +182,42 @@ class Organization(object):
         self.services.append(serv)
         return serv
 
-    def list_services(self):
-        url = self.auth.api+'/organizations/'+self.organizationId+'/services.json'
-        resp = requests.get(url, cookies=self.auth.cookies, verify=False)
-        log.debug(resp.request.body)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.ApiError('Unable to get services list, got error: %s' % resp.text)
+    def list_services(self, environment='default'):
+        instances = []
+        for app in self.list_applications():
+            found_app = self.get_application(app['id'])
+            instances.extend(found_app.list_instances())
+        env = self.get_environment_by_name(environment)
+        services = [x for x in instances if x['environment']==env.environmentId]
+        return services
 
-    def delete_service(self, id):
-        srv = self.get_service(id)
-        return srv.delete()
+    def delete_service(self, id, environment='default'):
+        pass
+        """srv = self.get_servicege(id)
+        return srv.delete()"""
 
-    def get_or_create_service(self, id=None, name=None, type=None, parameters={}, zone=None):
+    def get_or_create_service(self, id=None, name=None, type=None, parameters={}, zone=None, environment='default'):
         """ Get by name or create service with given parameters"""
         if name:
-            servs = [srv for srv in self.list_services() if srv['name'] == name]
+            servs = [srv for srv in self.list_services(environment) if srv['name'] == name]
             # service found by name
             if len(servs):
                 return self.get_service(servs[0]['id']) # pick first
             elif type:
-                return self.create_service(name, type, parameters, zone)
+                return self.create_service(name, type, parameters, zone, environment)
         else:
             name = 'generated-service'
             if id:
                 return self.get_service(id)
             elif type:
-                return self.create_service(name, type, parameters, zone)
+                return self.create_service(name, type, parameters, zone, environment)
         raise exceptions.NotFoundError('Service not found or not enough parameters to create service: %s' % name)
 
-    def service(self, id=None, name=None, type=None, parameters={}, zone=None):
+    def service(self, id=None, name=None, type=None, parameters={}, zone=None, environment='default'):
         """ Get, modify or create service
         """
         # TODO: modify service if differs
-        return self.get_or_create_service(id=id, name=name, type=type, parameters=parameters, zone=zone)
+        return self.get_or_create_service(id=id, name=name, type=type, parameters=parameters, zone=zone, environment=environment)
 
 ### ENVIRONMENT
     def create_environment(self, name, default=False, zone=None):
@@ -236,6 +246,15 @@ class Organization(object):
         if resp.status_code == 200:
             return resp.json()
         raise exceptions.ApiError('Unable to get environments list, got error: %s' % resp.text)
+
+    def get_environment_by_name(self, name):
+        envs = self.list_environments()
+        items = [x for x in envs if x['name']==name]
+        assert len(items)
+        from qubell.api.private.environment import Environment
+        env = Environment(self.auth, self, id=items[0]['id'])
+        self.environments.append(env)
+        return env
 
     def get_environment(self, id):
         from qubell.api.private.environment import Environment

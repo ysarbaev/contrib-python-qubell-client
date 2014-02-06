@@ -54,19 +54,19 @@ class Environment(object):
             self.add_policy(policy)
         for property in config.pop('properties', []):
             self.add_property(**property)
-        for provider in config.pop('providers', []):
-            prov = self.organization.get_or_create_provider(id=provider.pop('id', None), name=provider.pop('name'), parameters=provider)
-            self.add_provider(prov)
-        for service in config.pop('services', []):
-            serv = self.organization.get_or_create_service(id=service.pop('id', None), name=service.pop('name'), type=service.pop('type', None))
-            self.add_service(serv)
-            if serv.type == 'builtin:cobalt_secure_store':
-                # TODO: We do not need to regenerate key every time. Find better way.
-                myenv = self.organization.get_environment(self.environmentId)
-                myenv.add_policy(
-                    {"action": "provisionVms",
-                     "parameter": "publicKeyId",
-                     "value": serv.regenerate()['id']})
+        #for provider in config.pop('providers', []):
+        #    prov = self.organization.get_or_create_provider(id=provider.pop('id', None), name=provider.pop('name'), parameters=provider)
+        #    self.add_provider(prov)
+        #for service in config.pop('services', []):
+        #    serv = self.organization.get_or_create_service(id=service.pop('id', None), name=service.pop('name'), type=service.pop('type', None))
+        #    self.add_service(serv)
+        #    if serv.type == 'builtin:cobalt_secure_store':
+        #        # TODO: We do not need to regenerate key every time. Find better way.
+        #        myenv = self.organization.get_environment(self.environmentId)
+        #        myenv.add_policy(
+        #            {"action": "provisionVms",
+        #             "parameter": "publicKeyId",
+        #             "value": serv.regenerate()['id']})
 
     def json(self):
         url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'.json'
@@ -85,16 +85,9 @@ class Environment(object):
             return True
         raise exceptions.ApiError('Unable to delete environment %s, got error: %s' % (self.environmentId, resp.text))
 
-    def list_available_services(self):
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'/availableServices.json'
-        resp = requests.get(url, cookies=self.auth.cookies, verify=False)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
-
 
     def add_service(self, service):
+        # Service automatically added to env
         data = self.json()
         data['serviceIds'].append(service.serviceId)
         data['services'].append(service.json())
@@ -110,7 +103,9 @@ class Environment(object):
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
 
 
+
     def remove_service(self, service):
+
         data = self.json()
         data['serviceIds'].remove(service.serviceId)
         data['services'].remove(service.json())
@@ -124,6 +119,18 @@ class Environment(object):
             self.services.remove(service)
             return resp.json()
         raise exceptions.ApiError('Unable to update environment, got error: %s' % resp.text)
+
+    def list_available_services(self):
+        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'/availableServices.json'
+        resp = requests.get(url, cookies=self.auth.cookies, verify=False)
+        log.debug(resp.text)
+        if resp.status_code == 200:
+            return resp.json()
+        raise exceptions.ApiError('Unable get available services, got error: %s' % resp.text)
+
+    def list_services(self):
+        return self.json()['services']
+
 
     def add_marker(self, marker):
         data = self.json()
