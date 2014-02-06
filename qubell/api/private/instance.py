@@ -46,6 +46,7 @@ class Instance(object):
         self.auth.instanceId = self.instanceId
         self.name = self.name
 
+
     def __getattr__(self, key):
         url = self.auth.api+'/organizations/'+self.application.organizationId+'/instances/'+self.instanceId+'.json'
         resp = requests.get(url, cookies=self.auth.cookies, data="{}", verify=False)

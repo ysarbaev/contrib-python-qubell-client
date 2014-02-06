@@ -25,17 +25,22 @@ import simplejson as json
 import yaml
 
 from qubell.api.private import exceptions
+from qubell.api.private.instance import Instance
 
 
-class Service(object):
+class Service(Instance):
 
     def __init__(self, auth, organization, id):
         self.auth = auth
         self.serviceId = id
+        self.instanceId = id
         self.organization = organization
 
-        #my = self.json()
-        #self.name = my['name']
+        my = self.json()
+        self.name = my['name']
+
+
+        self.application = self.organization.get_application(my['applicationId'])
         #self.type = my['typeId']
         #self.zone = my['zoneId']
 
@@ -71,24 +76,20 @@ class Service(object):
         raise exceptions.ApiError('Unable to modify service %s: %s' % (self.name, resp.text))
 
     def add_shared_instance(self, revision, instance):
-        pass
-        """
-        # Not available yet
-        params = self.json()['parameters']
+        params = self.json()['revision']['parameters']
         if params.has_key('configuration.shared-instances'):
             old = yaml.safe_load(params['configuration.shared-instances'])
         else:
             old = {}
         old[revision.revisionId.split('-')[0]] = instance.instanceId
         params['configuration.shared-instances'] = yaml.safe_dump(old, default_flow_style=False)
-        self.modify(params)
-        """
+        #self.modify(params)
+        self.reconfigure(self.name, parameters=params)
+
+
 
     def remove_shared_instance(self, instance=None, revision=None):
-        pass
-        """
-        # Not available yet
-        params = self.json()['parameters']
+        params = self.json()['revision']['parameters']
         if params.has_key('configuration.shared-instances'):
             old = yaml.safe_load(params['configuration.shared-instances'])
             if instance.instanceId in old.values():
@@ -97,10 +98,9 @@ class Service(object):
             else:
                 raise exceptions.ApiError('Unable find shared instance %s in service %s' % (instance.instanceId, self.name))
             params['configuration.shared-instances'] = yaml.safe_dump(old, default_flow_style=False)
-            self.modify(params)
+            self.reconfigure(self.name, parameters=params)
         else:
             raise exceptions.ApiError('Unable to remove shared instance %s from service %s. No shared instances configured.' % (instance.name, self.name))
-        """
 
     def list_shared_instances(self):
         params = self.json()['parameters']
