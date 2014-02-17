@@ -33,13 +33,13 @@ class Application(object):
     Base class for applications. It should create application and services+environment requested
     """
 
-    def __init__(self, organization, auth, id):
+    def __init__(self, auth, organization, id):
         self.instances = []
         self.revisions = []
         self.auth = auth
         self.organization = organization
         self.applicationId = id
-        self.defaultEnvironment = self.organization.get_default_environment()
+        self.defaultEnvironment = organization.get_default_environment()
 
         my = self.json()
         self.name = my['name']
@@ -50,11 +50,6 @@ class Application(object):
         for val in values:
             ret[val['id']] = val['value']
         return ret
-
-    def restore(self, config):
-        for instance in config.pop('instances',[]):
-            launched = self.get_or_launch_instance(id=instance.pop('id', None), name=instance.pop('name'), **instance)
-            assert launched.ready()
 
         #TODO: Think how to restore revisions
 
@@ -105,48 +100,6 @@ class Application(object):
         if not resp.has_key(key):
             raise exceptions.NotFoundError('Cannot get property %s' % key)
         return resp[key] or False
-
-# INSTANCE
-    def launch(self, environment=None, **argv):
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/applications/'+self.applicationId+'/launch.json'
-        headers = {'Content-Type': 'application/json'}
-        if environment:
-            argv['environmentId'] = environment.environmentId
-        elif not 'environmentId' in argv.keys():
-            argv['environmentId'] = self.defaultEnvironment.environmentId
-
-        data = json.dumps(argv)
-        resp = requests.post(url, cookies=self.auth.cookies, data=data, verify=False, headers=headers)
-
-        log.debug('--- APPLICATION LAUNCH REQUEST ---')
-        log.debug('REQUEST HEADERS: %s' % resp.request.headers)
-        log.debug('REQUEST: %s' % resp.request.body)
-        log.debug('RESPONSE: %s' % resp.text)
-
-        if resp.status_code == 200:
-            instance_id = resp.json()['id']
-            return self.get_instance(id=instance_id)
-        raise exceptions.ApiError('Unable to launch application id: %s, got error: %s' % (self.applicationId, resp.text))
-
-    def get_instance(self, id):
-        from qubell.api.private.instance import Instance
-        instance = Instance(auth=self.auth, application=self, id=id)
-        self.instances.append(instance)
-        return instance
-
-    def list_instances(self):
-        return self.json()['instances']
-
-    def delete_instance(self, id):
-        instance = self.get_instance(id)
-        self.instances.remove(instance)
-        return instance.delete()
-
-    def get_or_launch_instance(self, id=None, **kwargs):
-        if id:
-            return self.get_instance(id)
-        else:
-            return self.launch(**kwargs)
 
 
 # REVISION

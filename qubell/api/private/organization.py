@@ -24,7 +24,73 @@ import requests
 import simplejson as json
 
 from qubell.api.private.manifest import Manifest
+from qubell.api.private.instance import Instance
 from qubell.api.private import exceptions
+
+
+class Instances:
+    def __init__(self, organization):
+        self.current = 0
+        self.organization = organization
+        self.auth = self.organization.auth
+        self.organizationId = self.organization.organizationId
+        self.object_list = []
+        self.__generate_instance_list()
+
+    def __iter__(self):
+        i = self.current
+        while i<len(self.object_list):
+            yield self.object_list[i]
+            i+=1
+
+    def __len__(self):
+        return len(self.object_list)
+
+    def __repr__(self):
+        return str(self.object_list)
+
+    def __getitem__(self, item):
+        # TODO: Guess item is ID or name
+        found = [x for x in self.object_list if x.name == item]
+        if len(found)==1:
+            return found[0]
+        raise
+
+    def __contains__(self, item):
+        return item in self.object_list
+
+    def add(self, instance):
+        self.object_list.append(instance)
+
+    def remove(self, instance):
+        del self.object_list[instance]
+
+    def __list_applications(self):
+        url = self.auth.api+'/organizations/'+self.organizationId+'/applications.json'
+        resp = requests.get(url, cookies=self.auth.cookies, data="{}", verify=False)
+        log.debug(resp.text)
+        if resp.status_code == 200:
+            return resp.json()
+        raise exceptions.ApiError('Unable to get applications list, got error: %s' % resp.text)
+
+    def __generate_instance_list(self):
+        from qubell.api.private.application import Application
+        for app in self.__list_applications():
+            url = self.auth.api+'/organizations/'+self.organizationId+'/applications/'+app['id']+'.json'
+            resp = requests.get(url, cookies=self.auth.cookies, data="{}", verify=False)
+            log.debug(resp.text)
+            if resp.status_code == 200:
+                instances = resp.json()['instances']
+                instances_alive = [ins for ins in instances if ins['status'] not in ['Destroyed', 'Destroying']]
+                app_obj = Application(self.auth, self.organization, app['id'])
+
+                for ins in instances_alive:
+                    self.object_list.append(Instance(self.auth, app_obj, id=ins['id']))
+            else:
+                raise exceptions.ApiError('Unable to get instances by url %s, got error: %s' % (url, resp.text))
+
+
+
 
 
 class Organization(object):
@@ -39,9 +105,13 @@ class Organization(object):
         self.organizationId = id
         self.auth = auth
         self.zone = self.get_default_zone()
+        self.defaultEnvironment = self.get_default_environment()
 
         my = self.json()
         self.name = my['name']
+        self.instance_list = []
+        self.instances = Instances(self)
+
 
     def json(self):
         url = self.auth.api+'/organizations.json'
@@ -55,13 +125,16 @@ class Organization(object):
         raise exceptions.ApiError('Unable to get organization by id %s, got error: %s' % (self.organizationId, resp.text))
 
     def restore(self, config):
+        for instance in config.pop('instances', []):
+            launched = self.get_or_launch_instance(id=instance.pop('id', None), name=instance.pop('name'), **instance)
+            assert launched.ready()
         for serv in config.pop('services',[]):
             self.get_or_create_service(id=serv.pop('id', None), name=serv.pop('name'), type=serv.pop('type', None))
         for prov in config.get('providers', []):
             self.get_or_create_provider(id=prov.pop('id', None), name=prov.pop('name'), parameters=prov)
         for env in config.pop('environments',[]):
             restored_env = self.get_or_create_environment(id=env.pop('id', None), name=env.pop('name', 'default'),zone=env.pop('zone', None), default=env.pop('default', False))
-            #restored_env.clean()
+            restored_env.clean()
             restored_env.restore(env)
         for app in config.pop('applications'):
             mnf = app.pop('manifest', None)
@@ -74,7 +147,6 @@ class Organization(object):
         url = self.auth.api+'/organizations/'+self.organizationId+'/applications.json'
 
         resp = requests.post(url, files={'path': manifest.content}, data={'manifestSource': 'upload', 'name': name}, verify=False, cookies=self.auth.cookies)
-        log.debug(resp.request)
         log.debug(resp.text)
         if resp.status_code == 200:
             app = self.get_application(resp.json()['id'])
@@ -136,44 +208,163 @@ class Organization(object):
             if manifest: app.upload(manifest=manifest)
         return app
 
-### SERVICE
-    def create_service(self, name, type, parameters={}, zone=None, environment='default'):
-        log.info("Creating service: %s" % name)
-        if 'builtin:shared_instances_catalog' in type:
-            return self.create_shared_service(name=name, instances={}, zone=zone, environment=environment)
-        elif 'builtin:workflow_service' in type:
-            return self.create_workflow_service(name=name, policies={}, zone=zone, environment=environment)
-        elif 'builtin:cobalt_secure_store' in type:
-            return self.create_keystore_service(name=name, parameters={}, zone=zone, environment=environment)
+
+# INSTANCE
+
+    def create_instance(self, application, revision=None, environment=None, name=None, parameters={}):
+        """ Launches instance in application and returns Instance object.
+        """
+        if not application:
+            raise exceptions.NotEnoughParams('Application not set')
+        from qubell.api.private.instance import Instance
+        instance = Instance(auth=self.auth, application=application)
+        instance.create(revision=revision, environment=environment, name=name, parameters=parameters)
+        self.instances.add(instance)
+        return instance
+
+    def get_instance(self, application=None, id=None, name=None):
+        """ Get instance object by name or id.
+        If application set, search within the application.
+        """
+
+        if application:
+            instances = [x for x in self.instances if x.applicationId == application.applicationId]
         else:
-            raise exceptions.ApiError('Unable to create service of unknown type %s' % type)
+            instances = self.instances
 
-    def create_keystore_service(self, name='generated-keystore', parameters={}, zone=None, environment='default'):
-        environment=self.get_environment_by_name(environment)
-        apps = [x for x in self.list_applications() if x['name'] == 'Secure Vault 2.0']
-        assert len(apps)
-        ksapp = self.get_application(id=apps[0]['id'])
-        srv = ksapp.launch(instanceName=name, asService=True, destroyInterval='-1', parameters={}, environmentId=environment.id)
-        srv.convert_to_service()
-        return self.get_service(srv.instanceId)
+        if id:
+            instance = [x for x in instances if x.id==id]
+        elif name:
+            instance = [x for x in instances if x.name==name]
+        else:
+            raise exceptions.NotEnoughParams('No name nor id given. Unable to get instance')
 
-    def create_workflow_service(self, name='generated-workflow', policies={}, zone=None, environment='default'):
-        environment=self.get_environment_by_name(environment)
-        apps = [x for x in self.list_applications() if x['name'] == 'Workflow Service']
-        assert len(apps)
-        wsapp = self.get_application(id=apps[0]['id'])
-        srv = wsapp.launch(instanceName=name, asService=True, destroyInterval='-1',parameters={}, environmentId=environment.id)
-        srv.convert_to_service()
-        return self.get_service(srv.instanceId)
+        if len(instance) == 1:
+            return instance[0]
+        elif len(instance) > 1:
+            log.warning('Found several instances with name %s. Picking first' % name)
+            return instance[0]
+        raise exceptions.NotFoundError('Unable to get instance or too many found')
 
-    def create_shared_service(self, name='generated-shared', instances={}, zone=None, environment='default'):
-        environment=self.get_environment_by_name(environment)
-        apps = [x for x in self.list_applications() if x['name'] == 'Shared Instances Catalog']
-        assert len(apps)
-        scapp = self.get_application(id=apps[0]['id'])
-        srv = scapp.launch(instanceName=name, asService=True, submodules={}, destroyInterval='-1', parameters={'configuration.shared-instances':'{}'}, environmentId=environment.id)
-        srv.convert_to_service()
-        return self.get_service(srv.instanceId)
+    def list_instances_json(self, application=None):
+        """ Get list of instances in json format converted to list
+        """
+        if application: # Return list of instances in application
+            url = self.auth.api+'/organizations/'+self.organizationId+'/applications/'+application.applicationId+'.json'
+            resp = requests.get(url, cookies=self.auth.cookies, data="{}", verify=False)
+            log.debug(resp.text)
+            if resp.status_code == 200:
+                instances = resp.json()['instances']
+                return [ins for ins in instances if ins['status'] not in ['Destroyed', 'Destroying']]
+            raise exceptions.ApiError('Unable to get application by url %s\n, got error: %s' % (url, resp.text))
+        else:  # Return all instances in organization
+            instances = []
+            for app in self.list_applications():
+                found_app = self.get_application(app['id'])
+                instances.extend(self.list_instances(found_app))
+            return instances
+
+
+    def delete_instance(self, id):
+        instance = self.get_instance(id)
+        self.instances.remove(instance)
+        return instance.delete()
+
+    def get_or_launch_instance(self, id=None, application=None, name=None, **kwargs):
+        """ Get instance by id or name.
+        If not found: create with given application (name and params are optional)
+        """
+        if id:
+            return self.get_instance(id=id)
+        elif name:
+            try:
+                instance = self.get_instance(name=name)
+            except exceptions.NotFoundError:
+                instance = self.create_instance(application=application, name=name, **kwargs)
+            return instance
+        elif application:
+            return self.create_instance(application=application, **kwargs)
+        raise exceptions.NotEnoughParams('Not enough parameters')
+
+    def instance(self, application=None, id=None, name=None, revision=None, environment=None,  parameters={}):
+        """ Smart method. It does everything, to return Instance with given parameters within the application.
+        If instance found running and given parameters are actual: return it.
+        If instance found, but parameters differs - reconfigure instance with new parameters.
+        If instance not found: launch instance with given parameters.
+        Return: Instance object.
+        """
+
+        modify = False
+        found = False
+
+        # Try to find instance by name or id
+        if name and id:
+            found = self.get_instance(application=application, id=id)
+            if not found.name == name:
+                modify = True
+        elif id:
+            found = self.get_instance(application=application, id=id)
+            name = found.name
+
+        elif name:
+            try:
+                found = self.get_instance(application=application, name=name)
+                id = found.instanceId
+            except exceptions.NotFoundError:
+                pass
+
+        # If found - compare parameters
+        # TODO:
+        """
+        if found:
+            if revision and not revision == found.revision:
+                modify = True
+            if environment and not environment == found.environment:
+                modify = True
+            if parameters and not parameters == found.parameters:
+                modify = True
+        """
+
+        # We need to reconfigure instance
+        if found and modify:
+            found.reconfigure(revision=revision, environment=environment, name=name, parameters=parameters)
+
+        if not found:
+            created = self.create_instance(application=application, revision=revision, environment=environment, name=name, parameters=parameters)
+
+        return found or created
+
+
+### SERVICE
+    def create_service(self, name, type, parameters={}, zone=None):
+        log.info("Creating service: %s" % name)
+        if not zone:
+            zone = self.zone.zoneId
+        data = {'name': name,
+                'typeId': type,
+                'zoneId': zone,
+                'parameters': parameters}
+
+        url = self.auth.api+'/organizations/'+self.organizationId+'/services.json'
+        headers = {'Content-Type': 'application/json'}
+        resp = requests.post(url, cookies=self.auth.cookies, data=json.dumps(data), verify=False, headers=headers)
+        log.debug(resp.request.body)
+        log.debug(resp.text)
+
+        if resp.status_code == 200:
+            return self.get_service(resp.json()['id'])
+        raise exceptions.ApiError('Unable to create service %s, got error: %s' % (name, resp.text))
+
+    def create_keystore_service(self, name='generated-keystore', parameters={}, zone=None):
+        return self.create_service(name=name, type='builtin:cobalt_secure_store', parameters=parameters, zone=zone)
+
+    def create_workflow_service(self, name='generated-workflow', policies={}, zone=None):
+        parameters = {'configuration.policies': json.dumps(policies)}
+        return self.create_service(name=name, type='builtin:workflow_service', parameters=parameters, zone=zone)
+
+    def create_shared_service(self, name='generated-shared', instances={}, zone=None):
+        parameters = {'configuration.shared-instances': json.dumps(instances)}
+        return self.create_service(name=name, type='builtin:shared_instances_catalog', parameters=parameters, zone=zone)
 
     def get_service(self, id):
         log.info("Picking service: %s" % id)
@@ -182,42 +373,41 @@ class Organization(object):
         self.services.append(serv)
         return serv
 
-    def list_services(self, environment='default'):
-        instances = []
-        for app in self.list_applications():
-            found_app = self.get_application(app['id'])
-            instances.extend(found_app.list_instances())
-        env = self.get_environment_by_name(environment)
-        services = [x for x in instances if x['environment']==env.environmentId]
-        return services
+    def list_services(self):
+        url = self.auth.api+'/organizations/'+self.organizationId+'/services.json'
+        resp = requests.get(url, cookies=self.auth.cookies, verify=False)
+        log.debug(resp.request.body)
+        log.debug(resp.text)
+        if resp.status_code == 200:
+            return resp.json()
+        raise exceptions.ApiError('Unable to get services list, got error: %s' % resp.text)
 
-    def delete_service(self, id, environment='default'):
-        pass
-        """srv = self.get_servicege(id)
-        return srv.delete()"""
+    def delete_service(self, id):
+        srv = self.get_service(id)
+        return srv.delete()
 
-    def get_or_create_service(self, id=None, name=None, type=None, parameters={}, zone=None, environment='default'):
+    def get_or_create_service(self, id=None, name=None, type=None, parameters={}, zone=None):
         """ Get by name or create service with given parameters"""
         if name:
-            servs = [srv for srv in self.list_services(environment) if srv['name'] == name]
+            servs = [srv for srv in self.list_services() if srv['name'] == name]
             # service found by name
             if len(servs):
                 return self.get_service(servs[0]['id']) # pick first
             elif type:
-                return self.create_service(name, type, parameters, zone, environment)
+                return self.create_service(name, type, parameters, zone)
         else:
             name = 'generated-service'
             if id:
                 return self.get_service(id)
             elif type:
-                return self.create_service(name, type, parameters, zone, environment)
+                return self.create_service(name, type, parameters, zone)
         raise exceptions.NotFoundError('Service not found or not enough parameters to create service: %s' % name)
 
-    def service(self, id=None, name=None, type=None, parameters={}, zone=None, environment='default'):
+    def service(self, id=None, name=None, type=None, parameters={}, zone=None):
         """ Get, modify or create service
         """
         # TODO: modify service if differs
-        return self.get_or_create_service(id=id, name=name, type=type, parameters=parameters, zone=zone, environment=environment)
+        return self.get_or_create_service(id=id, name=name, type=type, parameters=parameters, zone=zone)
 
 ### ENVIRONMENT
     def create_environment(self, name, default=False, zone=None):
@@ -246,15 +436,6 @@ class Organization(object):
         if resp.status_code == 200:
             return resp.json()
         raise exceptions.ApiError('Unable to get environments list, got error: %s' % resp.text)
-
-    def get_environment_by_name(self, name):
-        envs = self.list_environments()
-        items = [x for x in envs if x['name']==name]
-        assert len(items)
-        from qubell.api.private.environment import Environment
-        env = Environment(self.auth, self, id=items[0]['id'])
-        self.environments.append(env)
-        return env
 
     def get_environment(self, id):
         from qubell.api.private.environment import Environment
