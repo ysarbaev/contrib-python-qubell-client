@@ -21,6 +21,7 @@ __email__ = "vkhomenko@qubell.com"
 
 
 from qubell.api.private import exceptions
+from qubell import deprecated
 
 class Qubell_object_list(object):
     """ Class to store qubell objects information (Instances, Applications, etc)
@@ -64,3 +65,18 @@ class Qubell_object_list(object):
 
     def __generate_object_list(self):
         pass
+
+class Auth(object):
+    def __init__(self, user, password, tenant):
+        self.user = user
+        self.password = password
+        self.tenant = tenant
+
+        # TODO: parse tenant to generate api url
+        self.api = tenant
+
+
+@deprecated
+class Context(Auth):
+    def __init__(self, user, password, api):
+        Auth.__init__(self, user, password, api)

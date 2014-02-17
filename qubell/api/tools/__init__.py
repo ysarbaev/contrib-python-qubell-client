@@ -12,6 +12,7 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from qubell.api.private.common import Auth
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
@@ -23,7 +24,7 @@ import yaml
 import time
 import os
 import logging as log
-from qubell.api.private.platform import Auth
+
 
 def rand():
     return str(randrange(1000, 9999))

@@ -208,3 +208,64 @@ class Instance(object):
     def __del__(self):
         pass
 
+
+class Instances:
+    def __init__(self, organization):
+        self.current = 0
+        self.organization = organization
+        self.auth = self.organization.auth
+        self.organizationId = self.organization.organizationId
+        self.object_list = []
+        self.__generate_instance_list()
+
+    def __iter__(self):
+        i = self.current
+        while i<len(self.object_list):
+            yield self.object_list[i]
+            i+=1
+
+    def __len__(self):
+        return len(self.object_list)
+
+    def __repr__(self):
+        return str(self.object_list)
+
+    def __getitem__(self, item):
+        # TODO: Guess item is ID or name
+        found = [x for x in self.object_list if x.name == item]
+        if len(found)==1:
+            return found[0]
+        raise
+
+    def __contains__(self, item):
+        return item in self.object_list
+
+    def add(self, instance):
+        self.object_list.append(instance)
+
+    def remove(self, instance):
+        del self.object_list[instance]
+
+    def __list_applications(self):
+        url = self.auth.api+'/organizations/'+self.organizationId+'/applications.json'
+        resp = requests.get(url, cookies=self.auth.cookies, data="{}", verify=False)
+        log.debug(resp.text)
+        if resp.status_code == 200:
+            return resp.json()
+        raise exceptions.ApiError('Unable to get applications list, got error: %s' % resp.text)
+
+    def __generate_instance_list(self):
+        from qubell.api.private.application import Application
+        for app in self.__list_applications():
+            url = self.auth.api+'/organizations/'+self.organizationId+'/applications/'+app['id']+'.json'
+            resp = requests.get(url, cookies=self.auth.cookies, data="{}", verify=False)
+            log.debug(resp.text)
+            if resp.status_code == 200:
+                instances = resp.json()['instances']
+                instances_alive = [ins for ins in instances if ins['status'] not in ['Destroyed', 'Destroying']]
+                app_obj = Application(self.auth, self.organization, app['id'])
+
+                for ins in instances_alive:
+                    self.object_list.append(Instance(self.auth, app_obj, id=ins['id']))
+            else:
+                raise exceptions.ApiError('Unable to get instances by url %s, got error: %s' % (url, resp.text))
