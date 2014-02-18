@@ -24,8 +24,22 @@ import logging as log
 import requests
 import simplejson as json
 
-from qubell.api.private.organization import Organization
 from qubell.api.private import exceptions
+from qubell.api.private.common import Qubell_object_list
+
+
+class Applications(Qubell_object_list):
+    def __init__(self, organization):
+        self.organization = organization
+        self.auth = self.organization.auth
+        self.organizationId = self.organization.organizationId
+        self.object_list = []
+        self.__generate_object_list()
+
+    def __generate_object_list(self):
+        from qubell.api.private.application import Application
+        for app in self.organization.list_applications_json():
+            self.object_list.append(Application(self.auth, self.organization, id=app['id']))
 
 
 class Application(object):

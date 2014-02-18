@@ -25,98 +25,8 @@ import simplejson as json
 
 from qubell.api.private.manifest import Manifest
 from qubell.api.private import exceptions
-
-
-
-class Applications:
-    def __init__(self, organization):
-        self.organization = organization
-        self.auth = self.organization.auth
-        self.organizationId = self.organization.organizationId
-        self.object_list = []
-        self.__generate_applications_list()
-
-    def __iter__(self):
-        i = 0
-        while i<len(self.object_list):
-            yield self.object_list[i]
-            i+=1
-
-    def __len__(self):
-        return len(self.object_list)
-
-    def __repr__(self):
-        return str(self.object_list)
-
-    def __getitem__(self, item):
-        # TODO: Guess item is ID or name
-        found = [x for x in self.object_list if x.name == item]
-        if len(found)>0:
-            return found[-1]
-        raise exceptions.NotFoundError('Unable to get application by name')
-
-    def __contains__(self, item):
-        return item in self.object_list
-
-    def add(self, application):
-        self.object_list.append(application)
-
-    def remove(self, application):
-        del self.object_list[application]
-
-    def __generate_applications_list(self):
-        from qubell.api.private.application import Application
-        for app in self.organization.list_applications_json():
-            self.object_list.append(Application(self.auth, self.organization, id=app['id']))
-
-
-class Instances:
-    def __init__(self, organization):
-        self.current = 0
-        self.organization = organization
-        self.auth = self.organization.auth
-        self.organizationId = self.organization.organizationId
-        self.object_list = []
-        self.__generate_instance_list()
-
-    def __iter__(self):
-        i = self.current
-        while i<len(self.object_list):
-            yield self.object_list[i]
-            i+=1
-
-    def __len__(self):
-        return len(self.object_list)
-
-    def __repr__(self):
-        return str(self.object_list)
-
-    def __getitem__(self, item):
-        # TODO: Guess item is ID or name
-        found = [x for x in self.object_list if x.name == item]
-        if len(found)>0:
-            return found[-1]
-        raise exceptions.NotFoundError('Unable to get instance by name')
-
-    def __contains__(self, item):
-        return item in self.object_list
-
-    def add(self, instance):
-        self.object_list.append(instance)
-
-    def remove(self, instance):
-        del self.object_list[instance]
-
-    def __generate_instance_list(self):
-        from qubell.api.private.instance import Instance
-
-        for app in self.organization.applications:
-            instances = app.json()['instances']
-            instances_alive = [ins for ins in instances if ins['status'] not in ['Destroyed', 'Destroying']]
-
-            for ins in instances_alive:
-                self.object_list.append(Instance(self.auth, app, id=ins['id']))
-
+from qubell.api.private.instance import Instances
+from qubell.api.private.application import Applications
 
 class Organization(object):
 
@@ -310,7 +220,7 @@ class Organization(object):
             raise exceptions.ApiError('Unable to get application by url %s\n, got error: %s' % (url, resp.text))
         else:  # Return all instances in organization
             instances = []
-            for app in self.list_applications():
+            for app in self.list_applications_json():
                 found_app = self.get_application(app['id'])
                 instances.extend(self.list_instances_json(found_app))
             return instances

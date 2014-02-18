@@ -135,3 +135,11 @@ def full_dump(org):
     """ TODO:  Dump all that reports by api
     """
     pass
+
+
+def lazy(func):
+    def lazyfunc(*args, **kwargs):
+        wrapped = lambda x : func(*args, **kwargs)
+        wrapped.__name__ = "lazy-" + func.__name__
+        return wrapped
+    return lazyfunc

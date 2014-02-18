@@ -21,19 +21,34 @@ __email__ = "vkhomenko@qubell.com"
 import logging as log
 import requests
 import simplejson as json
+from qubell.api.tools import lazy
 
 from qubell.api.tools import waitForStatus as waitForStatus
 from qubell.api.private import exceptions
+from qubell.api.private.common import Qubell_object_list
 
 DEAD_STATUS = ['Destroyed', 'Destroying']
 
 
-def lazy(func):
-    def lazyfunc(*args, **kwargs):
-        wrapped = lambda x : func(*args, **kwargs)
-        wrapped.__name__ = "lazy-" + func.__name__
-        return wrapped
-    return lazyfunc
+class Instances(Qubell_object_list):
+    def __init__(self, organization):
+        self.current = 0
+        self.organization = organization
+        self.auth = self.organization.auth
+        self.organizationId = self.organization.organizationId
+        self.object_list = []
+        self.__generate_object_list()
+
+    def __generate_object_list(self):
+        from qubell.api.private.instance import Instance
+
+        for app in self.organization.applications:
+            instances = app.json()['instances']
+            instances_alive = [ins for ins in instances if ins['status'] not in ['Destroyed', 'Destroying']]
+
+            for ins in instances_alive:
+                self.object_list.append(Instance(self.auth, app, id=ins['id']))
+
 
 class Instance(object):
     """
