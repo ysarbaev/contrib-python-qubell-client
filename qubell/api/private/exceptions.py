@@ -14,10 +14,10 @@ class NotEnoughParams(BaseQubellException): pass
 
 class ApiError(BaseQubellException): pass
 
-class ApiUnauthorizedError(BaseQubellException): pass
+class ApiUnauthorizedError(ApiError): pass
 
-class ApiAuthenticationError(BaseQubellException): pass
+class ApiAuthenticationError(ApiError): pass
 
-class ApiNotFoundError(BaseQubellException): pass
+class ApiNotFoundError(ApiError): pass
 
 api_http_code_errors = {401: ApiUnauthorizedError, 403: ApiAuthenticationError, 404: ApiNotFoundError}

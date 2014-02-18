@@ -21,6 +21,9 @@ def gen_response(code=200, resp_text="enjoy"):
 @patch("requests.request", create=True)
 class RouterDecoratorTest(unittest2.TestCase):
     class DummyRouter(Router):
+        @property
+        def is_connected(self): return True
+
         @route("GET /simple")
         def get_simple(self): pass
 
@@ -47,7 +50,6 @@ class RouterDecoratorTest(unittest2.TestCase):
         def get_simple_json(self, cookies): pass
 
     router = DummyRouter("http://nowhere.com")
-    router.is_connected = True
 
     def test_simple_get(self, request_mock):
         request_mock.return_value = gen_response()
