@@ -60,9 +60,6 @@ class QubellPlatform(object):
         payload = json.dumps({'editable': 'true',
                               'name': name})
         resp = self.router.post_organization(data=payload)
-
-        if resp.status_code is not 200:
-            raise exceptions.ApiError('Unable to create organization %s, got error: %s' % (name, resp.text))
         return self.get_organization(resp.json()['id'])
 
 
@@ -96,8 +93,6 @@ class QubellPlatform(object):
 
     def organizations_json(self):
         resp = self.router.get_organizations()
-        if resp.status_code is not 200:
-            raise exceptions.ApiError('Unable to get organizations list, got error: %s' % resp.text)
         return resp.json()
 
     list_organizations = organizations_json

@@ -1,6 +1,8 @@
 from functools import wraps
 import inspect
 import requests
+from qubell.api.private.exceptions import ApiError, api_http_code_errors
+import logging as log
 
 
 def route(route_str):  # decorator param
@@ -15,9 +17,12 @@ def route(route_str):  # decorator param
         def wrapped_func(*args, **kwargs):  # params of function
             self = args[0]
             method, url = route_str.split(" ")
-            f_args, varargs, keywords, defaults = inspect.getargspec(f)
-            defaults = defaults or []
-            defs = dict(zip(f_args[-len(defaults):], defaults))
+
+            def defaults_dict():
+                f_args, varargs, keywords, defaults = inspect.getargspec(f)
+                defaults = defaults or []
+                return dict(zip(f_args[-len(defaults):], defaults))
+            defs = defaults_dict()
 
             route_args = dict(kwargs.items() + defs.items())
 
@@ -29,7 +34,6 @@ def route(route_str):  # decorator param
                         e.message))  # KeyError in format have a message with key
 
             destination_url = self.base_url + get_destination_url()
-            #print(destination_url)
             f(*args, **kwargs)  # generally this is "pass"
 
             bypass_args = {param: kwargs[param] for param in ["data", "cookies", "auth"] if param in kwargs}
@@ -40,8 +44,16 @@ def route(route_str):  # decorator param
             if destination_url.endswith('.json') or "auth" in kwargs:
                 bypass_args['headers'] = {'Content-Type': 'application/json'}
 
-            return requests.request(method, destination_url, verify=self.verify_ssl, **bypass_args)
-
+            response = requests.request(method, destination_url, verify=self.verify_ssl, **bypass_args)
+            if self.verify_codes:
+                if response.status_code is not 200:
+                    msg = "Route {0} returned code={1} and error: {2}".format(destination_url, response.status_code, response.text)
+                    if response.status_code in api_http_code_errors.keys():
+                        raise api_http_code_errors[response.status_code](msg)
+                    else:
+                        log.debug(response.text)
+                        raise ApiError(msg)
+            return response
 
         return wrapped_func
 

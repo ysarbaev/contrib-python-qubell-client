@@ -6,11 +6,10 @@ from qubell.api.provider import route, play_auth
 
 class Router(object):
     #todo: store on class level dict(user -> cook)
-    def __init__(self, base_url, verify_ssl=False):
-        #todo: add 'safe' mode to track code 200 in box
-
+    def __init__(self, base_url, verify_ssl=False, verify_codes=True):
         self.base_url = base_url
         self.verify_ssl = verify_ssl
+        self.verify_codes = verify_codes
 
         self.is_connected = False
         self._cookies = None
