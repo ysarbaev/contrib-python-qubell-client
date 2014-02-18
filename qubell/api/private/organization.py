@@ -24,8 +24,50 @@ import requests
 import simplejson as json
 
 from qubell.api.private.manifest import Manifest
-from qubell.api.private.instance import Instance
 from qubell.api.private import exceptions
+
+
+
+class Applications:
+    def __init__(self, organization):
+        self.organization = organization
+        self.auth = self.organization.auth
+        self.organizationId = self.organization.organizationId
+        self.object_list = []
+        self.__generate_applications_list()
+
+    def __iter__(self):
+        i = 0
+        while i<len(self.object_list):
+            yield self.object_list[i]
+            i+=1
+
+    def __len__(self):
+        return len(self.object_list)
+
+    def __repr__(self):
+        return str(self.object_list)
+
+    def __getitem__(self, item):
+        # TODO: Guess item is ID or name
+        found = [x for x in self.object_list if x.name == item]
+        if len(found)>0:
+            return found[-1]
+        raise exceptions.NotFoundError('Unable to get application by name')
+
+    def __contains__(self, item):
+        return item in self.object_list
+
+    def add(self, application):
+        self.object_list.append(application)
+
+    def remove(self, application):
+        del self.object_list[application]
+
+    def __generate_applications_list(self):
+        from qubell.api.private.application import Application
+        for app in self.organization.list_applications_json():
+            self.object_list.append(Application(self.auth, self.organization, id=app['id']))
 
 
 class Instances:
@@ -52,9 +94,9 @@ class Instances:
     def __getitem__(self, item):
         # TODO: Guess item is ID or name
         found = [x for x in self.object_list if x.name == item]
-        if len(found)==1:
-            return found[0]
-        raise
+        if len(found)>0:
+            return found[-1]
+        raise exceptions.NotFoundError('Unable to get instance by name')
 
     def __contains__(self, item):
         return item in self.object_list
@@ -65,38 +107,20 @@ class Instances:
     def remove(self, instance):
         del self.object_list[instance]
 
-    def __list_applications(self):
-        url = self.auth.api+'/organizations/'+self.organizationId+'/applications.json'
-        resp = requests.get(url, cookies=self.auth.cookies, data="{}", verify=False)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.ApiError('Unable to get applications list, got error: %s' % resp.text)
-
     def __generate_instance_list(self):
-        from qubell.api.private.application import Application
-        for app in self.__list_applications():
-            url = self.auth.api+'/organizations/'+self.organizationId+'/applications/'+app['id']+'.json'
-            resp = requests.get(url, cookies=self.auth.cookies, data="{}", verify=False)
-            log.debug(resp.text)
-            if resp.status_code == 200:
-                instances = resp.json()['instances']
-                instances_alive = [ins for ins in instances if ins['status'] not in ['Destroyed', 'Destroying']]
-                app_obj = Application(self.auth, self.organization, app['id'])
+        from qubell.api.private.instance import Instance
 
-                for ins in instances_alive:
-                    self.object_list.append(Instance(self.auth, app_obj, id=ins['id']))
-            else:
-                raise exceptions.ApiError('Unable to get instances by url %s, got error: %s' % (url, resp.text))
+        for app in self.organization.applications:
+            instances = app.json()['instances']
+            instances_alive = [ins for ins in instances if ins['status'] not in ['Destroyed', 'Destroying']]
 
-
-
+            for ins in instances_alive:
+                self.object_list.append(Instance(self.auth, app, id=ins['id']))
 
 
 class Organization(object):
 
     def __init__(self, auth, id):
-        self.applications = []
         self.environments = []
         self.services = []
         self.providers = []
@@ -109,7 +133,7 @@ class Organization(object):
 
         my = self.json()
         self.name = my['name']
-        self.instance_list = []
+        self.applications = Applications(self)
         self.instances = Instances(self)
 
 
@@ -142,26 +166,36 @@ class Organization(object):
             restored_app.restore(app)
 
 ### APPLICATION
-    def create_application(self, name, manifest):
-        log.info("Creating application: %s" % name)
-        url = self.auth.api+'/organizations/'+self.organizationId+'/applications.json'
-
-        resp = requests.post(url, files={'path': manifest.content}, data={'manifestSource': 'upload', 'name': name}, verify=False, cookies=self.auth.cookies)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            app = self.get_application(resp.json()['id'])
-            app.manifest = manifest
-            return app
-        raise exceptions.ApiError('Unable to create application %s, got error: %s' % (name, resp.text))
-
-    def get_application(self, id):
-        log.info("Picking application: %s" % id)
+    def create_application(self, name=None, manifest=None):
+        """ Creates application and returns Application object.
+        """
+        if not manifest:
+            raise exceptions.NotEnoughParams('Manifest not set')
+        if not name:
+            name = 'auto-generated-name'
         from qubell.api.private.application import Application
-        app = Application(auth=self.auth, organization=self, id=id)
-        self.applications.append(app)
+        app = Application(auth=self.auth, organization=self).create(name=name, manifest=manifest)
+        self.applications.add(app)
         return app
 
-    def list_applications(self):
+    def get_application(self, id=None, name=None):
+        """ Get application object by name or id.
+        """
+        if id:
+            apps = [x for x in self.applications if x.id == id]
+        elif name:
+            apps = [x for x in self.applications if x.name == name]
+        else:
+            raise exceptions.NotEnoughParams('No name nor id given. Unable to get application')
+
+        if len(apps) == 1:
+            return apps[0]
+        elif len(apps) > 1:
+            log.warning('Found several applications with name %s. Picking last' % name)
+            return apps[-1]
+        raise exceptions.NotFoundError('Unable to get application by id: %s' % id)
+
+    def list_applications_json(self):
         url = self.auth.api+'/organizations/'+self.organizationId+'/applications.json'
         resp = requests.get(url, cookies=self.auth.cookies, data="{}", verify=False)
         log.debug(resp.text)
@@ -175,38 +209,56 @@ class Organization(object):
         return app.delete()
 
     def get_or_create_application(self, id=None, manifest=None, name=None):
-        """ Will get app by id or create application with parameters """
-        if name:
-            appz = [app for app in self.list_applications() if app['name'] == name]
-            # app found by name
-            if len(appz):
-                app = self.get_application(appz[0]['id']) # pick first
-                if manifest:
-                    app.upload(manifest)
-                    return self.get_application(app.applicationId)
-                else:
-                    return app
-            else:
-                return self.create_application(name, manifest)
-        else:
-            name = 'generated-app-name'
-            if id:
-                return self.get_application(id)
-            else:
-                return self.create_application(name, manifest)
-
-    def application(self, id=None, manifest=None, name=None):
-        """ Creates, picks or modify application
+        """ Get application by id or name.
+        If not found: create with given or generated parameters
         """
         if id:
-            app = self.get_application()
-            if name: app.update(name=name)
-            if manifest:
-                app.upload(manifest=manifest)
+            return self.get_application(id=id)
         elif name:
-            app = self.get_or_create_application(id=id, manifest=manifest, name=name)
-            if manifest: app.upload(manifest=manifest)
-        return app
+            try:
+                app = self.get_application(name=name)
+            except exceptions.NotFoundError:
+                app = self.create_application(name=name, manifest=manifest)
+            return app
+        raise exceptions.NotEnoughParams('Not enough parameters')
+
+    def application(self, id=None, manifest=None, name=None):
+        """ Smart method. Creates, picks or modifies application.
+        If application found by name or id and manifest not changed: return app.
+        If app found by id, but other parameters differs: change them.
+        If no application found, create.
+        """
+
+        modify = False
+        found = False
+
+        # Try to find application by name or id
+        if name and id:
+            found = self.get_application(id=id)
+            if not found.name == name:
+                modify = True
+        elif id:
+            found = self.get_application(id=id)
+            name = found.name
+        elif name:
+            try:
+                found = self.get_application(name=name)
+                id = found.applicationId
+            except exceptions.NotFoundError:
+                pass
+
+        # If found - compare parameters
+        if found:
+            if manifest and not manifest == found.manifest:
+                modify = True
+
+        # We need to update application
+        if found and modify:
+            found.update(name=name, manifest=manifest)
+        if not found:
+            created = self.create_application(name=name, manifest=manifest)
+
+        return found or created
 
 
 # INSTANCE
@@ -217,8 +269,7 @@ class Organization(object):
         if not application:
             raise exceptions.NotEnoughParams('Application not set')
         from qubell.api.private.instance import Instance
-        instance = Instance(auth=self.auth, application=application)
-        instance.create(revision=revision, environment=environment, name=name, parameters=parameters)
+        instance = Instance(auth=self.auth, application=application).create(revision=revision, environment=environment, name=name, parameters=parameters)
         self.instances.add(instance)
         return instance
 
@@ -233,18 +284,18 @@ class Organization(object):
             instances = self.instances
 
         if id:
-            instance = [x for x in instances if x.id==id]
+            instance = [x for x in instances if x.id == id]
         elif name:
-            instance = [x for x in instances if x.name==name]
+            instance = [x for x in instances if x.name == name]
         else:
             raise exceptions.NotEnoughParams('No name nor id given. Unable to get instance')
 
         if len(instance) == 1:
             return instance[0]
         elif len(instance) > 1:
-            log.warning('Found several instances with name %s. Picking first' % name)
-            return instance[0]
-        raise exceptions.NotFoundError('Unable to get instance or too many found')
+            log.warning('Found several instances with name %s. Picking last' % name)
+            return instance[-1]
+        raise exceptions.NotFoundError('Unable to get instance by id: %s' % id)
 
     def list_instances_json(self, application=None):
         """ Get list of instances in json format converted to list
@@ -261,7 +312,7 @@ class Organization(object):
             instances = []
             for app in self.list_applications():
                 found_app = self.get_application(app['id'])
-                instances.extend(self.list_instances(found_app))
+                instances.extend(self.list_instances_json(found_app))
             return instances
 
 

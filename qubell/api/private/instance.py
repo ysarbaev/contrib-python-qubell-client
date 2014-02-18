@@ -46,20 +46,18 @@ class Instance(object):
             ret[val['id']] = val['value']
         return ret
 
-    @lazy
+    #@lazy
     def __update(self):
-        print "UPDATING"
         info = self.json()
         self.name = info['name']
-        self.id = self.instanceId
+        #self.id = self.instanceId
 
         self.environmentId = info['environmentId']
         self.environment = self.organization.get_environment(self.environmentId)
 
     def __init__(self, auth, application, **kwargs):
-        print "INS"
         if hasattr(self, 'instanceId'):
-            print "INSTANCE ALREADY EXIST"
+            log.warning("Instance reinitialized. Dangerous!")
         self.auth = auth
         self.application = application
         self.applicationId = application.applicationId
@@ -70,29 +68,26 @@ class Instance(object):
         if 'id' in kwargs:
             self.instanceId = kwargs.get('id')
             self.__update()
-        elif 'name' in kwargs:
-            self.by_name(kwargs.get('name'))
-
+        #elif 'name' in kwargs:
+        #    self.by_name(kwargs.get('name'))
 
     def __getattr__(self, key):
-        if key in ['instanceId']:
+        if key in ['instanceId',]:
             raise exceptions.NotFoundError('Unable to get instance property: %s' % key)
         if key == 'ready':
+            log.debug('Checking instance status')
             return self.ready()
         # return same way old_public api does
         if key in ['returnValues', ]:
             return self.__parse(self.json()[key])
         else:
+            log.debug('Getting instance attribute: %s' % key)
             return self.json()[key]
-
-    def __find_by_key(self, key, value):
-        instances = self.organization.list_instances(self.application)
-        resp = [x for x in instances if x[key] == value and x['status'] not in DEAD_STATUS]
-        return resp
 
     def json(self):
         url = self.auth.api+'/organizations/'+self.organizationId+'/instances/'+self.instanceId+'.json'
         resp = requests.get(url, cookies=self.auth.cookies, data="{}", verify=False)
+        log.debug(resp.request.headers)
         log.debug(resp.text)
         if resp.status_code == 200:
             return resp.json()
@@ -126,22 +121,12 @@ class Instance(object):
         raise exceptions.ApiError('Unable to launch application id: %s, got error: %s' % (self.applicationId, resp.text))
 
     def by_name(self, name):
-        found = self.__find_by_key('name', name)
-        if len(found) == 1:
-            self.instanceId = found[0]['id']
-            self.__update()
-            return self
-        else:
-            raise exceptions.NotFoundError('Unable to find instance by name %s or too many found. Application: %s' % (name, self.application.name))
+        instance = self.organization.get_instance(name=name)
+        #instance = [x for x in self.organization.instances if x.name == name]
+        return instance
 
     def by_id(self, id):
-        found = self.__find_by_key('id', id)
-        if len(found) == 1:
-            self.instanceId = found[0]['id']
-            self.__update()
-            return self
-        else:
-            raise exceptions.NotFoundError('Unable to find instance by id %s. Application: %s' % (id, self.application.id))
+        return self.organization.get_instance(id=id, application=self.application)
 
     def ready(self, timeout=3):  # Shortcut for convinience. Temeout = 3 min (ask timeout*6 times every 10 sec)
         return waitForStatus(instance=self, final='Running', accepted=['Launching', 'Requested', 'Executing', 'Unknown'], timeout=[timeout*6, 10, 1])
@@ -174,8 +159,6 @@ class Instance(object):
             return resp.json()
         raise exceptions.ApiError('Unable to get manifest, got error: %s' % resp.text)
 
-
-
     def reconfigure(self, name='reconfigured', revision=None, environment=None,  parameters={}):
         revisionId = revision or ''
         submodules = parameters.get('submodules', {})
@@ -193,9 +176,9 @@ class Instance(object):
         log.debug('REQUEST: %s' % resp.request.body)
         log.debug('RESPONSE: %s' % resp.text)
         if resp.status_code == 200:
+            self.__update()
             return resp.json()
         raise exceptions.ApiError('Unable to reconfigure instance, got error: %s' % resp.text)
-
 
     def delete(self):
         return self.destroy()

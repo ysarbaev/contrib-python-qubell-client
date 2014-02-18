@@ -33,17 +33,25 @@ class Application(object):
     Base class for applications. It should create application and services+environment requested
     """
 
-    def __init__(self, auth, organization, id):
-        self.instances = []
+    def __update(self):
+        info = self.json()
+        self.name = info['name']
+        self.id = self.applicationId
+
+
+    def __init__(self, auth, organization, **kwargs):
+        # TODO: self.instances = organization
+
+        if hasattr(self, 'applicationId'):
+            log.warning("Application reinitialized. Dangerous!")
         self.revisions = []
         self.auth = auth
         self.organization = organization
-        self.applicationId = id
-        self.defaultEnvironment = organization.get_default_environment()
-
-        my = self.json()
-        self.name = my['name']
-
+        self.organizationId = self.organization.organizationId
+        self.defaultEnvironment = self.organization.get_default_environment()
+        if 'id' in kwargs:
+            self.applicationId = kwargs.get('id')
+            self.__update()
 
     def __parse(self, values):
         ret = {}
@@ -53,9 +61,22 @@ class Application(object):
 
         #TODO: Think how to restore revisions
 
+    def create(self, name, manifest):
+        log.info("Creating application: %s" % name)
+        url = self.auth.api+'/organizations/'+self.organizationId+'/applications.json'
+
+        resp = requests.post(url, files={'path': manifest.content}, data={'manifestSource': 'upload', 'name': name}, verify=False, cookies=self.auth.cookies)
+        log.debug(resp.text)
+        if resp.status_code == 200:
+            self.applicationId = resp.json()['id']
+            self.manifest = manifest
+            self.__update()
+            return self
+        raise exceptions.ApiError('Unable to create application %s, got error: %s' % (name, resp.text))
+
     def delete(self):
         log.info("Removing application: %s" % self.name)
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/applications/'+self.applicationId+'.json'
+        url = self.auth.api+'/organizations/'+self.organizationId+'/applications/'+self.applicationId+'.json'
         resp = requests.delete(url, verify=False, cookies=self.auth.cookies)
         log.debug(resp.text)
         if resp.status_code == 200:
@@ -63,13 +84,16 @@ class Application(object):
         raise exceptions.ApiError('Unable to delete application: %s' % resp.text)
 
     def update(self, **kwargs):
+        if kwargs.get('manifest'):
+            self.upload(kwargs.pop('manifest'))
         log.info("Updating application: %s" % self.name)
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/applications/'+self.applicationId+'.json'
+        url = self.auth.api+'/organizations/'+self.organizationId+'/applications/'+self.applicationId+'.json'
         headers = {'Content-Type': 'application/json'}
         data = json.dumps(kwargs)
         resp = requests.put(url, headers=headers, verify=False, data=data, cookies=self.auth.cookies)
         log.debug(resp.text)
         if resp.status_code == 200:
+            self.__update()
             return resp.json()
         raise exceptions.ApiError('Unable to update application %s, got error: %s' % (self.name, resp.text))
 
@@ -88,7 +112,7 @@ class Application(object):
         return True
 
     def json(self):
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/applications/'+self.applicationId+'.json'
+        url = self.auth.api+'/organizations/'+self.organizationId+'/applications/'+self.applicationId+'.json'
         resp = requests.get(url, cookies=self.auth.cookies, data="{}", verify=False)
         log.debug(resp.text)
         if resp.status_code == 200:
@@ -115,7 +139,7 @@ class Application(object):
     def create_revision(self, name, instance, parameters=[], version=None):
         if not version:
             version=self.get_manifest()['manifestVersion']
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/applications/'+self.applicationId+'/revisions.json'
+        url = self.auth.api+'/organizations/'+self.organizationId+'/applications/'+self.applicationId+'/revisions.json'
         headers = {'Content-Type': 'application/json'}
         payload = json.dumps({ 'name': name,
                     'parameters': parameters,
@@ -139,18 +163,19 @@ class Application(object):
 # MANIFEST
 
     def get_manifest(self):
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/applications/'+self.applicationId+'/refreshManifest.json'
+        url = self.auth.api+'/organizations/'+self.organizationId+'/applications/'+self.applicationId+'/refreshManifest.json'
         headers = {'Content-Type': 'application/json'}
         payload = json.dumps({})
         resp = requests.post(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
         log.debug(resp.text)
+
         if resp.status_code == 200:
             return resp.json()
         raise exceptions.ApiError('Unable to get manifest, got error: %s' % resp.text)
 
     def upload(self, manifest):
         log.info("Uploading manifest")
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/applications/'+self.applicationId+'/manifests.json'
+        url = self.auth.api+'/organizations/'+self.organizationId+'/applications/'+self.applicationId+'/manifests.json'
         resp = requests.post(url, files={'path': manifest.content}, data={'manifestSource': 'upload', 'name': self.name}, verify=False, cookies=self.auth.cookies)
         log.debug(resp.text)
         if resp.status_code == 200:
