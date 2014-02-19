@@ -12,6 +12,7 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import re
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
@@ -23,7 +24,7 @@ import yaml
 import time
 import os
 import logging as log
-from qubell.api.private.platform import Auth
+
 
 def rand():
     return str(randrange(1000, 9999))
@@ -143,3 +144,7 @@ def lazy(func):
         wrapped.__name__ = "lazy-" + func.__name__
         return wrapped
     return lazyfunc
+
+def is_bson_id(bson_id):
+    id_pattern = "[A-Fa-f0-9]{24}"
+    return re.match(id_pattern, bson_id)

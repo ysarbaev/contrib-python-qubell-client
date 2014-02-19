@@ -24,22 +24,17 @@ import requests
 import simplejson as json
 
 from qubell.api.private import exceptions
-from qubell.api.private.common import Qubell_object_list
+from qubell.api.private.common import QubellEntityList
 
 DEAD_STATUS = ['Destroyed', 'Destroying']
 
 
-class Environments(Qubell_object_list):
+class Environments(QubellEntityList):
     def __init__(self, organization):
         # TODO: That should be done by parent
-        self.organization = organization
-        self.auth = self.organization.auth
-        self.organizationId = self.organization.organizationId
-        self.object_list = []
-        self.__generate_object_list()
+        QubellEntityList.__init__(self, organization)
 
-
-    def __generate_object_list(self):
+    def _generate_object_list(self):
         for env in self.organization.list_environments_json():
             self.object_list.append(Environment(self.auth, self.organization, id=env['id']))
 

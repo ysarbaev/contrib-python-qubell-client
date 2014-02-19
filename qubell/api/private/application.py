@@ -25,18 +25,17 @@ import requests
 import simplejson as json
 
 from qubell.api.private import exceptions
-from qubell.api.private.common import Qubell_object_list
+from qubell.api.private.common import EntityList
 
 
-class Applications(Qubell_object_list):
+class Applications(EntityList):
     def __init__(self, organization):
         self.organization = organization
         self.auth = self.organization.auth
         self.organizationId = self.organization.organizationId
-        self.object_list = []
-        self.__generate_object_list()
+        EntityList.__init__(self)
 
-    def __generate_object_list(self):
+    def _generate_object_list(self):
         for app in self.organization.list_applications_json():
             self.object_list.append(Application(self.auth, self.organization, id=app['id']))
 

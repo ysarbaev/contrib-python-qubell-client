@@ -12,8 +12,30 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import functools
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
 __email__ = "vkhomenko@qubell.com"
+
+import warnings
+
+warnings.simplefilter('always', DeprecationWarning)
+
+
+def deprecated(func, msg=None):
+    """
+    A decorator which can be used to mark functions
+    as deprecated.It will result in a deprecation warning being shown
+    when the function is used.
+    """
+
+    message = msg or "Use of deprecated function '{}`.".format(func.__name__)
+
+    @functools.wraps(func)
+    def wrapper_func(*args, **kwargs):
+        warnings.warn(message, DeprecationWarning, stacklevel=2)
+        return func(*args, **kwargs)
+
+    return wrapper_func

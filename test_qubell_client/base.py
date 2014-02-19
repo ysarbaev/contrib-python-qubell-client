@@ -73,14 +73,14 @@ class BaseTestCase(testtools.TestCase):
         cls.platform = QubellPlatform(cls.context)
         assert cls.platform.authenticate()
 
-        cls.platform_public = QubellPlatformPublic(context=cls.context_public)
+        ###cls.platform_public = QubellPlatformPublic(context=cls.context_public)
 
     # Set default manifest for app creation
         cls.manifest = Manifest(file=os.path.join(os.path.dirname(__file__), 'default.yml'), name='BaseTestManifest')
 
     # Initialize organization
         cls.organization = cls.platform.organization(name=org)
-        cls.organization_public = cls.platform_public.organization(name=org)
+        ###cls.organization_public = cls.platform_public.organization(name=org)
 
         if zone:
             z = [x for x in cls.organization.list_zones() if x['name'] == zone]

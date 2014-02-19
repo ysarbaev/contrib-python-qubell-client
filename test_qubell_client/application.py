@@ -38,7 +38,7 @@ application:
           int1.pin1: "HIHIHI"
 """)
 
-class InstanceTest(base.BaseTestCasePrivate):
+class InstanceTest(base.BaseTestCase):
 
     @classmethod
     def setUpClass(cls):

@@ -22,18 +22,15 @@ import logging as log
 import requests
 
 from qubell.api.private import exceptions
-from qubell.api.private.common import Qubell_object_list
+from qubell.api.private.common import QubellEntityList
 
 
-class Zones(Qubell_object_list):
+class Zones(QubellEntityList):
     def __init__(self, organization):
-        self.organization = organization
-        self.auth = self.organization.auth
-        self.organizationId = self.organization.organizationId
-        self.object_list = []
-        self.__generate_object_list()
+        # TODO: That should be done by parent
+        QubellEntityList.__init__(self, organization)
 
-    def __generate_object_list(self):
+    def _generate_object_list(self):
         for zone in self.organization.list_zones_json():
             self.object_list.append(Zone(self.auth, self.organization, id=zone['id']))
 

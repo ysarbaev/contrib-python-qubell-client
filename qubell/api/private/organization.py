@@ -12,7 +12,6 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
@@ -24,11 +23,13 @@ import requests
 import simplejson as json
 
 from qubell.api.private.manifest import Manifest
+from qubell.api.private.instance import Instance
 from qubell.api.private import exceptions
 from qubell.api.private.instance import Instances
 from qubell.api.private.application import Applications
 from qubell.api.private.environment import Environments
 from qubell.api.private.zone import Zones
+
 
 class Organization(object):
 
