@@ -33,10 +33,10 @@ class Applications(EntityList):
         self.organization = organization
         self.auth = self.organization.auth
         self.organizationId = self.organization.organizationId
-        self.object_list = []
-        self.__generate_object_list()
+        EntityList.__init__(self)
 
-    def __generate_object_list(self):
+    def _generate_object_list(self):
+        from qubell.api.private.application import Application
         for app in self.organization.list_applications_json():
             self.object_list.append(Application(self.auth, self.organization, id=app['id']))
 

@@ -35,10 +35,11 @@ class Instances(EntityList):
         self.organization = organization
         self.auth = self.organization.auth
         self.organizationId = self.organization.organizationId
-        self.object_list = []
-        self.__generate_object_list()
+        EntityList.__init__(self)
 
-    def __generate_object_list(self):
+    def _generate_object_list(self):
+        from qubell.api.private.instance import Instance
+
         for app in self.organization.applications:
             instances = app.json()['instances']
             instances_alive = [ins for ins in instances if ins['status'] not in ['Destroyed', 'Destroying']]

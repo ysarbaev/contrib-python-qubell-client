@@ -12,7 +12,7 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from qubell.api.private.common import Auth
+import re
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
@@ -144,3 +144,7 @@ def lazy(func):
         wrapped.__name__ = "lazy-" + func.__name__
         return wrapped
     return lazyfunc
+
+def is_bson_id(bson_id):
+    id_pattern = "[A-Fa-f0-9]{24}"
+    return re.match(id_pattern, bson_id)

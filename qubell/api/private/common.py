@@ -12,6 +12,10 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from qubell.api.tools import is_bson_id
+
+from qubell.api.private import exceptions
+from qubell import deprecated
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
@@ -20,8 +24,7 @@ __version__ = ""
 __email__ = "vkhomenko@qubell.com"
 
 
-from qubell.api.private import exceptions
-from qubell import deprecated
+
 
 class EntityList(object):
     """ Class to store qubell objects information (Instances, Applications, etc)
@@ -33,13 +36,10 @@ class EntityList(object):
         self.auth = self.organization.auth
         self.organizationId = self.organization.organizationId
         self.object_list = []
-        self.__generate_object_list()
+        self._generate_object_list()
 
     def __iter__(self):
-        i = 0
-        while i<len(self.object_list):
-            yield self.object_list[i]
-            i+=1
+        return iter(self.object_list)
 
     def __len__(self):
         return len(self.object_list)
@@ -49,22 +49,30 @@ class EntityList(object):
 
     def __getitem__(self, item):
         # TODO: Guess item is ID or name
-        found = [x for x in self.object_list if x.name == item]
+        found = [x for x in self.object_list if (is_bson_id(item) and x.id == item) or x.name == item]
+        if len(found)>1:
+            raise exceptions.ExistsError("There are more than one '{1}' in {0}".format(self.__class__.__name__, item))
+
         if len(found)>0:
             return found[-1]
-        raise exceptions.NotFoundError('Unable to get instance by name')
+        raise exceptions.NotFoundError("None of '{1}' in {0}".format(self.__class__.__name__, item))
 
     def __contains__(self, item):
-        return item in self.object_list
+        return item.id in [item.id for item in self.object_list]
 
+    #todo: this must be immutable list
+    @deprecated
     def add(self, item):
         self.object_list.append(item)
 
+    #todo: this must be immutable list
+    @deprecated
     def remove(self, item):
-        self.object_list.remove(item)
+        del self.object_list[item]
 
-    def __generate_object_list(self):
-        pass
+    def _generate_object_list(self):
+        raise AssertionError("'_generate_object_list' method should be implemented in subclasses")
+
 
 class Auth(object):
     def __init__(self, user, password, tenant):
