@@ -31,10 +31,7 @@ class EntityList(object):
     Gives convenient way for searching and manipulating objects
     """
 
-    def __init__(self, organization):
-        self.organization = organization
-        self.auth = self.organization.auth
-        self.organizationId = self.organization.organizationId
+    def __init__(self):
         self.object_list = []
         self._generate_object_list()
 
@@ -52,10 +49,9 @@ class EntityList(object):
         found = [x for x in self.object_list if (is_bson_id(item) and x.id == item) or x.name == item]
         if len(found)>1:
             raise exceptions.ExistsError("There are more than one '{1}' in {0}".format(self.__class__.__name__, item))
-
-        if len(found)>0:
-            return found[-1]
-        raise exceptions.NotFoundError("None of '{1}' in {0}".format(self.__class__.__name__, item))
+        if len(found) is 0:
+            raise exceptions.NotFoundError("None of '{1}' in {0}".format(self.__class__.__name__, item))
+        return found[-1]
 
     def __contains__(self, item):
         return item.id in [item.id for item in self.object_list]
@@ -73,6 +69,13 @@ class EntityList(object):
     def _generate_object_list(self):
         raise AssertionError("'_generate_object_list' method should be implemented in subclasses")
 
+#todo: what this object does?
+class QubellEntityList(EntityList):
+    def __init__(self, organization):
+        self.organization = organization
+        self.auth = self.organization.auth
+        self.organizationId = self.organization.organizationId
+        EntityList.__init__(self)
 
 class Auth(object):
     def __init__(self, user, password, tenant):
