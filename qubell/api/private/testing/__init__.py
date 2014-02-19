@@ -36,6 +36,7 @@ from requests import sessions
 import time
 import logging
 import re
+import types
 logger = logging.getLogger("qubell.routes")
 logging.getLogger("requests.packages.urllib3.connectionpool").setLevel(logging.WARN)
 
@@ -126,29 +127,34 @@ def workflow(name, parameters=None, timeout=10):
 
 
 def environment(params):
+    """
+    Decorator that allows to run tests in sandbox against different Qubell environments.
+    Each test method in suite is converted to <test_name>_on_environemnt_<environment_name>
+    :param params: dict
+    """
+    assert isinstance(params, dict), "@environment decorator should take 'dict' with environments"
+
     def copy(func, name=None):
-        import types
-
-        if not name:
-            name = func.func_name
-
         return types.FunctionType(func.func_code, func.func_globals, name=name,
                                   argdefs=func.func_defaults,
                                   closure=func.func_closure)
 
     def wraps_class(clazz):
+        if "environments" in clazz.__dict__:
+            log.warn("Class {0} environment attribute is overriden".format(clazz.__name__))
+
         clazz.environments = params
 
-        methods = filter(lambda (name, func): name.startswith("test"), clazz.__dict__.items())
+        methods = [method
+                   for _, method in clazz.__dict__.items()
+                   if isinstance(method, types.FunctionType) and method.func_name.startswith("test") ]
 
-        for name_method, _ in methods:
-            delattr(clazz, name_method)
-
-        for name in params.keys():
-            for name_method, method in methods:
-                new_name = name_method + "_on_environment_" + name
-                method = copy(method, new_name)
-                setattr(clazz, new_name, method)
+        for method in methods:
+            delattr(clazz, method.func_name)
+            log.info("'{0}' multiplied per environment in ".format(method.func_name))
+            for env_name in params.keys():
+                new_name = method.func_name + "_on_environment_" + env_name
+                setattr(clazz, new_name, copy(method, new_name))
 
         return clazz
     return wraps_class

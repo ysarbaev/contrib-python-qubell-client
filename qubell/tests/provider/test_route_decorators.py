@@ -19,7 +19,7 @@ def gen_response(code=200, resp_text="enjoy"):
 
 
 @patch("requests.request", create=True)
-class RouterDecoratorTest(unittest2.TestCase):
+class RouterDecoratorTests(unittest2.TestCase):
     class DummyRouter(Router):
         @property
         def is_connected(self): return True

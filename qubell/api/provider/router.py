@@ -17,7 +17,7 @@ class Router(object):
 
     @property
     def is_connected(self):
-        return 'PLAY_SESSION' in self._cookies
+        return self._cookies and 'PLAY_SESSION' in self._cookies
 
     #todo: add integration test for this
     def connect(self, email, password):
