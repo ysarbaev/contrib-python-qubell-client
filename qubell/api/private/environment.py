@@ -23,29 +23,75 @@ import logging as log
 import requests
 import simplejson as json
 
-from qubell.api.private.organization import Organization
 from qubell.api.private import exceptions
+from qubell.api.private.common import Qubell_object_list
 
+DEAD_STATUS = ['Destroyed', 'Destroying']
+
+
+class Environments(Qubell_object_list):
+    def __init__(self, organization):
+        # TODO: That should be done by parent
+        self.organization = organization
+        self.auth = self.organization.auth
+        self.organizationId = self.organization.organizationId
+        self.object_list = []
+        self.__generate_object_list()
+
+
+    def __generate_object_list(self):
+        for env in self.organization.list_environments_json():
+            self.object_list.append(Environment(self.auth, self.organization, id=env['id']))
 
 class Environment(object):
+    def __update(self):
+        info = self.json()
+        self.name = info['name']
+        self.id = self.environmentId
+        self.zoneId = info['backends'][0]['id']
+        self.isDefault = info['isDefault']
 
-    def __init__(self, auth, organization, id):
-        self.environmentId = id
-        self.auth = auth
-        self.organization = organization
-        my = self.json()
-        self.name = my['name']
+    def __init__(self, auth, organization, **kwargs):
+        if 'environmentId' in locals():
+            log.warning("Environment reinitialized. Dangerous!")
         self.services = []
         self.policies = []
         self.markers = []
         self.properties = []
         self.providers = []
+        self.auth = auth
+        self.organization = organization
+        self.organizationId = self.organization.organizationId
+        if 'id' in kwargs:
+            self.environmentId = kwargs.get('id')
+            self.__update()
 
     def __getattr__(self, key):
         resp = self.json()
         if not resp.has_key(key):
             raise exceptions.NotFoundError('Cannot get property %s' % key)
         return resp[key] or False
+
+    def create(self, name, zone=None, default=False):
+        log.info("Creating environment: %s" % name)
+        if not zone:
+            zone = self.organization.zone.zoneId
+        data = {'isDefault': default,
+                'name': name,
+                'backend': zone,
+                'organizationId': self.organizationId}
+
+        url = self.auth.api+'/organizations/'+self.organizationId+'/environments.json'
+        headers = {'Content-Type': 'application/json'}
+        resp = requests.post(url, cookies=self.auth.cookies, data=json.dumps(data), verify=False, headers=headers)
+        log.debug(resp.request.body)
+        log.debug(resp.text)
+
+        if resp.status_code == 200:
+            self.environmentId = resp.json()['id']
+            self.__update()
+            return self
+        raise exceptions.ApiError('Unable to create environment %s, got error: %s' % (name, resp.text))
 
     def restore(self, config):
         for marker in config.pop('markers', []):
@@ -69,7 +115,7 @@ class Environment(object):
                      "value": serv.regenerate()['id']})
 
     def json(self):
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'.json'
+        url = self.auth.api+'/organizations/'+self.organizationId+'/environments/'+self.environmentId+'.json'
         resp = requests.get(url, cookies=self.auth.cookies, verify=False)
         log.debug(resp.text)
         if resp.status_code == 200:
@@ -77,7 +123,7 @@ class Environment(object):
         raise exceptions.ApiError('Unable to get environment properties, got error: %s' % resp.text)
 
     def delete(self):
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'.json'
+        url = self.auth.api+'/organizations/'+self.organizationId+'/environments/'+self.environmentId+'.json'
         headers = {'Content-Type': 'application/json'}
         resp = requests.delete(url, cookies=self.auth.cookies, data=json.dumps({}), verify=False, headers=headers)
         log.debug(resp.text)
@@ -85,8 +131,19 @@ class Environment(object):
             return True
         raise exceptions.ApiError('Unable to delete environment %s, got error: %s' % (self.environmentId, resp.text))
 
+    def set_as_default(self):
+        url = self.auth.api+'/organizations/'+self.organizationId+'/defaultEnvironment.json'
+        headers = {'Content-Type': 'application/json'}
+        data = json.dumps({'environmentId': self.id})
+        resp = requests.put(url, cookies=self.auth.cookies, headers=headers, data=data, verify=False)
+        log.debug(resp.text)
+        if resp.status_code == 200:
+            return resp.json()
+        raise exceptions.ApiError('Unable to set default environment, got error: %s' % resp.text)
+
+
     def list_available_services(self):
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'/availableServices.json'
+        url = self.auth.api+'/organizations/'+self.organizationId+'/environments/'+self.environmentId+'/availableServices.json'
         resp = requests.get(url, cookies=self.auth.cookies, verify=False)
         log.debug(resp.text)
         if resp.status_code == 200:
@@ -99,7 +156,7 @@ class Environment(object):
         data['serviceIds'].append(service.serviceId)
         data['services'].append(service.json())
 
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'.json'
+        url = self.auth.api+'/organizations/'+self.organizationId+'/environments/'+self.environmentId+'.json'
         payload = json.dumps(data)
         headers = {'Content-Type': 'application/json'}
         resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
@@ -115,7 +172,7 @@ class Environment(object):
         data['serviceIds'].remove(service.serviceId)
         data['services'].remove(service.json())
 
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'.json'
+        url = self.auth.api+'/organizations/'+self.organizationId+'/environments/'+self.environmentId+'.json'
         payload = json.dumps(data)
         headers = {'Content-Type': 'application/json'}
         resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
@@ -129,7 +186,7 @@ class Environment(object):
         data = self.json()
         data['markers'].append({'name': marker})
 
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'.json'
+        url = self.auth.api+'/organizations/'+self.organizationId+'/environments/'+self.environmentId+'.json'
         payload = json.dumps(data)
         headers = {'Content-Type': 'application/json'}
         resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
@@ -144,7 +201,7 @@ class Environment(object):
         data = self.json()
         data['markers'].remove({'name': marker})
 
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'.json'
+        url = self.auth.api+'/organizations/'+self.organizationId+'/environments/'+self.environmentId+'.json'
         payload = json.dumps(data)
         headers = {'Content-Type': 'application/json'}
         resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
@@ -159,7 +216,7 @@ class Environment(object):
         data = self.json()
         data['properties'].append({'name': name, 'type': type, 'value': value})
 
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'.json'
+        url = self.auth.api+'/organizations/'+self.organizationId+'/environments/'+self.environmentId+'.json'
         payload = json.dumps(data)
         headers = {'Content-Type': 'application/json'}
         resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
@@ -177,7 +234,7 @@ class Environment(object):
             log.error('Unable to remove property %s. Not found.' % name)
         data['properties'].remove(property[0])
 
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'.json'
+        url = self.auth.api+'/organizations/'+self.organizationId+'/environments/'+self.environmentId+'.json'
         payload = json.dumps(data)
         headers = {'Content-Type': 'application/json'}
         resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
@@ -195,7 +252,7 @@ class Environment(object):
         data['serviceIds'] = []
         data['services'] = []
 
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'.json'
+        url = self.auth.api+'/organizations/'+self.organizationId+'/environments/'+self.environmentId+'.json'
         payload = json.dumps(data)
         headers = {'Content-Type': 'application/json'}
         resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
@@ -209,7 +266,7 @@ class Environment(object):
         data = self.json()
         data['policies'].append(new)
 
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'.json'
+        url = self.auth.api+'/organizations/'+self.organizationId+'/environments/'+self.environmentId+'.json'
         payload = json.dumps(data)
         headers = {'Content-Type': 'application/json'}
         resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
@@ -226,7 +283,7 @@ class Environment(object):
         data = self.json()
         data.update({'providerId': provider.providerId})
 
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'.json'
+        url = self.auth.api+'/organizations/'+self.organizationId+'/environments/'+self.environmentId+'.json'
         payload = json.dumps(data)
         headers = {'Content-Type': 'application/json'}
         resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
@@ -242,7 +299,7 @@ class Environment(object):
     def set_backend(self, zone):
         data = self.json()
         data.update({'backend': zone.zoneId})
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/environments/'+self.environmentId+'.json'
+        url = self.auth.api+'/organizations/'+self.organizationId+'/environments/'+self.environmentId+'.json'
         payload = json.dumps(data)
         headers = {'Content-Type': 'application/json'}
         resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)

@@ -144,6 +144,8 @@ class InstanceClassTest(BaseTestCase):
         self.assertTrue(new_instance in org.instances)
         self.assertTrue(new_instance.delete())
 
+        self.assertTrue(base_inst.delete())
+
     """
     def test_instance_launch_as_service(self):
         inst = self.org.create_instance(application=self.app, parameters={'asService': True})

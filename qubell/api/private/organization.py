@@ -27,24 +27,28 @@ from qubell.api.private.manifest import Manifest
 from qubell.api.private import exceptions
 from qubell.api.private.instance import Instances
 from qubell.api.private.application import Applications
+from qubell.api.private.environment import Environments
+from qubell.api.private.zone import Zones
 
 class Organization(object):
 
     def __init__(self, auth, id):
-        self.environments = []
         self.services = []
         self.providers = []
         self.zones = []
 
         self.organizationId = id
         self.auth = auth
-        self.zone = self.get_default_zone()
-        self.defaultEnvironment = self.get_default_environment()
 
         my = self.json()
         self.name = my['name']
+        self.zones = Zones(self)
+        self.environments = Environments(self)
         self.applications = Applications(self)
         self.instances = Instances(self)
+
+        self.zone = self.get_default_zone()
+        self.defaultEnvironment = self.get_default_environment()
 
 
     def json(self):
@@ -106,6 +110,8 @@ class Organization(object):
         raise exceptions.NotFoundError('Unable to get application by id: %s' % id)
 
     def list_applications_json(self):
+        """ Return raw json
+        """
         url = self.auth.api+'/organizations/'+self.organizationId+'/applications.json'
         resp = requests.get(url, cookies=self.auth.cookies, data="{}", verify=False)
         log.debug(resp.text)
@@ -372,25 +378,14 @@ class Organization(object):
 
 ### ENVIRONMENT
     def create_environment(self, name, default=False, zone=None):
-        log.info("Creating environment: %s" % name)
-        if not zone:
-            zone = self.zone.zoneId
-        data = {'isDefault': default,
-                'name': name,
-                'backend': zone,
-                'organizationId': self.organizationId}
+        """ Creates environment and returns Environment object.
+        """
+        from qubell.api.private.environment import Environment
+        env = Environment(auth=self.auth, organization=self).create(name=name, zone=zone, default=default)
+        self.environments.add(env)
+        return env
 
-        url = self.auth.api+'/organizations/'+self.organizationId+'/environments.json'
-        headers = {'Content-Type': 'application/json'}
-        resp = requests.post(url, cookies=self.auth.cookies, data=json.dumps(data), verify=False, headers=headers)
-        log.debug(resp.request.body)
-        log.debug(resp.text)
-
-        if resp.status_code == 200:
-            return self.get_environment(resp.json()['id'])
-        raise exceptions.ApiError('Unable to create environment %s, got error: %s' % (name, resp.text))
-
-    def list_environments(self):
+    def list_environments_json(self):
         url = self.auth.api+'/organizations/'+self.organizationId+'/environments.json'
         resp = requests.get(url, cookies=self.auth.cookies, verify=False)
         log.debug(resp.text)
@@ -398,11 +393,21 @@ class Organization(object):
             return resp.json()
         raise exceptions.ApiError('Unable to get environments list, got error: %s' % resp.text)
 
-    def get_environment(self, id):
-        from qubell.api.private.environment import Environment
-        env = Environment(self.auth, self, id)
-        self.environments.append(env)
-        return env
+    def get_environment(self, id=None, name=None):
+        """ Get environment object by name or id.
+        """
+        if id:
+            envs = [x for x in self.environments if x.id == id]
+        elif name:
+            envs = [x for x in self.environments if x.name == name]
+        else:
+            raise exceptions.NotEnoughParams('No name nor id given. Unable to get application')
+        if len(envs) == 1:
+            return envs[0]
+        elif len(envs) > 1:
+            log.warning('Found several environments with name %s. Picking last' % name)
+            return envs[-1]
+        raise exceptions.NotFoundError('Unable to get environment by id: %s' % id)
 
     def delete_environment(self, id):
         env = self.get_environment(id)
@@ -410,41 +415,76 @@ class Organization(object):
         return env.delete()
 
     def get_or_create_environment(self, id=None, name=None, zone=None, default=False):
-        """ Get env by name or create with parameters"""
-        if name:
-            envs = [env for env in self.list_environments() if env['name'] == name]
-            # environment found by name
-            if len(envs):
-                return self.get_environment(envs[0]['id']) # pick first
-            else:
-                return self.create_environment(name=name, zone=zone, default=default)
+        """ Get environment by id or name.
+        If not found: create with given or generated parameters
+        """
+        if id:
+            return self.get_environment(id=id)
+        elif name:
+            try:
+                env = self.get_environment(name=name)
+            except exceptions.NotFoundError:
+                env = self.create_environment(name=name, zone=zone, default=default)
+            return env
         else:
-            name = 'generated-env'
-            if id:
-                return self.get_environment(id)
-            else:
-                return self.create_environment(name=name, zone=zone, default=default)
+            name = 'auto-generated-env'
+            return self.create_environment(name=name, zone=zone, default=default)
 
     def environment(self, id=None, name=None, zone=None, default=False):
-        return self.get_or_create_environment(id=id, name=name, zone=zone, default=default)
+        """ Smart method. Creates, picks or modifies environment.
+        If environment found by name or id parameters not changed: return env.
+        If env found by id, but other parameters differs: change them.
+        If no environment found, create with given parameters.
+        """
+
+        modify = False
+        found = False
+
+        # Try to find environment by name or id
+        if name and id:
+            found = self.get_environment(id=id)
+            if not found.name == name:
+                modify = True
+        elif id:
+            found = self.get_environment(id=id)
+            name = found.name
+        elif name:
+            try:
+                found = self.get_environment(name=name)
+                id = found.applicationId
+            except exceptions.NotFoundError:
+                pass
+
+        # If found - compare parameters
+        if found:
+            if default and not found.isDefault:
+                # We cannot set it to non default
+                found.set_default()
+
+            # TODO: add abilities to change zone and name.
+            """
+            if name and not name == found.name:
+                found.rename(name)
+            if zone and not zone == found.zone:
+                modify = True
+            """
+        if not found:
+            created = self.create_environment(name=name, zone=zone, default=default)
+        return found or created
+
 
     def get_default_environment(self):
-        envs = self.list_environments()
-        defaults = [x for x in envs if x['isDefault']==True]
-        if len(defaults):
-            envId = defaults[0]['id'] # If we had several default environments, pick first
-            return self.get_environment(id=envId)
+        def_envs = [x for x in self.environments if x.isDefault == True]
+        if len(def_envs)>1:
+            log.warning('Found more than one default environment. Picking last.')
+            return def_envs[-1]
+        elif len(def_envs)==1:
+            return def_envs[0]
         raise exceptions.NotFoundError('Unable to get default environment')
 
-    def set_default_environment(self, id):
-        url = self.auth.api+'/organizations/'+self.organizationId+'/defaultEnvironment.json'
-        headers = {'Content-Type': 'application/json'}
-        data = json.dumps({'environmentId': id})
-        resp = requests.put(url, cookies=self.auth.cookies, headers=headers, data=data, verify=False)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.ApiError('Unable to set default environment, got error: %s' % resp.text)
+    def set_default_environment(self, environment):
+        return environment.set_as_default()
+
 
 ### PROVIDER
     def create_provider(self, name, parameters):
@@ -481,7 +521,6 @@ class Organization(object):
 
     def get_or_create_provider(self,id=None, name=None, parameters=None):
 
-
         """ Smart object. Will create provider or pick one, if exists"""
         if name:
             provs = [prov for prov in self.list_providers() if prov['name'] == name]
@@ -505,7 +544,7 @@ class Organization(object):
 
 ### ZONES
 
-    def list_zones(self):
+    def list_zones_json(self):
         url = self.auth.api+'/organizations/'+self.organizationId+'/zones.json'
         resp = requests.get(url, cookies=self.auth.cookies, verify=False)
         log.debug(resp.text)
@@ -513,11 +552,21 @@ class Organization(object):
             return resp.json()
         raise exceptions.ApiError('Unable to get zones list, got error: %s' % resp.text)
 
-    def get_zone(self, id):
-        from qubell.api.private.zone import Zone
-        zone = Zone(self.auth, organization=self, id=id)
-        self.zones.append(zone)
-        return zone
+    def get_zone(self, id=None, name=None):
+        """ Get zone object by name or id.
+        """
+        if id:
+            zones = [x for x in self.zones if x.id == id]
+        elif name:
+            zones = [x for x in self.zones if x.name == name]
+        else:
+            raise exceptions.NotEnoughParams('No name nor id given. Unable to get application')
+        if len(zones) == 1:
+            return zones[0]
+        elif len(zones) > 1:
+            log.warning('Found several zones with name %s. Picking last' % name)
+            return zones[-1]
+        raise exceptions.NotFoundError('Unable to get zone by id: %s' % id)
 
     def get_default_zone(self):
     # Zones(backends) are factor we can't controll. So, get them.

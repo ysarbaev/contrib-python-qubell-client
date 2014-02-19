@@ -22,7 +22,20 @@ import logging as log
 import requests
 
 from qubell.api.private import exceptions
+from qubell.api.private.common import Qubell_object_list
 
+
+class Zones(Qubell_object_list):
+    def __init__(self, organization):
+        self.organization = organization
+        self.auth = self.organization.auth
+        self.organizationId = self.organization.organizationId
+        self.object_list = []
+        self.__generate_object_list()
+
+    def __generate_object_list(self):
+        for zone in self.organization.list_zones_json():
+            self.object_list.append(Zone(self.auth, self.organization, id=zone['id']))
 
 class Zone(object):
     def __init__(self, auth, organization, id):

@@ -32,7 +32,6 @@ DEAD_STATUS = ['Destroyed', 'Destroying']
 
 class Instances(Qubell_object_list):
     def __init__(self, organization):
-        self.current = 0
         self.organization = organization
         self.auth = self.organization.auth
         self.organizationId = self.organization.organizationId
@@ -40,8 +39,6 @@ class Instances(Qubell_object_list):
         self.__generate_object_list()
 
     def __generate_object_list(self):
-        from qubell.api.private.instance import Instance
-
         for app in self.organization.applications:
             instances = app.json()['instances']
             instances_alive = [ins for ins in instances if ins['status'] not in ['Destroyed', 'Destroying']]

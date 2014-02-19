@@ -53,7 +53,7 @@ class ApplicationClassTest(BaseTestCase):
 
     def test_application_create_method(self):
         # Check we can create applications
-        my_app = self.org.create_application(manifest=self.manifest, name='Self-ApplicationClassTest')
+        my_app = self.org.create_application(manifest=self.manifest, name='Self-test_application_create_method')
         self.assertTrue(my_app.name)
         self.assertTrue(my_app in self.org.applications)
 

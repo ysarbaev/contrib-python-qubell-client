@@ -94,7 +94,7 @@ class BaseTestCase(testtools.TestCase):
             cls.environment = cls.organization.environment(name='default', zone=cls.organization.zoneId)
             cls.environment.set_backend(cls.organization.zoneId)
         else:
-            cls.environment = cls.organization.environment(name='default')
+            cls.environment = cls.organization.get_environment(name='default')
         """
         cls.environment_public = cls.organization_public.environment(id=cls.environment.environmentId)
 

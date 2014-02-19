@@ -27,8 +27,12 @@ class Qubell_object_list(object):
     Class should give convenient way for searching and manipulating objects
     """
 
-    def __init__(self):
+    def __init__(self, organization):
+        self.organization = organization
+        self.auth = self.organization.auth
+        self.organizationId = self.organization.organizationId
         self.object_list = []
+        self.__generate_object_list()
 
     def __iter__(self):
         i = 0
@@ -52,11 +56,11 @@ class Qubell_object_list(object):
     def __contains__(self, item):
         return item in self.object_list
 
-    def add(self, instance):
-        self.object_list.append(instance)
+    def add(self, item):
+        self.object_list.append(item)
 
-    def remove(self, instance):
-        del self.object_list[instance]
+    def remove(self, item):
+        self.object_list.remove(item)
 
     def __generate_object_list(self):
         pass

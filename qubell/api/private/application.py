@@ -37,7 +37,6 @@ class Applications(Qubell_object_list):
         self.__generate_object_list()
 
     def __generate_object_list(self):
-        from qubell.api.private.application import Application
         for app in self.organization.list_applications_json():
             self.object_list.append(Application(self.auth, self.organization, id=app['id']))
 
@@ -51,11 +50,10 @@ class Application(object):
         info = self.json()
         self.name = info['name']
         self.id = self.applicationId
+        self.defaultEnvironment = self.organization.get_default_environment()
 
 
     def __init__(self, auth, organization, **kwargs):
-        # TODO: self.instances = organization
-
         if hasattr(self, 'applicationId'):
             log.warning("Application reinitialized. Dangerous!")
         self.revisions = []
