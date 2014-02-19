@@ -64,7 +64,7 @@ class EntityList(object):
     #todo: this must be immutable list
     @deprecated
     def remove(self, item):
-        del self.object_list[item]
+        self.object_list.remove(item)
 
     def _generate_object_list(self):
         raise AssertionError("'_generate_object_list' method should be implemented in subclasses")
