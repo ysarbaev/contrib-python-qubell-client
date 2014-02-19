@@ -17,10 +17,3 @@ __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
 __email__ = "vkhomenko@qubell.com"
-
-def main():
-    pass
-
-
-if __name__ == "__main__":
-    main()

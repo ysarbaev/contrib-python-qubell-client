@@ -25,12 +25,12 @@ from qubell.api.tools import lazy
 
 from qubell.api.tools import waitForStatus as waitForStatus
 from qubell.api.private import exceptions
-from qubell.api.private.common import Qubell_object_list
+from qubell.api.private.common import EntityList
 
 DEAD_STATUS = ['Destroyed', 'Destroying']
 
 
-class Instances(Qubell_object_list):
+class Instances(EntityList):
     def __init__(self, organization):
         self.organization = organization
         self.auth = self.organization.auth
@@ -263,7 +263,7 @@ class Instances:
             if resp.status_code == 200:
                 instances = resp.json()['instances']
                 instances_alive = [ins for ins in instances if ins['status'] not in ['Destroyed', 'Destroying']]
-                app_obj = Application(self.auth, self.organization, app['id'])
+                app_obj = Application(self.auth, self.organization, id=app['id'])
 
                 for ins in instances_alive:
                     self.object_list.append(Instance(self.auth, app_obj, id=ins['id']))

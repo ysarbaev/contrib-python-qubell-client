@@ -23,9 +23,9 @@ __email__ = "vkhomenko@qubell.com"
 from qubell.api.private import exceptions
 from qubell import deprecated
 
-class Qubell_object_list(object):
+class EntityList(object):
     """ Class to store qubell objects information (Instances, Applications, etc)
-    Class should give convenient way for searching and manipulating objects
+    Gives convenient way for searching and manipulating objects
     """
 
     def __init__(self, organization):

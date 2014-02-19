@@ -1,8 +1,13 @@
 from functools import wraps
 import inspect
-import requests
-from qubell.api.private.exceptions import ApiError, api_http_code_errors
 import logging as log
+
+import requests
+
+from qubell.api.private.exceptions import ApiError, api_http_code_errors
+
+
+log.getLogger("requests.packages.urllib3.connectionpool").setLevel(log.WARN)
 
 
 def route(route_str):  # decorator param
@@ -12,6 +17,7 @@ def route(route_str):  # decorator param
     :param route_str: a route "GET /parent/{parentID}/child/{childId}{ctype}"
     :return: the response of requests.request
     """
+
     def wrapper(f):  # decorated function
         @wraps(f)
         def wrapped_func(*args, **kwargs):  # params of function
@@ -22,6 +28,7 @@ def route(route_str):  # decorator param
                 f_args, varargs, keywords, defaults = inspect.getargspec(f)
                 defaults = defaults or []
                 return dict(zip(f_args[-len(defaults):], defaults))
+
             defs = defaults_dict()
 
             route_args = dict(kwargs.items() + defs.items())
@@ -47,7 +54,8 @@ def route(route_str):  # decorator param
             response = requests.request(method, destination_url, verify=self.verify_ssl, **bypass_args)
             if self.verify_codes:
                 if response.status_code is not 200:
-                    msg = "Route {0} returned code={1} and error: {2}".format(destination_url, response.status_code, response.text)
+                    msg = "Route {0} returned code={1} and error: {2}".format(destination_url, response.status_code,
+                                                                              response.text)
                     if response.status_code in api_http_code_errors.keys():
                         raise api_http_code_errors[response.status_code](msg)
                     else:
@@ -65,6 +73,7 @@ def play_auth(f):
     Injects cookies, into requests call over route
     :return: route
     """
+
     def wrapper(*args, **kwargs):
         self = args[0]
         if "cookies" in kwargs:
@@ -82,6 +91,7 @@ def basic_auth(f):
     Injects auth, into requests call over route
     :return: route
     """
+
     def wrapper(*args, **kwargs):
         self = args[0]
         if "auth" in kwargs:

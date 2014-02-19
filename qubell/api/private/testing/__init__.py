@@ -37,37 +37,7 @@ import time
 import logging
 import re
 import types
-logger = logging.getLogger("qubell.routes")
 logging.getLogger("requests.packages.urllib3.connectionpool").setLevel(logging.WARN)
-
-def nicer(url):
-    """
-    Converts 'https://secure.dev.qubell.com/organizations/52f0f242e4b0defa5da4808e/environments/52f0f242e4b0defa5da4808f.json'
-    To '/organizations/__/environments/__.json'
-    """
-    withoutdomain = url[url.find("/", 8):]  # 8 == len("https://")
-    id_pattern="[A-Fa-f0-9]{24}"
-    snips = re.split(id_pattern, withoutdomain)
-    return "__".join(snips)
-
-def requestWithInfo(method, url, **kwargs):
-    session = sessions.Session()
-    start = time.time()
-    cache = session.request(method=method, url=url, **kwargs)
-    end = time.time()
-    elapsed = int((end-start)*1000.0)
-    logfun = logger.info
-    if 1000 > elapsed >= 10000:
-        logfun = logger.warn
-    elif elapsed > 10000:
-        logfun = logger.error
-
-    logfun(' {0} {1} took {2} ms'.format(method.upper(), nicer(url), elapsed))
-    return cache
-
-api.request = requestWithInfo
-
-
 
 def values(names):
     def wrapper(func):

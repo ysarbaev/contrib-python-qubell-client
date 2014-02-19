@@ -17,13 +17,12 @@ import warnings
 
 import simplejson as json
 
-from qubell.api.private.organization import OrganizationList
 from qubell.api.provider.router import Router
 from qubell import deprecated
-from qubell.api.private import exceptions
 
 #todo: understood, that some people may use this object for authentication, need to move this to proper place
 from qubell.api.private.common import Auth
+Auth = Auth # Auth usage, to be sure won't be removed from imports
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
@@ -36,9 +35,6 @@ class QubellPlatform(object):
         if context:
             warnings.warn("replace context with auth name, it is deprecated and will be removed", DeprecationWarning,
                           stacklevel=2)
-        if not isinstance(auth, Auth):
-            pass  # Auth usage, to be sure won't be removed from imports
-
 
         self.organizations = []
         self.auth = auth or context

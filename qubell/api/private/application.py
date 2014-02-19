@@ -25,10 +25,10 @@ import requests
 import simplejson as json
 
 from qubell.api.private import exceptions
-from qubell.api.private.common import Qubell_object_list
+from qubell.api.private.common import EntityList
 
 
-class Applications(Qubell_object_list):
+class Applications(EntityList):
     def __init__(self, organization):
         self.organization = organization
         self.auth = self.organization.auth
