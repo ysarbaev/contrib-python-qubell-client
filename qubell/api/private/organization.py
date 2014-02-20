@@ -18,17 +18,15 @@ __license__ = "Apache"
 __email__ = "vkhomenko@qubell.com"
 
 import logging as log
-
-import requests
 import simplejson as json
 
 from qubell.api.private.manifest import Manifest
-from qubell.api.private.instance import Instance
 from qubell.api.private import exceptions
 from qubell.api.private.instance import Instances
 from qubell.api.private.application import Applications
 from qubell.api.private.environment import Environments
 from qubell.api.private.zone import Zones
+from qubell.api.provider.router import ROUTER as router
 
 
 class Organization(object):
@@ -53,15 +51,11 @@ class Organization(object):
 
 
     def json(self):
-        url = self.auth.api+'/organizations.json'
-        resp = requests.get(url, cookies=self.auth.cookies, verify=False)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            org = [x for x in resp.json() if x['id'] == self.organizationId]
-            if len(org)>0:
-                return org[0]
-            return resp.json()
-        raise exceptions.ApiError('Unable to get organization by id %s, got error: %s' % (self.organizationId, resp.text))
+        resp = router.get_organizations()
+        org = [x for x in resp.json() if x['id'] == self.organizationId]
+        if len(org)>0:
+            return org[0]
+        return resp.json()
 
     def restore(self, config):
         for instance in config.pop('instances', []):
@@ -113,12 +107,7 @@ class Organization(object):
     def list_applications_json(self):
         """ Return raw json
         """
-        url = self.auth.api+'/organizations/'+self.organizationId+'/applications.json'
-        resp = requests.get(url, cookies=self.auth.cookies, data="{}", verify=False)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.ApiError('Unable to get applications list, got error: %s' % resp.text)
+        return router.get_applications(org_id=self.organizationId).json()
 
     def delete_application(self, id):
         app = self.get_application(id)
@@ -218,13 +207,9 @@ class Organization(object):
         """ Get list of instances in json format converted to list
         """
         if application: # Return list of instances in application
-            url = self.auth.api+'/organizations/'+self.organizationId+'/applications/'+application.applicationId+'.json'
-            resp = requests.get(url, cookies=self.auth.cookies, data="{}", verify=False)
-            log.debug(resp.text)
-            if resp.status_code == 200:
-                instances = resp.json()['instances']
-                return [ins for ins in instances if ins['status'] not in ['Destroyed', 'Destroying']]
-            raise exceptions.ApiError('Unable to get application by url %s\n, got error: %s' % (url, resp.text))
+            resp = router.get_application_instances(org_id=self.organizationId, app_id=application.applicationId)
+            instances = resp.json()['instances']
+            return [ins for ins in instances if ins['status'] not in ['Destroyed', 'Destroying']]
         else:  # Return all instances in organization
             instances = []
             for app in self.list_applications_json():
@@ -313,15 +298,8 @@ class Organization(object):
                 'zoneId': zone,
                 'parameters': parameters}
 
-        url = self.auth.api+'/organizations/'+self.organizationId+'/services.json'
-        headers = {'Content-Type': 'application/json'}
-        resp = requests.post(url, cookies=self.auth.cookies, data=json.dumps(data), verify=False, headers=headers)
-        log.debug(resp.request.body)
-        log.debug(resp.text)
-
-        if resp.status_code == 200:
-            return self.get_service(resp.json()['id'])
-        raise exceptions.ApiError('Unable to create service %s, got error: %s' % (name, resp.text))
+        resp = router.get_404()
+        return self.get_service(resp.json()['id'])
 
     def create_keystore_service(self, name='generated-keystore', parameters={}, zone=None):
         return self.create_service(name=name, type='builtin:cobalt_secure_store', parameters=parameters, zone=zone)
@@ -342,13 +320,7 @@ class Organization(object):
         return serv
 
     def list_services(self):
-        url = self.auth.api+'/organizations/'+self.organizationId+'/services.json'
-        resp = requests.get(url, cookies=self.auth.cookies, verify=False)
-        log.debug(resp.request.body)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.ApiError('Unable to get services list, got error: %s' % resp.text)
+        return router.get_404().json()
 
     def delete_service(self, id):
         srv = self.get_service(id)
@@ -387,12 +359,7 @@ class Organization(object):
         return env
 
     def list_environments_json(self):
-        url = self.auth.api+'/organizations/'+self.organizationId+'/environments.json'
-        resp = requests.get(url, cookies=self.auth.cookies, verify=False)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.ApiError('Unable to get environments list, got error: %s' % resp.text)
+        return router.get_environments(org_id=self.organizationId).json()
 
     def get_environment(self, id=None, name=None):
         """ Get environment object by name or id.
@@ -491,23 +458,11 @@ class Organization(object):
     def create_provider(self, name, parameters):
         log.info("Creating provider: %s" % name)
         parameters['name'] = name
-
-        url = self.auth.api+'/organizations/'+self.organizationId+'/providers.json'
-        headers = {'Content-Type': 'application/json'}
-        resp = requests.post(url, cookies=self.auth.cookies, data=json.dumps(parameters), verify=False, headers=headers)
-        log.debug(resp.text)
-
-        if resp.status_code == 200:
-            return self.get_provider(resp.json()['id'])
-        raise exceptions.ApiError('Unable to create provider %s, got error: %s' % (name, resp.text))
+        resp = router.post_provider(org_id=self.organizationId, data=json.dumps(parameters))
+        return self.get_provider(resp.json()['id'])
 
     def list_providers(self):
-        url = self.auth.api+'/organizations/'+self.organizationId+'/providers.json'
-        resp = requests.get(url, cookies=self.auth.cookies, verify=False)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.ApiError('Unable to get providers list, got error: %s' % resp.text)
+        return router.get_providers(org_id=self.organizationId).json()
 
     def get_provider(self, id):
         from qubell.api.private.provider import Provider
@@ -546,12 +501,7 @@ class Organization(object):
 ### ZONES
 
     def list_zones_json(self):
-        url = self.auth.api+'/organizations/'+self.organizationId+'/zones.json'
-        resp = requests.get(url, cookies=self.auth.cookies, verify=False)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.ApiError('Unable to get zones list, got error: %s' % resp.text)
+        return router.get_zones(org_id=self.organizationId).json()
 
     def get_zone(self, id=None, name=None):
         """ Get zone object by name or id.
