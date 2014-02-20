@@ -37,8 +37,7 @@ def route(route_str):  # decorator param
                 try:
                     return url.format(**route_args)
                 except KeyError as e:
-                    raise AttributeError("Define '{0}' as named argument for route.".format(
-                        e.message))  # KeyError in format have a message with key
+                    raise AttributeError("Define {0} as named argument for route.".format(e))  # KeyError in format have a message with key
 
             destination_url = self.base_url + get_destination_url()
             f(*args, **kwargs)  # generally this is "pass"
@@ -54,7 +53,7 @@ def route(route_str):  # decorator param
             response = requests.request(method, destination_url, verify=self.verify_ssl, **bypass_args)
             if self.verify_codes:
                 if response.status_code is not 200:
-                    msg = "Route {0} {1} returned code={2} and error: {3}".format(method, destination_url, response.status_code,
+                    msg = "Route {0} {1} returned code={2} and error: {3}".format(method, get_destination_url(), response.status_code,
                                                                               response.text)
                     if response.status_code in api_http_code_errors.keys():
                         raise api_http_code_errors[response.status_code](msg)
