@@ -19,13 +19,13 @@ __license__ = "Apache"
 __email__ = "vkhomenko@qubell.com"
 
 import logging as log
-import requests
 import simplejson as json
 from qubell.api.tools import lazy
 
 from qubell.api.tools import waitForStatus as waitForStatus
 from qubell.api.private import exceptions
 from qubell.api.private.common import EntityList
+from qubell.api.provider.router import ROUTER as router
 
 DEAD_STATUS = ['Destroyed', 'Destroying']
 
@@ -98,20 +98,12 @@ class Instance(object):
             return self.json()[key]
 
     def json(self):
-        url = self.auth.api+'/organizations/'+self.organizationId+'/instances/'+self.instanceId+'.json'
-        resp = requests.get(url, cookies=self.auth.cookies, data="{}", verify=False)
-        log.debug(resp.request.headers)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.NotFoundError('Unable to get instance properties, got error: %s' % resp.text)
+        return router.get_instance(org_id=self.organizationId, instance_id=self.instanceId).json()
 
     def create(self, revision=None, environment=None, name=None, parameters={}):
         # Check we already has instance assosiated with us
         if hasattr(self, 'instanceId'):
             return self
-        url = self.auth.api+'/organizations/'+self.organizationId+'/applications/'+self.applicationId+'/launch.json'
-        headers = {'Content-Type': 'application/json'}
         if environment:
             parameters['environmentId'] = environment.environmentId
         elif not 'environmentId' in parameters.keys():
@@ -120,18 +112,10 @@ class Instance(object):
             parameters['instanceName'] = name
 
         data = json.dumps(parameters)
-        resp = requests.post(url, cookies=self.auth.cookies, data=data, verify=False, headers=headers)
-
-        log.debug('--- INSTANCE LAUNCH REQUEST ---')
-        log.debug('REQUEST HEADERS: %s' % resp.request.headers)
-        log.debug('REQUEST: %s' % resp.request.body)
-        log.debug('RESPONSE: %s' % resp.text)
-
-        if resp.status_code == 200:
-            self.instanceId = resp.json()['id']
-            self.__update()
-            return self
-        raise exceptions.ApiError('Unable to launch application id: %s, got error: %s' % (self.applicationId, resp.text))
+        resp = router.post_organization_instance(org_id=self.organizationId, app_id=self.applicationId, data=data)
+        self.instanceId = resp.json()['id']
+        self.__update()
+        return self
 
     def by_name(self, name):
         instance = self.organization.get_instance(name=name)
@@ -151,60 +135,29 @@ class Instance(object):
 
     def run_workflow(self, name, parameters={}):
         log.info("Running workflow %s" % name)
-
-        url = self.auth.api+'/organizations/'+self.application.organizationId+'/instances/'+self.instanceId+'/workflows/'+name+'.json'
-        headers = {'Content-Type': 'application/json'}
-        payload = json.dumps(parameters)
-        resp = requests.post(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return True
-        raise exceptions.ApiError('Unable to run workflow %s, got error: %s' % (name, resp.text))
-
+        router.post_instance_workflow(org_id=self.organizationId, instance_id=self.instanceId, wf_name=name, data=json.dumps(parameters))
+        return True
 
     def get_manifest(self):
-        url = self.auth.api+'/organizations/'+self.application.organizationId+'/applications/'+self.auth.applicationId+'/refreshManifest.json'
-        headers = {'Content-Type': 'application/json'}
-        payload = json.dumps({})
-        resp = requests.post(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.ApiError('Unable to get manifest, got error: %s' % resp.text)
+        return router.post_application_refresh(org_id=self.organizationId, app_id=self.applicationId).json()
 
     def reconfigure(self, name='reconfigured', revision=None, environment=None,  parameters={}):
         revisionId = revision or ''
         submodules = parameters.get('submodules', {})
-        url = self.auth.api+'/organizations/'+self.application.organizationId+'/instances/'+self.instanceId+'/configuration.json'
-        headers = {'Content-Type': 'application/json'}
+
         payload = json.dumps({
                    'parameters': parameters,
                    'submodules': submodules,
                    'revisionId': revisionId,
                    'instanceName': name})
-        resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
-
-        log.debug('--- INSTANCE RECONFIGUREATION REQUEST ---')
-        log.debug('REQUEST HEADERS: %s' % resp.request.headers)
-        log.debug('REQUEST: %s' % resp.request.body)
-        log.debug('RESPONSE: %s' % resp.text)
-        if resp.status_code == 200:
-            self.__update()
-            return resp.json()
-        raise exceptions.ApiError('Unable to reconfigure instance, got error: %s' % resp.text)
+        resp = router.put_instance_configuration(org_id=self.organizationId, instance_id=self.instanceId, data=payload)
+        self.__update()
+        return resp.json()
 
     def delete(self):
         return self.destroy()
 
     def destroy(self):
         log.info("Destroying")
-        url = self.auth.api+'/organizations/'+self.application.organizationId+'/instances/'+self.instanceId+'/workflows/destroy.json'
-        headers = {'Content-Type': 'application/json'}
-        resp = requests.post(url, cookies=self.auth.cookies, data=json.dumps({}), verify=False, headers=headers)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.ApiError('Unable to destroy instance, got error: %s' % resp.text)
-
-    def __del__(self):
-        pass
+        resp = router.post_instance_workflow(org_id=self.organizationId, instance_id=self.instanceId, wf_name="destroy")
+        return resp.json()

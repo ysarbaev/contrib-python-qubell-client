@@ -20,12 +20,11 @@ __license__ = "Apache"
 __email__ = "vkhomenko@qubell.com"
 
 import logging as log
-
-import requests
 import simplejson as json
 
 from qubell.api.private import exceptions
 from qubell.api.private.common import EntityList
+from qubell.api.provider.router import ROUTER as router
 
 
 class Applications(EntityList):
@@ -74,39 +73,26 @@ class Application(object):
 
     def create(self, name, manifest):
         log.info("Creating application: %s" % name)
-        url = self.auth.api+'/organizations/'+self.organizationId+'/applications.json'
-
-        resp = requests.post(url, files={'path': manifest.content}, data={'manifestSource': 'upload', 'name': name}, verify=False, cookies=self.auth.cookies)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            self.applicationId = resp.json()['id']
-            self.manifest = manifest
-            self.__update()
-            return self
-        raise exceptions.ApiError('Unable to create application %s, got error: %s' % (name, resp.text))
+        resp = router.post_organization_application(org_id=self.organizationId, files={'path': manifest.content}, data={'manifestSource': 'upload', 'name': name})
+        self.applicationId = resp.json()['id']
+        self.manifest = manifest
+        self.__update()
+        return self
 
     def delete(self):
         log.info("Removing application: %s" % self.name)
-        url = self.auth.api+'/organizations/'+self.organizationId+'/applications/'+self.applicationId+'.json'
-        resp = requests.delete(url, verify=False, cookies=self.auth.cookies)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return True
-        raise exceptions.ApiError('Unable to delete application: %s' % resp.text)
+        router.delete_application(org_id=self.organizationId, app_id=self.applicationId)
+        return True
 
     def update(self, **kwargs):
         if kwargs.get('manifest'):
             self.upload(kwargs.pop('manifest'))
         log.info("Updating application: %s" % self.name)
-        url = self.auth.api+'/organizations/'+self.organizationId+'/applications/'+self.applicationId+'.json'
-        headers = {'Content-Type': 'application/json'}
+
         data = json.dumps(kwargs)
-        resp = requests.put(url, headers=headers, verify=False, data=data, cookies=self.auth.cookies)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            self.__update()
-            return resp.json()
-        raise exceptions.ApiError('Unable to update application %s, got error: %s' % (self.name, resp.text))
+        resp = router.put_application(org_id=self.organizationId, app_id=self.applicationId, data=data)
+        self.__update() #todo: json called here
+        return resp.json()
 
     def clean(self, timeout=3):
         for ins in self.instances:
@@ -123,12 +109,7 @@ class Application(object):
         return True
 
     def json(self):
-        url = self.auth.api+'/organizations/'+self.organizationId+'/applications/'+self.applicationId+'.json'
-        resp = requests.get(url, cookies=self.auth.cookies, data="{}", verify=False)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.ApiError('Unable to get application by url %s\n, got error: %s' % (url, resp.text))
+        return router.get_application(org_id=self.organizationId, app_id=self.applicationId).json()
 
     def __getattr__(self, key):
         resp = self.json()
@@ -150,8 +131,6 @@ class Application(object):
     def create_revision(self, name, instance, parameters=[], version=None):
         if not version:
             version=self.get_manifest()['manifestVersion']
-        url = self.auth.api+'/organizations/'+self.organizationId+'/applications/'+self.applicationId+'/revisions.json'
-        headers = {'Content-Type': 'application/json'}
         payload = json.dumps({ 'name': name,
                     'parameters': parameters,
                     'submoduleRevisions': {},
@@ -160,11 +139,8 @@ class Application(object):
                     'applicationName': self.name,
                     'version': version,
                     'instanceId': instance.instanceId})
-        resp = requests.post(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return self.get_revision(id=resp.json()['id'])
-        raise exceptions.ApiError('Unable to get revision, got error: %s' % resp.text)
+        resp = router.post_revision(org_id=self.organizationId, app_id=self.applicationId, data=payload)
+        return self.get_revision(id=resp.json()['id'])
 
     def delete_revision(self, id):
         rev = self.get_revision(id)
@@ -174,22 +150,11 @@ class Application(object):
 # MANIFEST
 
     def get_manifest(self):
-        url = self.auth.api+'/organizations/'+self.organizationId+'/applications/'+self.applicationId+'/refreshManifest.json'
-        headers = {'Content-Type': 'application/json'}
-        payload = json.dumps({})
-        resp = requests.post(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
-        log.debug(resp.text)
-
-        if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.ApiError('Unable to get manifest, got error: %s' % resp.text)
+        return router.post_application_refresh(org_id=self.organizationId, app_id=self.applicationId).json()
 
     def upload(self, manifest):
         log.info("Uploading manifest")
-        url = self.auth.api+'/organizations/'+self.organizationId+'/applications/'+self.applicationId+'/manifests.json'
-        resp = requests.post(url, files={'path': manifest.content}, data={'manifestSource': 'upload', 'name': self.name}, verify=False, cookies=self.auth.cookies)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            self.manifest = manifest
-            return resp.json()
-        raise exceptions.ApiError('Unable to upload manifest, got error: %s' % resp.text)
+        self.manifest = manifest
+        return router.post_application_manifest(org_id=self.organizationId, app_id=self.applicationId,
+                                    files={'path': manifest.content},
+                                    data={'manifestSource': 'upload', 'name': self.name}).json()

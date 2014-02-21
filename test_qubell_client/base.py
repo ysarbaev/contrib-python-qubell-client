@@ -28,7 +28,9 @@ from qubell.api.private.platform import QubellPlatform, Auth
 from qubell.api.public.platform import QubellPlatform as QubellPlatformPublic
 from qubell.api.private.manifest import Manifest
 from qubell.api.tools import rand
+from qubell.api.provider.router import ROUTER as router
 
+log.getLogger().setLevel(log.DEBUG)
 
 user = os.environ.get('QUBELL_USER')
 password = os.environ.get('QUBELL_PASSWORD')

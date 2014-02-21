@@ -18,11 +18,8 @@ __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
 __email__ = "vkhomenko@qubell.com"
 
-import logging as log
-import requests
-
 from qubell.api.private import exceptions
-
+from qubell.api.provider.router import ROUTER as router
 
 class Revision(object):
     """
@@ -32,6 +29,8 @@ class Revision(object):
     def __init__(self, auth, application, id):
         self.revisionId = id
         self.application = application
+        self.organizationId = self.application.organizationId
+        self.applicationId = self.application.applicationId
         self.auth = auth
         my = self.json()
         self.name = my['name']
@@ -43,17 +42,8 @@ class Revision(object):
         raise exceptions.NotFoundError('Cannot get revision property %s' % key)
 
     def json(self):
-        url = self.auth.api+'/organizations/'+self.application.organizationId+'/applications/'+self.application.applicationId+'/revisions/'+self.revisionId+'.json'
-        resp = requests.get(url, cookies=self.auth.cookies, verify=False)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.ApiError('Unable to get revision properties, got error: %s' % resp.text)
+        return router.delete_revision(org_id=self.organizationId, app_id=self.applicationId, rev_id=self.revisionId).json()
 
     def delete(self):
-        url = self.auth.api+'/organizations/'+self.application.organizationId+'/applications/'+self.application.applicationId+'/revisions/'+self.revisionId+'.json'
-        resp = requests.delete(url, cookies=self.auth.cookies, verify=False)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return True
-        raise exceptions.ApiError('Unable to delete revision, got error: %s' % resp.text)
+        router.delete_revision(org_id=self.organizationId, app_id=self.applicationId, rev_id=self.revisionId)
+        return True

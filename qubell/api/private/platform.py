@@ -17,7 +17,7 @@ import warnings
 
 import simplejson as json
 
-from qubell.api.provider.router import Router
+from qubell.api.provider.router import ROUTER as router
 from qubell import deprecated
 
 #todo: understood, that some people may use this object for authentication, need to move this to proper place
@@ -28,7 +28,6 @@ __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
 __email__ = "vkhomenko@qubell.com"
-
 
 class QubellPlatform(object):
     def __init__(self, auth=None, context=None):
@@ -42,20 +41,18 @@ class QubellPlatform(object):
         self.password = self.auth.password
         self.tenant = self.auth.tenant
 
-        self.router = Router(self.tenant)
-
-
     def authenticate(self):
-        self.router.connect(self.auth.user, self.auth.password)
+        router.base_url = self.tenant
+        router.connect(self.auth.user, self.auth.password)
         #todo: remove following, left for compatibility
-        self.auth.cookies = self.router._cookies
+        self.auth.cookies = router._cookies
         return True
 
     def create_organization(self, name):
         log.info("Creating organization: %s" % name)
         payload = json.dumps({'editable': 'true',
                               'name': name})
-        resp = self.router.post_organization(data=payload)
+        resp = router.post_organization(data=payload)
         return self.get_organization(resp.json()['id'])
 
 
@@ -68,17 +65,13 @@ class QubellPlatform(object):
         return org
 
     def get_or_create_organization(self, id=None, name=None):
-        if name:
+        name = name or 'generated-org-name'
+        if id: return self.get_organization(id)
+        else:
             orgz = [org for org in self.list_organizations() if org['name'] == name]
             # Org found by name
             if len(orgz):
                 return self.get_organization(orgz[0]['id'])
-            else:
-                return self.create_organization(name)
-        else:
-            name = 'generated-org-name'
-            if id:
-                return self.get_organization(id)
             else:
                 return self.create_organization(name)
 
@@ -88,7 +81,7 @@ class QubellPlatform(object):
         return self.get_or_create_organization(id, name)
 
     def organizations_json(self):
-        resp = self.router.get_organizations()
+        resp = router.get_organizations()
         return resp.json()
 
     list_organizations = organizations_json
