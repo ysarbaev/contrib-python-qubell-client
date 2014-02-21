@@ -4,12 +4,14 @@ import logging as log
 
 import requests
 import time
+import sys
 
 from qubell.api.private.exceptions import ApiError, api_http_code_errors
 
 
 log.getLogger("requests.packages.urllib3.connectionpool").setLevel(log.WARN)
 
+_routes_stat = {}
 
 def route(route_str):  # decorator param
     """
@@ -19,6 +21,17 @@ def route(route_str):  # decorator param
     :return: the response of requests.request
     """
     def ilog(elapsed):
+        #statistic
+        last_stat = _routes_stat.get(route_str, {"count": 0, "min": sys.maxint, "max": 0, "avg": 0})
+        last_count = last_stat["count"]
+        _routes_stat[route_str] = {
+            "count": last_count + 1,
+            "min": min(elapsed, last_stat["min"]),
+            "max": max(elapsed, last_stat["max"]),
+            "avg": (last_count * last_stat["avg"] + elapsed) / (last_count + 1)
+        }
+
+        #user log
         logfun = log.debug
         if 1000 < elapsed <= 10000:
             logfun = log.warn
@@ -116,3 +129,7 @@ def basic_auth(f):
         return f(*args, **kwargs)
 
     return wrapper
+
+def log_routes_stat():
+    nice_stat = ["  count: {0:<4} min: {1:<6} avg: {2:<6} max: {3:<6}  {4}".format(stat["count"], stat["min"], stat["avg"], stat["max"], r) for r, stat in _routes_stat.items()]
+    log.info("Route Statistic\n{0}".format("\n".join(nice_stat)))
