@@ -91,7 +91,7 @@ def dump(node):
     from qubell.api.private.revision import Revision
     from qubell.api.private.provider import Provider
     from qubell.api.private.environment import Environment
-    from qubell.api.private.service import Service
+    from qubell.api.private.service import ServiceLegacy
     from qubell.api.private.zone import Zone
     from qubell.api.private.manifest import Manifest
 
@@ -107,7 +107,7 @@ def dump(node):
         Revision: ['auth', 'revisionId'],
         Provider: ['auth', 'providerId', 'organization'],
         Environment: ['auth', 'environmentId', 'organization'],
-        Service: ['auth', 'organization', 'zone', 'serviceId'],
+        ServiceLegacy: ['auth', 'organization', 'zone', 'serviceId'],
         Zone: ['auth', 'zoneId', 'organization'],
     }
 
@@ -136,6 +136,20 @@ def full_dump(org):
     """ TODO:  Dump all that reports by api
     """
     pass
+
+def lazyproperty(fn):
+    """
+    Decorator, reads property once, on first use.
+    :param fn:
+    :return:
+    """
+    attr_name = '_lazy_' + fn.__name__
+    @property
+    def _lazyprop(self):
+        if not hasattr(self, attr_name):
+            setattr(self, attr_name, fn(self))
+        return getattr(self, attr_name)
+    return _lazyprop
 
 
 def lazy(func):

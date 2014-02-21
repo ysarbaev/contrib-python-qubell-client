@@ -1,3 +1,4 @@
+from qubell import deprecated
 import unittest2
 
 from qubell.api.private.common import EntityList
@@ -14,6 +15,12 @@ class EntityListTests(unittest2.TestCase):
         def dummy(self):
             'dummy property'
             return self.id + "--==--" + self.name
+
+        @deprecated
+        def plain_old(self): pass
+
+        @deprecated(msg="yo")
+        def plain_old_with_message(self): pass
 
     class DummyEntityList(EntityList):
         def __init__(self, raw_json):
@@ -43,10 +50,17 @@ class EntityListTests(unittest2.TestCase):
     def test_get_last_item_when_duplicate_by_name(self):
         assert "4" == self.entity_list["name3dup"].id
 
+    def test_get_item_by_index(self):
+        assert "2" == self.entity_list[1].id
+        assert "4" == self.entity_list[-2].id
+
+    def test_get_item_by_slice(self):
+        assert ["2", "4"] == [i.id for i in self.entity_list[1:4:2]]
+
     def test_not_existing_item(self):
         with self.assertRaises(exceptions.NotFoundError) as context:
             assert self.entity_list["hren"]
-        assert context.exception.message == "None of 'hren' in DummyEntityList"
+        assert str(context.exception) == "None of 'hren' in DummyEntityList"
 
     def test__len(self):
         assert len(self.raw_objects) == len(self.entity_list)
@@ -59,3 +73,7 @@ class EntityListTests(unittest2.TestCase):
         entity_ids = [e.id for e in self.entity_list]
         raw_ids = [e["id"] for e in self.raw_objects]
         self.assertEqual(entity_ids, raw_ids)
+
+    def test_deprecation_visually(self):
+        self.entity_list[0].plain_old()
+        self.entity_list["name2"].plain_old_with_message()

@@ -27,7 +27,7 @@ import yaml
 from qubell.api.private import exceptions
 
 
-class Service(object):
+class ServiceLegacy(object):
 
     def __init__(self, auth, organization, id):
         self.auth = auth

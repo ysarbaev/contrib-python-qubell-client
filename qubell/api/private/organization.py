@@ -12,6 +12,8 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from qubell.api.tools import lazyproperty
+
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
@@ -22,17 +24,16 @@ import simplejson as json
 
 from qubell.api.private.manifest import Manifest
 from qubell.api.private import exceptions
-from qubell.api.private.instance import Instances
-from qubell.api.private.application import Applications
-from qubell.api.private.environment import Environments
-from qubell.api.private.zone import Zones
+from qubell.api.private.instance import InstanceList, DEAD_STATUS
+from qubell.api.private.application import ApplicationList
+from qubell.api.private.environment import EnvironmentList
+from qubell.api.private.zone import ZoneList
 from qubell.api.provider.router import ROUTER as router
 
 
 class Organization(object):
 
     def __init__(self, auth, id):
-        self.services = []
         self.providers = []
         self.zones = []
 
@@ -41,14 +42,24 @@ class Organization(object):
 
         my = self.json()
         self.name = my['name']
-        self.zones = Zones(self)
-        self.environments = Environments(self)
-        self.applications = Applications(self)
-        self.instances = Instances(self)
 
         self.zone = self.get_default_zone()
         self.defaultEnvironment = self.get_default_environment()
 
+    @lazyproperty
+    def environments(self):
+        return EnvironmentList(list_json_method=self.list_environments_json, organization=self)
+
+    @lazyproperty
+    def instances(self):
+        return InstanceList(list_json_method=self.list_instances_json, organization=self)
+
+    @lazyproperty
+    def applications(self):
+        return ApplicationList(list_json_method=self.list_applications_json, organization=self)
+
+    @lazyproperty
+    def zones(self): return ZoneList(self)
 
     def json(self):
         resp = router.get_organizations()
@@ -175,7 +186,7 @@ class Organization(object):
         if not application:
             raise exceptions.NotEnoughParams('Application not set')
         from qubell.api.private.instance import Instance
-        instance = Instance(auth=self.auth, application=application).create(revision=revision, environment=environment, name=name, parameters=parameters)
+        instance = Instance(auth=self.auth, organization=application.organization).create(revision=revision, environment=environment, application=application, name=name, parameters=parameters)
         self.instances.add(instance)
         return instance
 
@@ -203,20 +214,16 @@ class Organization(object):
             return instance[-1]
         raise exceptions.NotFoundError('Unable to get instance by id: %s' % id)
 
+    #todo: application should not be parameter here. Application should do its own list
     def list_instances_json(self, application=None):
         """ Get list of instances in json format converted to list
         """
         if application: # Return list of instances in application
             resp = router.get_application_instances(org_id=self.organizationId, app_id=application.applicationId)
             instances = resp.json()['instances']
-            return [ins for ins in instances if ins['status'] not in ['Destroyed', 'Destroying']]
         else:  # Return all instances in organization
-            instances = []
-            for app in self.list_applications_json():
-                found_app = self.get_application(app['id'])
-                instances.extend(self.list_instances_json(found_app))
-            return instances
-
+            instances = router.get_instances(org_id=self.organizationId).json()
+        return [ins for ins in instances if ins['status'] not in DEAD_STATUS]
 
     def delete_instance(self, id):
         instance = self.get_instance(id)
@@ -314,13 +321,17 @@ class Organization(object):
 
     def get_service(self, id):
         log.info("Picking service: %s" % id)
-        from qubell.api.private.service import Service
-        serv = Service(self.auth, organization=self, id=id)
+        from qubell.api.private.service import ServiceLegacy
+        serv = ServiceLegacy(self.auth, organization=self, id=id)
         self.services.append(serv)
         return serv
 
     def list_services(self):
-        return router.get_404().json()
+        return router.get_services().json()
+
+    @property
+    def services(self):
+        return InstanceList()
 
     def delete_service(self, id):
         srv = self.get_service(id)

@@ -23,20 +23,8 @@ import logging as log
 import simplejson as json
 
 from qubell.api.private import exceptions
-from qubell.api.private.common import EntityList
+from qubell.api.private.common import QubellEntityList
 from qubell.api.provider.router import ROUTER as router
-
-
-class Applications(EntityList):
-    def __init__(self, organization):
-        self.organization = organization
-        self.auth = self.organization.auth
-        self.organizationId = self.organization.organizationId
-        EntityList.__init__(self)
-
-    def _generate_object_list(self):
-        for app in self.organization.list_applications_json():
-            self.object_list.append(Application(self.auth, self.organization, id=app['id']))
 
 
 class Application(object):
@@ -158,3 +146,7 @@ class Application(object):
         return router.post_application_manifest(org_id=self.organizationId, app_id=self.applicationId,
                                     files={'path': manifest.content},
                                     data={'manifestSource': 'upload', 'name': self.name}).json()
+
+
+class ApplicationList(QubellEntityList):
+    base_clz = Application

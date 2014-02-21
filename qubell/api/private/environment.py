@@ -12,6 +12,7 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from qubell import deprecated
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
@@ -24,18 +25,6 @@ import simplejson as json
 from qubell.api.private import exceptions
 from qubell.api.private.common import QubellEntityList
 from qubell.api.provider.router import ROUTER as router
-
-DEAD_STATUS = ['Destroyed', 'Destroying']
-
-
-class Environments(QubellEntityList):
-    def __init__(self, organization):
-        # TODO: That should be done by parent
-        QubellEntityList.__init__(self, organization)
-
-    def _generate_object_list(self):
-        for env in self.organization.list_environments_json():
-            self.object_list.append(Environment(self.auth, self.organization, id=env['id']))
 
 class Environment(object):
     def __update(self):
@@ -201,3 +190,6 @@ class Environment(object):
         # data = self.json()
         # data.update({'backend': zone.zoneId})
         # return self._put_environment(data=json.dumps(data)).json()
+
+class EnvironmentList(QubellEntityList):
+    base_clz = Environment

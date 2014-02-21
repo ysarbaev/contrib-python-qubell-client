@@ -12,18 +12,19 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from qubell.api.tools import is_bson_id
+import logging as log
+import time
 
+from qubell.api.tools import is_bson_id
 from qubell.api.private import exceptions
 from qubell import deprecated
+
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
 __version__ = ""
 __email__ = "vkhomenko@qubell.com"
-
-
 
 
 class EntityList(object):
@@ -45,6 +46,8 @@ class EntityList(object):
         return str(self.object_list)
 
     def __getitem__(self, item):
+        if isinstance(item, int) or isinstance(item, slice): return self.object_list[item]
+
         found = [x for x in self.object_list if (is_bson_id(item) and x.id == item) or x.name == item]
         if len(found) is 0:
             raise exceptions.NotFoundError("None of '{1}' in {0}".format(self.__class__.__name__, item))
@@ -53,13 +56,9 @@ class EntityList(object):
     def __contains__(self, item):
         return item.id in [item.id for item in self.object_list]
 
-    #todo: this must be immutable list
-    @deprecated
     def add(self, item):
         self.object_list.append(item)
 
-    #todo: this must be immutable list
-    @deprecated
     def remove(self, item):
         self.object_list.remove(item)
 
@@ -68,13 +67,35 @@ class EntityList(object):
 
 #todo: what this object does?
 class QubellEntityList(EntityList):
-    def __init__(self, organization):
+    """
+    This is base class for entities that depends on organization
+    """
+
+    def __init__(self, list_json_method, organization):
         self.organization = organization
         self.auth = self.organization.auth
         self.organizationId = self.organization.organizationId
+        self.json = list_json_method
         EntityList.__init__(self)
 
+    # noinspection PyUnresolvedReferences
+    def _generate_object_list(self):
+        assert self.base_clz, "Define 'base_clz' in constructor or override this method"
+        for ent in self.json():
+            start = time.time()
+            entity = self.base_clz(auth=self.auth, organization=self.organization, id=ent['id'])
+            end = time.time()
+            elapsed = int((end - start) * 1000.0)
+            log.debug("  Listing Time: Fetching {0}='{name}' with id={id} took {elapsed} ms".format(self.base_clz.__name__,
+                                                                                                 id=ent['id'],
+                                                                                                 name=ent['name'],
+                                                                                                 elapsed=elapsed))
+            self.object_list.append(entity)
+
+
+
 class Auth(object):
+    @deprecated(msg="use global from qubell.api.provider.ROUTER as router instead")
     def __init__(self, user, password, tenant):
         self.user = user
         self.password = password
@@ -84,7 +105,7 @@ class Auth(object):
         self.api = tenant
 
 
-@deprecated
 class Context(Auth):
+    @deprecated(msg="use global from qubell.api.provider.ROUTER as router instead")
     def __init__(self, user, password, api):
         Auth.__init__(self, user, password, api)
