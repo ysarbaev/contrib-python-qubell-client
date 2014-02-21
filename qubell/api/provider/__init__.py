@@ -3,6 +3,7 @@ import inspect
 import logging as log
 
 import requests
+import time
 
 from qubell.api.private.exceptions import ApiError, api_http_code_errors
 
@@ -17,6 +18,14 @@ def route(route_str):  # decorator param
     :param route_str: a route "GET /parent/{parentID}/child/{childId}{ctype}"
     :return: the response of requests.request
     """
+    def ilog(elapsed):
+        logfun = log.debug
+        if 1000 < elapsed <= 10000:
+            logfun = log.warn
+        elif elapsed > 10000:
+            logfun = log.error
+        logfun(' TimeTrace: {0} took {1} ms'.format(route_str, elapsed))
+
 
     def wrapper(f):  # decorated function
         @wraps(f)
@@ -42,15 +51,21 @@ def route(route_str):  # decorator param
             destination_url = self.base_url + get_destination_url()
             f(*args, **kwargs)  # generally this is "pass"
 
-            bypass_args = {param: kwargs[param] for param in ["data", "cookies", "auth", "files"] if param in kwargs}
+            bypass_args = {param: route_args[param] for param in ["data", "cookies", "auth", "files"] if param in route_args}
 
             #add json content type for:
             # - all public api, meaning have basic auth
             # - private that ends with .json
-            if destination_url.endswith('.json') or "auth" in kwargs:
+            # - unless files are sent
+            if "files" not in bypass_args and (destination_url.endswith('.json') or "auth" in route_args):
                 bypass_args['headers'] = {'Content-Type': 'application/json'}
 
+            start = time.time()
             response = requests.request(method, destination_url, verify=self.verify_ssl, **bypass_args)
+            end = time.time()
+            elapsed = int((end - start) * 1000.0)
+            ilog(elapsed)
+
             if self.verify_codes:
                 if response.status_code is not 200:
                     msg = "Route {0} {1} returned code={2} and error: {3}".format(method, get_destination_url(), response.status_code,

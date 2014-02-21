@@ -90,7 +90,7 @@ class Application(object):
         log.info("Updating application: %s" % self.name)
 
         data = json.dumps(kwargs)
-        resp = router.post_application(org_id=self.organizationId, app_id=self.applicationId, data=data)
+        resp = router.put_application(org_id=self.organizationId, app_id=self.applicationId, data=data)
         self.__update() #todo: json called here
         return resp.json()
 
@@ -155,6 +155,6 @@ class Application(object):
     def upload(self, manifest):
         log.info("Uploading manifest")
         self.manifest = manifest
-        return router.post_manifest(org_id=self.organizationId, app_id=self.applicationId,
+        return router.post_application_manifest(org_id=self.organizationId, app_id=self.applicationId,
                                     files={'path': manifest.content},
                                     data={'manifestSource': 'upload', 'name': self.name}).json()

@@ -45,10 +45,7 @@ class EntityList(object):
         return str(self.object_list)
 
     def __getitem__(self, item):
-        # TODO: Guess item is ID or name
         found = [x for x in self.object_list if (is_bson_id(item) and x.id == item) or x.name == item]
-        if len(found)>1:
-            raise exceptions.ExistsError("There are more than one '{1}' in {0}".format(self.__class__.__name__, item))
         if len(found) is 0:
             raise exceptions.NotFoundError("None of '{1}' in {0}".format(self.__class__.__name__, item))
         return found[-1]

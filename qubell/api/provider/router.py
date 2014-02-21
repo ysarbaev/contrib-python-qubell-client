@@ -63,8 +63,8 @@ class Router(object):
     def put_organization_default_environment(self, org_id, env_id, data, cookies, ctype=".json"): pass
 
     @play_auth
-    @route("POST /organizations/{org_id}/applications/{app_id}/launch{ctype}'")
-    def post_oranization_instance(self, org_id, app_id, data, cookies, ctype=".json"): pass
+    @route("POST /organizations/{org_id}/applications/{app_id}/launch{ctype}")
+    def post_organization_instance(self, org_id, app_id, data, cookies, ctype=".json"): pass
 
     @play_auth
     @route("POST /organizations/{org_id}/environments{ctype}")
@@ -76,16 +76,16 @@ class Router(object):
     def get_applications(self, org_id, cookies, data="{}", ctype=".json"): pass
 
     @play_auth
-    @route("POST /organizations/{org_id}/applications/{app_id}{ctype}")
-    def post_application(self, org_id, app_id, data, cookies, ctype=".json"): pass
+    @route("PUT /organizations/{org_id}/applications/{app_id}{ctype}")
+    def put_application(self, org_id, app_id, data, cookies, ctype=".json"): pass
 
     @play_auth
     @route("GET /organizations/{org_id}/applications/{app_id}{ctype}")
     def get_application(self, org_id, app_id, cookies, data="{}", ctype=".json"): pass
 
     @play_auth
-    @route("DELETE /organizations/{org_id}/applications/{app_id}{ctype}'")
-    def delete_application(self, org_id, app_id, cookies, ctype=".json"): pass
+    @route("DELETE /organizations/{org_id}/applications/{app_id}{ctype}")
+    def delete_application(self, org_id, app_id, cookies, data="{}", ctype=".json"): pass
 
     @play_auth
     @route("POST /organizations/{org_id}/applications/{app_id}/refreshManifest{ctype}")
@@ -95,23 +95,22 @@ class Router(object):
     @route("GET /organizations/{org_id}/applications/{app_id}{ctype}")
     def get_application_instances(self, org_id, app_id, cookies, data="{}", ctype=".json"): pass
 
+    @play_auth
+    @route("POST /organizations/{org_id}/applications/{app_id}/manifests{ctype}")
+    def post_application_manifest(self, org_id, app_id, data, files, cookies, ctype=".json"): pass
+
     #Revision
     @play_auth
     @route("POST /organizations/{org_id}/applications/{app_id}/revisions{ctype}")
     def post_revision(self, org_id, app_id, data, cookies, ctype=".json"): pass
 
     @play_auth
-    @route("GET /organizations/{org_id}/applications/{app_id}/revisions/{rev_id}{ctype}'")
+    @route("GET /organizations/{org_id}/applications/{app_id}/revisions/{rev_id}{ctype}")
     def get_revision(self, org_id, app_id, rev_id, cookies, ctype=".json"): pass
 
     @play_auth
-    @route("DELETE /organizations/{org_id}/applications/{app_id}/revisions/{rev_id}{ctype}'")
+    @route("DELETE /organizations/{org_id}/applications/{app_id}/revisions/{rev_id}{ctype}")
     def delete_revision(self, org_id, app_id, rev_id, cookies, ctype=".json"): pass
-
-    #Manifest
-    @play_auth
-    @route("POST /organizations/{org_id}/applications/{app_id}/manifest{ctype}")
-    def post_manifest(self, org_id, app_id, data, files, cookies, ctype=".json"): pass
 
     #Instance
     @play_auth
@@ -119,11 +118,11 @@ class Router(object):
     def get_instance(self, org_id, instance_id, cookies, ctype=".json"): pass
 
     @play_auth
-    @route("PUT /organizations/{org_id}/instances/{instance_id}/workflows/{wf_name}{ctype}")
-    def post_instance_workflow(self, org_id, instance_id, wf_name, data, cookies, ctype=".json"): pass
+    @route("POST /organizations/{org_id}/instances/{instance_id}/workflows/{wf_name}{ctype}")
+    def post_instance_workflow(self, org_id, instance_id, wf_name, cookies, data="{}", ctype=".json"): pass
 
     @play_auth
-    @route("POST /organizations/{org_id}/instances/{instance_id}/configuration{ctype}")
+    @route("PUT /organizations/{org_id}/instances/{instance_id}/configuration{ctype}")
     def put_instance_configuration(self, org_id, instance_id, data, cookies, ctype=".json"): pass
 
     #Environment
@@ -154,15 +153,15 @@ class Router(object):
 
     #CloudProvider
     @play_auth
-    @route("GET /organizations/{org_id}/providers{ctype}'")
+    @route("GET /organizations/{org_id}/providers{ctype}")
     def get_providers(self, org_id, cookies, ctype=".json"): pass
 
     @play_auth
-    @route("POST /organizations/{org_id}/providers{ctype}'")
+    @route("POST /organizations/{org_id}/providers{ctype}")
     def post_provider(self, org_id, data, cookies, ctype=".json"): pass
 
     @play_auth
-    @route("DELETE /organizations/{org_id}/providers/{prov_id}{ctype}'")
+    @route("DELETE /organizations/{org_id}/providers/{prov_id}{ctype}")
     def delete_provider(self, org_id, prov_id, cookies, ctype=".json"): pass
 
 

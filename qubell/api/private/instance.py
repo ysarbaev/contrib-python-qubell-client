@@ -112,7 +112,7 @@ class Instance(object):
             parameters['instanceName'] = name
 
         data = json.dumps(parameters)
-        resp = router.post_oranization_instance(org_id=self.organizationId, app_id=self.applicationId, data=data)
+        resp = router.post_organization_instance(org_id=self.organizationId, app_id=self.applicationId, data=data)
         self.instanceId = resp.json()['id']
         self.__update()
         return self

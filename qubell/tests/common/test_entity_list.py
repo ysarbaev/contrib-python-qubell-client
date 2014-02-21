@@ -40,10 +40,8 @@ class EntityListTests(unittest2.TestCase):
     def test_get_item_by_id(self):
         assert self.entity_list["1234567890abcd1234567890"].name == "with_bson_id"
 
-    def test_get_dublicate_item_by_name(self):
-        with self.assertRaises(exceptions.ExistsError) as context:
-            assert self.entity_list["name3dup"]
-        assert context.exception.message == "There are more than one 'name3dup' in DummyEntityList"
+    def test_get_last_item_when_duplicate_by_name(self):
+        assert "4" == self.entity_list["name3dup"].id
 
     def test_not_existing_item(self):
         with self.assertRaises(exceptions.NotFoundError) as context:
