@@ -15,6 +15,8 @@
 import warnings
 from qubell import deprecated
 from qubell.api.private.environment import EnvironmentList
+from qubell.api.private.revision import Revision
+from qubell.api.private.service import ServiceMixin
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
@@ -23,6 +25,7 @@ __email__ = "vkhomenko@qubell.com"
 
 import logging as log
 import simplejson as json
+import time
 from qubell.api.tools import lazyproperty
 
 from qubell.api.tools import waitForStatus as waitForStatus
@@ -32,7 +35,7 @@ from qubell.api.provider.router import ROUTER as router
 
 DEAD_STATUS = ['Destroyed', 'Destroying']
 
-class Instance(object):
+class Instance(ServiceMixin):
     """
     Base class for application instance. Manifest required.
     """
@@ -52,12 +55,13 @@ class Instance(object):
         self.organization = organization
         self.organizationId = organization.organizationId
         self.__dict__.update(kwargs)
+        self.__cached_json=None
         if id:
-            self.instanceId = id
+            self.instanceId = self.id = id
             self.json()
 
     @lazyproperty
-    def applicationId(self): return self.json()["applicationId"]
+    def applicationId(self): return self.json()['applicationId']
 
     @lazyproperty
     def application(self):
@@ -70,10 +74,19 @@ class Instance(object):
     def environment(self): return self.organization.get_environment(self.environmentId)
 
     @property
-    def status(self): return self.json()["status"]
+    def status(self): return self.json()['status']
 
     @property
-    def name(self): return self.json()["name"]
+    def name(self): return self.json()['name']
+
+    @property
+    def return_values(self): return self.__parse(self.json()['returnValues'])
+
+    #alias
+    returnValues=return_values
+
+    @property
+    def parameters(self): return self.json()['revision']['parameters']
 
     def __getattr__(self, key):
         if key in ['instanceId',]:
@@ -81,24 +94,44 @@ class Instance(object):
         if key == 'ready':
             log.debug('Checking instance status')
             return self.ready()
-        # return same way old_public api does
-        if key in ['returnValues', ]:
-            return self.__parse(self.json()[key])
         else:
             log.debug('Getting instance attribute: %s' % key)
             return self.json()[key]
 
+    def fresh(self):
+        #todo: create decorator from this
+        if self.__cached_json is None:
+            return False
+        now = time.time()
+        elapsed = (now - self.__last_read_time) * 1000.0
+        return elapsed < 500
+
     def json(self):
-        return router.get_instance(org_id=self.organizationId, instance_id=self.instanceId).json()
+        '''
+        return __cached_json, if accessed withing 300 ms.
+        This allows to optimize calls when many parameters of entity requires withing short time.
+        '''
+
+        if self.fresh():
+            log.debug("using cached instance")
+            return self.__cached_json
+        self.__last_read_time = time.time()
+        self.__cached_json = router.get_instance(org_id=self.organizationId, instance_id=self.instanceId).json()
+        return self.__cached_json
 
     @staticmethod
-    def new(application=None, revision=None, environment=None, name=None, parameters={}):
-        if environment:
+    def new(application=None, revision=None, environment=None, name=None, parameters=None, destroyInterval=None):
+        if not parameters: parameters = {}
+        if environment:  # if environment set, it overrides parameter
             parameters['environmentId'] = environment.environmentId
-        elif not 'environmentId' in parameters.keys():
+        elif not 'environmentId' in parameters.keys():  # if not set and not in params, use default
             parameters['environmentId'] = application.organization.defaultEnvironment.environmentId
         if name:
             parameters['instanceName'] = name
+        if destroyInterval:
+            parameters['destroyInterval'] = str(destroyInterval)
+        if revision:
+            parameters['revisionId'] = revision.revisionId
 
         data = json.dumps(parameters)
         resp = router.post_organization_instance(org_id=application.organizationId, app_id=application.applicationId, data=data)
@@ -121,7 +154,7 @@ class Instance(object):
     def by_id(self, id):
         return Instance(id=id, organization=self.organization)
 
-    def ready(self, timeout=3):  # Shortcut for convinience. Temeout = 3 min (ask timeout*6 times every 10 sec)
+    def ready(self, timeout=3):  # Shortcut for convinience. Timeout = 3 min (ask timeout*6 times every 10 sec)
         return waitForStatus(instance=self, final='Running', accepted=['Launching', 'Requested', 'Executing', 'Unknown'], timeout=[timeout*6, 10, 1])
         # TODO: Unknown status  should be removed
 
@@ -137,25 +170,29 @@ class Instance(object):
     def get_manifest(self):
         return router.post_application_refresh(org_id=self.organizationId, app_id=self.applicationId).json()
 
-    def reconfigure(self, name='reconfigured', revision=None, environment=None,  parameters={}):
-        revisionId = revision or ''
+    def reconfigure(self, revision=None, parameters=None):
+        if not parameters: parameters = {}
+        if isinstance(revision, Revision):
+            revisionId = revision.revisionId
+        else:
+            revisionId = ''
         submodules = parameters.get('submodules', {})
 
         payload = json.dumps({
                    'parameters': parameters,
                    'submodules': submodules,
-                   'revisionId': revisionId,
-                   'instanceName': name})
+                   'revisionId': revisionId})
         resp = router.put_instance_configuration(org_id=self.organizationId, instance_id=self.instanceId, data=payload)
         return resp.json()
 
     def delete(self):
-        return self.destroy()
+        self.destroy()
+        #todo: remove, if destroyed
+        return True
 
     def destroy(self):
         log.info("Destroying")
-        resp = router.post_instance_workflow(org_id=self.organizationId, instance_id=self.instanceId, wf_name="destroy")
-        return resp.json()
+        return self.run_workflow("destroy")
 
     @property
     def serve_environments(self):
@@ -169,6 +206,10 @@ class Instance(object):
             assert isinstance(environment_ids, list)
             data = environment_ids
         router.post_instance_services(org_id=self.organizationId, instance_id=self.instanceId, data=json.dumps(data))
+
+    @property
+    def serviceId(self):
+        raise AttributeError("Service is instance reference now, use instanceId")
 
 class InstanceList(QubellEntityList):
     base_clz = Instance

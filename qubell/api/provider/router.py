@@ -92,10 +92,6 @@ class Router(object):
     def post_application_refresh(self, org_id, app_id, cookies, data="{}", ctype=".json"): pass
 
     @play_auth
-    @route("GET /organizations/{org_id}/applications/{app_id}{ctype}")
-    def get_application_instances(self, org_id, app_id, cookies, data="{}", ctype=".json"): pass
-
-    @play_auth
     @route("POST /organizations/{org_id}/applications/{app_id}/manifests{ctype}")
     def post_application_manifest(self, org_id, app_id, data, files, cookies, ctype=".json"): pass
 
@@ -176,6 +172,10 @@ class Router(object):
     @play_auth
     @route("GET /organizations/{org_id}/services{ctype}")
     def get_services(self, org_id, cookies, ctype=".json"): pass
+
+    @play_auth
+    @route("POST /organizations/{org_id}/services/{instance_id}/keys/generate{ctype}")
+    def post_service_generate(self, org_id, instance_id, cookies, data="{}", ctype=".json"): pass
 
 
 ROUTER = Router(os.environ.get('QUBELL_TENANT'))

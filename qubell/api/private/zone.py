@@ -23,9 +23,8 @@ from qubell.api.private.common import QubellEntityList
 from qubell.api.provider.router import ROUTER as router
 
 class Zone(object):
-    def __init__(self, auth, organization, id):
-        self.auth = auth
-        self.zoneId = id
+    def __init__(self, organization, id, auth=None):
+        self.zoneId = self.id = id
         self.organizationId = organization.organizationId
         self.organization = organization
         my = self.json()

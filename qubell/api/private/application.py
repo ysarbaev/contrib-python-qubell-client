@@ -12,6 +12,8 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from qubell.api.private.instance import InstanceList
+from qubell.api.tools import lazyproperty
 
 
 __author__ = "Vasyl Khomenko"
@@ -39,7 +41,7 @@ class Application(object):
         self.defaultEnvironment = self.organization.get_default_environment()
 
 
-    def __init__(self, auth, organization, **kwargs):
+    def __init__(self, organization, auth=None, **kwargs):
         if hasattr(self, 'applicationId'):
             log.warning("Application reinitialized. Dangerous!")
         self.revisions = []
@@ -50,6 +52,10 @@ class Application(object):
         if 'id' in kwargs:
             self.applicationId = kwargs.get('id')
             self.__update()
+
+    @lazyproperty
+    def instances(self):
+        return InstanceList(list_json_method=self.list_instances_json, organization=self)
 
     def __parse(self, values):
         ret = {}
@@ -83,21 +89,25 @@ class Application(object):
         return resp.json()
 
     def clean(self, timeout=3):
-        for ins in self.instances:
-            st = ins.status
-            if st not in ['Destroyed', 'Destroying', 'Launching', 'Executing']: # Tests could fail and we can get any statye here
-                log.info("Destroying instance %s" % ins.name)
-                ins.delete()
-                assert ins.destroyed(timeout=timeout)
-                self.instances.remove(ins)
-
-        for rev in self.revisions:
-            self.revisions.remove(rev)
-            rev.delete()
-        return True
+        raise NotImplementedError("Deprecated and no known usages")
+        # for ins in self.instances:
+        #     st = ins.status
+        #     if st not in ['Destroyed', 'Destroying', 'Launching', 'Executing']:  # Tests could fail and we can get any state here
+        #         log.info("Destroying instance %s" % ins.name)
+        #         ins.delete()
+        #         assert ins.destroyed(timeout=timeout)
+        #         self.instances.remove(ins)
+        #
+        # for rev in self.revisions:
+        #     self.revisions.remove(rev)
+        #     rev.delete()
+        # return True
 
     def json(self):
         return router.get_application(org_id=self.organizationId, app_id=self.applicationId).json()
+
+    def list_instances_json(self):
+        return self.json()['instances']
 
     def __getattr__(self, key):
         resp = self.json()
@@ -146,6 +156,17 @@ class Application(object):
         return router.post_application_manifest(org_id=self.organizationId, app_id=self.applicationId,
                                     files={'path': manifest.content},
                                     data={'manifestSource': 'upload', 'name': self.name}).json()
+
+    def create_instance(self, name=None, environment=None, revision=None, parameters={}, destroyInterval=None):
+        from qubell.api.private.instance import Instance
+        return Instance.new(name=name,
+                            application=self,
+                            environment=environment,
+                            revision=revision,
+                            parameters=parameters,
+                            destroyInterval=destroyInterval)
+
+    launch = create_instance
 
 
 class ApplicationList(QubellEntityList):

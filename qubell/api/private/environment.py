@@ -34,7 +34,7 @@ class Environment(object):
         self.zoneId = info['backends'][0]['id']
         self.isDefault = info['isDefault']
 
-    def __init__(self, auth, organization, **kwargs):
+    def __init__(self, organization, auth=None, **kwargs):
         if 'environmentId' in locals():
             log.warning("Environment reinitialized. Dangerous!")
         self.services = []
@@ -107,7 +107,7 @@ class Environment(object):
 
     def add_service(self, service):
         data = self.json()
-        data['serviceIds'].append(service.serviceId)
+        data['serviceIds'].append(service.instanceId)
         data['services'].append(service.json())
 
         resp = self._put_environment(data=json.dumps(data))
@@ -116,7 +116,7 @@ class Environment(object):
 
     def remove_service(self, service):
         data = self.json()
-        data['serviceIds'].remove(service.serviceId)
+        data['serviceIds'].remove(service.instanceId)
         data['services'].remove(service.json())
 
         resp = self._put_environment(data=json.dumps(data))

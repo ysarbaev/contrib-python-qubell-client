@@ -54,6 +54,11 @@ class EntityList(object):
         return found[-1]
 
     def __contains__(self, item):
+        if isinstance(item, str) or isinstance(item, unicode):
+            if is_bson_id(item):
+                return item in [item.id for item in self.object_list]
+            else:
+                return item in [item.name for item in self.object_list]
         return item.id in [item.id for item in self.object_list]
 
     def add(self, item):
@@ -73,7 +78,6 @@ class QubellEntityList(EntityList):
 
     def __init__(self, list_json_method, organization):
         self.organization = organization
-        self.auth = self.organization.auth
         self.organizationId = self.organization.organizationId
         self.json = list_json_method
         EntityList.__init__(self)
@@ -83,15 +87,15 @@ class QubellEntityList(EntityList):
         assert self.base_clz, "Define 'base_clz' in constructor or override this method"
         for ent in self.json():
             start = time.time()
-            entity = self.base_clz(auth=self.auth, organization=self.organization, id=ent['id'])
+            entity = self.base_clz(organization=self.organization, id=ent['id'], auth=None)
             end = time.time()
             elapsed = int((end - start) * 1000.0)
-            log.debug("  Listing Time: Fetching {0}='{name}' with id={id} took {elapsed} ms".format(self.base_clz.__name__,
-                                                                                                 id=ent['id'],
-                                                                                                 name=ent['name'],
-                                                                                                 elapsed=elapsed))
+            log.debug(
+                "  Listing Time: Fetching {0}='{name}' with id={id} took {elapsed} ms".format(self.base_clz.__name__,
+                                                                                              id=ent['id'],
+                                                                                              name=ent['name'],
+                                                                                              elapsed=elapsed))
             self.object_list.append(entity)
-
 
 
 class Auth(object):

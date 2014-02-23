@@ -72,7 +72,7 @@ class InstanceClassTest(BaseTestCase):
         """ Check list_instances method contains our instance
         """
 
-        list = self.org.list_instances_json(application=self.app)
+        list = self.app.list_instances_json()
         self.assertTrue(self.ins.id in [x['id'] for x in list])
         list = self.org.list_instances_json()
         self.assertTrue(self.ins.id in [x['id'] for x in list])

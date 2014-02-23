@@ -65,9 +65,19 @@ class EntityListTests(unittest2.TestCase):
     def test__len(self):
         assert len(self.raw_objects) == len(self.entity_list)
 
-    def test__in(self):
+    def test__in_by_item(self):
         dummy = EntityListTests.DummyEntity("1", "name1")
         assert dummy in self.entity_list
+
+    def test__in_by_id(self):
+        assert "1234567890abcd1234567890" in self.entity_list
+
+    def test__in_by_uid(self):
+        assert u"1234567890abcd1234567890" in self.entity_list
+
+    def test__in_by_name(self):
+        assert "name2" in self.entity_list
+        assert "name3dup" in self.entity_list
 
     def test__iter(self):
         entity_ids = [e.id for e in self.entity_list]
