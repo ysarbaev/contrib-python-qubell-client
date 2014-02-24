@@ -1,7 +1,7 @@
 from qubell import deprecated
 import unittest2
 
-from qubell.api.private.common import EntityList
+from qubell.api.private.common import EntityList, IdName
 from qubell.api.private import exceptions
 
 
@@ -27,8 +27,10 @@ class EntityListTests(unittest2.TestCase):
             self.raw_json = raw_json
             EntityList.__init__(self)
 
-        def _generate_object_list(self):
-            self.object_list = [EntityListTests.DummyEntity(item["id"], item["name"]) for item in self.raw_json]
+        def _id_name_list(self):
+            self._list = [IdName(item["id"], item["name"]) for item in self.raw_json]
+        def _get_item(self, id_name):
+            return EntityListTests.DummyEntity(id_name.id, id_name.name)
 
     raw_objects = [
         {"id": "1", "name": "name1"},
@@ -83,7 +85,12 @@ class EntityListTests(unittest2.TestCase):
         entity_ids = [e.id for e in self.entity_list]
         raw_ids = [e["id"] for e in self.raw_objects]
         self.assertEqual(entity_ids, raw_ids)
+        for e in self.entity_list:
+            assert isinstance(e, EntityListTests.DummyEntity)
 
     def test_deprecation_visually(self):
         self.entity_list[0].plain_old()
         self.entity_list["name2"].plain_old_with_message()
+
+    def test__repr(self):
+        assert repr(self.entity_list) == "DummyEntityList([IdName(id='1', name='name1'), IdName(id='2', name='name2'), IdName(id='3', name='name3dup'), IdName(id='4', name='name3dup'), IdName(id='1234567890abcd1234567890', name='with_bson_id')])"
