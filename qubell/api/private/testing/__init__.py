@@ -41,34 +41,36 @@ import types
 logging.getLogger("requests.packages.urllib3.connectionpool").setLevel(logging.WARN)
 
 def values(names):
+    """
+    Method decorator that allows inject return values into method parameters.
+    It tries to find desired value going deep. For convinience injects list with only one value as value.
+    :param names: dict of "value-name": "method-parameter-name"
+    """
     def wrapper(func):
         @wraps(func)
         def wrapped_func(*args, **kwargs):
-            instance = args[1]
+            instance = None
+            if len(args)>1:
+                instance=args[1]
+            else:
+                instance = kwargs['instance']
 
             def findReturnValues(rvalues):
                 for k, v in rvalues.iteritems():
                     if isinstance(v, dict):
-                        findReturnValues(v)
-                    elif isinstance(v, unicode):
-                        #TODO fix return values
-                        try:
-                            value = yaml.safe_load(v)
-                        except Exception:
-                            import re
-                            try:
-                                value = yaml.safe_load(re.sub(r': ([:/?a-zA-Z_0-9-\.]+)', r': "\1"', v))
-                            except Exception:
-                                value = None
-
-                        if not isinstance(value, dict) and k in names.keys():
-                            kwargs.update({names[k]: value})
-                        elif isinstance(value, dict):
-                            findReturnValues(value)
-                    elif k in names.keys():
-                        kwargs.update({names[k]: v})
+                        findReturnValues(v) #go deep, to find desired name
+                    if k in names.keys():
+                        if isinstance(v,list) and len(v)==1:
+                            kwargs.update({names[k]: v[0]})
+                        else:
+                            kwargs.update({names[k]: v})
 
             findReturnValues(instance.returnValues)
+
+            #ensure all names was set
+            missing_params = [k for k, v in names.items() if v not in kwargs]
+            if missing_params:
+                raise AttributeError("Parameters {0} for '{1}' were not found".format(missing_params, func.__name__), missing_params)
 
             func(*args, **kwargs)
         return wrapped_func
@@ -99,7 +101,7 @@ def workflow(name, parameters=None, timeout=10):
 
 def environment(params):
     """
-    Decorator that allows to run tests in sandbox against different Qubell environments.
+    Class decorator that allows to run tests in sandbox against different Qubell environments.
     Each test method in suite is converted to <test_name>_on_environemnt_<environment_name>
     :param params: dict
     """

@@ -40,12 +40,6 @@ class Instance(Entity, ServiceMixin):
     Base class for application instance. Manifest required.
     """
 
-    def __parse(self, values):
-        ret = {}
-        for val in values:
-            ret[val['id']] = val['value']
-        return ret
-
     def __init__(self, organization, id):
         self.instanceId = self.id = id
         self.organization = organization
@@ -76,6 +70,9 @@ class Instance(Entity, ServiceMixin):
 
     @property
     def name(self): return self.json()['name']
+
+    def __parse(self, values):
+        return dict({val['id']: val['value'] for val in values})
 
     @property
     def return_values(self): return self.__parse(self.json()['returnValues'])
