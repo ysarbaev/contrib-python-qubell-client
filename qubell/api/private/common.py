@@ -127,16 +127,10 @@ class QubellEntityList(EntityList):
 
 class Auth(object):
     @deprecated(msg="use global from qubell.api.provider.ROUTER as router instead")
-    def __init__(self, user, password, tenant):
+    def __init__(self, user, password, tenant=None, api=None):
         self.user = user
         self.password = password
-        self.tenant = tenant
+        self.tenant = tenant or api
 
         # TODO: parse tenant to generate api url
         self.api = tenant
-
-
-class Context(Auth):
-    @deprecated(msg="use global from qubell.api.provider.ROUTER as router instead")
-    def __init__(self, user, password, api):
-        Auth.__init__(self, user, password, api)

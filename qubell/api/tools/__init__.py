@@ -141,7 +141,7 @@ def dump(node):
                     try:
                         fields.pop(excl_item)
                     except:
-                        print 'No item %s in object %s' % (excl_item, x)
+                        log.warn('No item %s in object %s' % (excl_item, x))
                 return dumper.represent_mapping('tag:yaml.org,2002:map', fields)
         return dumper.represent_mapping('tag:yaml.org,2002:map', obj.__dict__)
 

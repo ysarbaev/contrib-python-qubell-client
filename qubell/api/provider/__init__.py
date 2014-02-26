@@ -30,14 +30,7 @@ def route(route_str):  # decorator param
             "max": max(elapsed, last_stat["max"]),
             "avg": (last_count * last_stat["avg"] + elapsed) / (last_count + 1)
         }
-
-        #user log
-        logfun = log.debug
-        if 1000 < elapsed <= 10000:
-            logfun = log.warn
-        elif elapsed > 10000:
-            logfun = log.error
-        logfun(' Route Time: {0} took {1} ms'.format(route_str, elapsed))
+        log.debug(' Route Time: {0} took {1} ms'.format(route_str, elapsed))
 
 
     def wrapper(f):  # decorated function

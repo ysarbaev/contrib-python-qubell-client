@@ -23,10 +23,13 @@ from qubell.api.provider.router import ROUTER as router
 from qubell import deprecated
 
 #todo: understood, that some people may use this object for authentication, need to move this to proper place
-from qubell.api.private.common import Auth, EntityList, IdName
+
 from qubell.api.tools import lazyproperty
 
-Auth = Auth # Auth usage, to be sure won't be removed from imports
+### Backward compatibility for component testing ###
+from qubell.api.private.common import Auth
+Context = Auth
+####################################################
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"

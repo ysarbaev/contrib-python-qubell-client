@@ -122,7 +122,7 @@ def environment(params):
 
         for method in methods:
             delattr(clazz, method.func_name)
-            log.info("'{0}' multiplied per environment in ".format(method.func_name))
+            log.info("Test '{0}' multiplied per environment in {1}".format(method.func_name, clazz.__name__))
             for env_name in params.keys():
                 new_name = method.func_name + "_on_environment_" + env_name
                 setattr(clazz, new_name, copy(method, new_name))
@@ -294,7 +294,7 @@ class SandBox(object):
         app["id"] = application.applicationId
 
     def make(self):
-        log.info("preparing sandbox...")
+        log.info("Preparing sandbox...")
 
         for name, env in self.sandbox["environments"].items():
             environment = self.organization.environment(name=name)
@@ -312,12 +312,12 @@ class SandBox(object):
             for app in self.sandbox["applications"]:
                 self.__application(app)
 
-        log.info("sandbox prepared")
+        log.info("Sandbox prepared")
 
         return self.organization
 
     def clean(self, timeout=10):
-        log.info("cleaning sandbox...")
+        log.info("Cleaning sandbox...")
 
         def destroy(test_instances):
             return_instances = []
@@ -335,7 +335,7 @@ class SandBox(object):
                     "Instance was not destroyed properly {0}: {1}", instance.id, instance.name
                 )
 
-        log.info("sandbox cleaned")
+        log.info("Sandbox cleaned")
 
     def __check_environment_name(self, name):
         import re
