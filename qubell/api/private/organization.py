@@ -12,6 +12,12 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import warnings
+from qubell import deprecated
+from qubell.api.private.common import EntityList, IdName
+from qubell.api.private.service import system_application_types, COBALT_SECURE_STORE_TYPE, WORKFLOW_SERVICE_TYPE, \
+    SHARED_INSTANCE_CATALOG_TYPE
+from qubell.api.tools import lazyproperty
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
@@ -19,42 +25,71 @@ __license__ = "Apache"
 __email__ = "vkhomenko@qubell.com"
 
 import logging as log
-
-import requests
 import simplejson as json
 
 from qubell.api.private.manifest import Manifest
 from qubell.api.private import exceptions
+from qubell.api.private.instance import InstanceList, DEAD_STATUS, Instance
+from qubell.api.private.application import ApplicationList
+from qubell.api.private.environment import EnvironmentList
+from qubell.api.private.zone import ZoneList
+from qubell.api.provider.router import ROUTER as router
 
 
 class Organization(object):
 
-    def __init__(self, auth, id):
-        self.applications = []
-        self.environments = []
-        self.services = []
+    def __init__(self, id, auth=None):
         self.providers = []
-        self.zones = []
 
         self.organizationId = id
-        self.auth = auth
-        self.zone = self.get_default_zone()
 
         my = self.json()
         self.name = my['name']
 
+    @staticmethod
+    def new(name):
+        log.info("Creating organization: %s" % name)
+        payload = json.dumps({'editable': 'true',
+                              'name': name})
+        resp = router.post_organization(data=payload)
+        return Organization(resp.json()['id'])
+
+    @lazyproperty
+    def environments(self):
+        return EnvironmentList(list_json_method=self.list_environments_json, organization=self)
+
+    @lazyproperty
+    def instances(self):
+        return InstanceList(list_json_method=self.list_instances_json, organization=self)
+
+    @lazyproperty
+    def applications(self):
+        return ApplicationList(list_json_method=self.list_applications_json, organization=self)
+
+    @lazyproperty
+    def services(self):
+        return InstanceList(list_json_method=self.list_services_json, organization=self)
+
+    @lazyproperty
+    def zones(self): return ZoneList(self)
+
+    @property
+    def defaultEnvironment(self): return self.get_default_environment()
+
+    @property
+    def zone(self): return self.get_default_zone()
+
     def json(self):
-        url = self.auth.api+'/organizations.json'
-        resp = requests.get(url, cookies=self.auth.cookies, verify=False)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            org = [x for x in resp.json() if x['id'] == self.organizationId]
-            if len(org)>0:
-                return org[0]
-            return resp.json()
-        raise exceptions.ApiError('Unable to get organization by id %s, got error: %s' % (self.organizationId, resp.text))
+        resp = router.get_organizations()
+        org = [x for x in resp.json() if x['id'] == self.organizationId]
+        if len(org)>0:
+            return org[0]
+        return resp.json()
 
     def restore(self, config):
+        for instance in config.pop('instances', []):
+            launched = self.get_or_launch_instance(id=instance.pop('id', None), name=instance.pop('name'), **instance)
+            assert launched.ready()
         for serv in config.pop('services',[]):
             self.get_or_create_service(id=serv.pop('id', None), name=serv.pop('name'), type=serv.pop('type', None))
         for prov in config.get('providers', []):
@@ -69,32 +104,26 @@ class Organization(object):
             restored_app.restore(app)
 
 ### APPLICATION
-    def create_application(self, name, manifest):
-        log.info("Creating application: %s" % name)
-        url = self.auth.api+'/organizations/'+self.organizationId+'/applications.json'
-
-        resp = requests.post(url, files={'path': manifest.content}, data={'manifestSource': 'upload', 'name': name}, verify=False, cookies=self.auth.cookies)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            app = self.get_application(resp.json()['id'])
-            app.manifest = manifest
-            return app
-        raise exceptions.ApiError('Unable to create application %s, got error: %s' % (name, resp.text))
-
-    def get_application(self, id):
-        log.info("Picking application: %s" % id)
+    def create_application(self, name=None, manifest=None):
+        """ Creates application and returns Application object.
+        """
+        if not manifest:
+            raise exceptions.NotEnoughParams('Manifest not set')
+        if not name:
+            name = 'auto-generated-name'
         from qubell.api.private.application import Application
-        app = Application(auth=self.auth, organization=self, id=id)
-        self.applications.append(app)
-        return app
+        return Application.new(self, name, manifest)
 
-    def list_applications(self):
-        url = self.auth.api+'/organizations/'+self.organizationId+'/applications.json'
-        resp = requests.get(url, cookies=self.auth.cookies, data="{}", verify=False)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.ApiError('Unable to get applications list, got error: %s' % resp.text)
+    def get_application(self, id=None, name=None):
+        """ Get application object by name or id.
+        """
+        criteria = id or name
+        return self.applications[criteria]
+
+    def list_applications_json(self):
+        """ Return raw json
+        """
+        return router.get_applications(org_id=self.organizationId).json()
 
     def delete_application(self, id):
         app = self.get_application(id)
@@ -102,214 +131,273 @@ class Organization(object):
         return app.delete()
 
     def get_or_create_application(self, id=None, manifest=None, name=None):
-        """ Will get app by id or create application with parameters """
-        if name:
-            appz = [app for app in self.list_applications() if app['name'] == name]
-            # app found by name
-            if len(appz):
-                app = self.get_application(appz[0]['id']) # pick first
-                if manifest:
-                    app.upload(manifest)
-                    return self.get_application(app.applicationId)
-                else:
-                    return app
-            else:
-                return self.create_application(name, manifest)
-        else:
-            name = 'generated-app-name'
-            if id:
-                return self.get_application(id)
-            else:
-                return self.create_application(name, manifest)
-
-    def application(self, id=None, manifest=None, name=None):
-        """ Creates, picks or modify application
+        """ Get application by id or name.
+        If not found: create with given or generated parameters
         """
         if id:
-            app = self.get_application()
-            if name: app.update(name=name)
-            if manifest:
-                app.upload(manifest=manifest)
+            return self.get_application(id=id)
         elif name:
-            app = self.get_or_create_application(id=id, manifest=manifest, name=name)
-            if manifest: app.upload(manifest=manifest)
-        return app
+            try:
+                app = self.get_application(name=name)
+            except exceptions.NotFoundError:
+                app = self.create_application(name=name, manifest=manifest)
+            return app
+        raise exceptions.NotEnoughParams('Not enough parameters')
+
+    def application(self, id=None, manifest=None, name=None):
+        """ Smart method. Creates, picks or modifies application.
+        If application found by name or id and manifest not changed: return app.
+        If app found by id, but other parameters differs: change them.
+        If no application found, create.
+        """
+
+        modify = False
+        found = False
+
+        # Try to find application by name or id
+        if name and id:
+            found = self.get_application(id=id)
+            if not found.name == name:
+                modify = True
+        elif id:
+            found = self.get_application(id=id)
+            name = found.name
+        elif name:
+            try:
+                found = self.get_application(name=name)
+                id = found.applicationId
+            except exceptions.NotFoundError:
+                pass
+
+        # If found - compare parameters
+        if found:
+            if manifest and not manifest == found.manifest:
+                modify = True
+
+        # We need to update application
+        if found and modify:
+            found.update(name=name, manifest=manifest)
+        if not found:
+            created = self.create_application(name=name, manifest=manifest)
+
+        return found or created
+
+
+# INSTANCE
+
+    def create_instance(self, application, revision=None, environment=None, name=None, parameters=None,
+                        destroyInterval=None):
+        """ Launches instance in application and returns Instance object.
+        """
+        from qubell.api.private.instance import Instance
+        return Instance.new(application, revision, environment, name, parameters, destroyInterval)
+
+    def get_instance(self, id=None, name=None):
+        """ Get instance object by name or id.
+        If application set, search within the application.
+        """
+        if id:  # submodule instances are invisible for lists
+            return Instance(id=id, organization=self)
+        return self.instances[id or name]
+
+    def list_instances_json(self, application=None):
+        """ Get list of instances in json format converted to list"""
+        if application:  # todo: application should not be parameter here. Application should do its own list
+            warnings.warn("organization.list_instances_json(app) is deprecated, use app.list_instances_json", DeprecationWarning, stacklevel=2)
+            instances = application.list_instances_json()
+        else:  # Return all instances in organization
+            instances = router.get_instances(org_id=self.organizationId).json()
+        return [ins for ins in instances if ins['status'] not in DEAD_STATUS]
+
+    def get_or_create_instance(self, id=None, application=None, revision=None, environment=None, name=None, parameters=None,
+                               destroyInterval=None):
+        """ Get instance by id or name.
+        If not found: create with given parameters
+        """
+        try:
+            instance = self.get_instance(id=id, name=name)
+            if name and name != instance.name:
+                instance.rename(name)
+                instance.ready()
+            return instance
+        except exceptions.NotFoundError:
+            return self.create_instance(application, revision, environment, name, parameters, destroyInterval)
+    get_or_launch_instance = get_or_create_instance
+
+    def instance(self, id=None, application=None, name=None, revision=None, environment=None, parameters=None, destroyInterval=None):
+        """ Smart method. It does everything, to return Instance with given parameters within the application.
+        If instance found running and given parameters are actual: return it.
+        If instance found, but parameters differs - reconfigure instance with new parameters.
+        If instance not found: launch instance with given parameters.
+        Return: Instance object.
+        """
+        instance = self.get_or_create_instance(id, application, revision, environment, name, parameters, destroyInterval)
+
+        reconfigure = False
+        # if found:
+        #     if revision and revision is not found.revision:
+        #         reconfigure = True
+        #     if parameters and parameters is not found.parameters:
+        #         reconfigure = True
+
+        # We need to reconfigure instance
+        if reconfigure:
+            instance.reconfigure(revision=revision, parameters=parameters)
+
+        return instance
+
 
 ### SERVICE
-    def create_service(self, name, type, parameters={}, zone=None):
-        log.info("Creating service: %s" % name)
-        if not zone:
-            zone = self.zone.zoneId
-        data = {'name': name,
-                'typeId': type,
-                'zoneId': zone,
-                'parameters': parameters}
+    def create_service(self, application, revision=None, environment=None, name=None, parameters=None,
+                       destroyInterval=None):
+        if application.name in system_application_types.values():
+             destroyInterval = -1  # never for system applications
 
-        url = self.auth.api+'/organizations/'+self.organizationId+'/services.json'
-        headers = {'Content-Type': 'application/json'}
-        resp = requests.post(url, cookies=self.auth.cookies, data=json.dumps(data), verify=False, headers=headers)
-        log.debug(resp.request.body)
-        log.debug(resp.text)
+        instance = self.create_instance(application, revision, environment, name, parameters, destroyInterval)
+        instance.environment.add_service(instance)
+        return instance
 
-        if resp.status_code == 200:
-            return self.get_service(resp.json()['id'])
-        raise exceptions.ApiError('Unable to create service %s, got error: %s' % (name, resp.text))
+    def create_keystore_service(self, name='generated-keystore', parameters=None):
+        application = self.applications[system_application_types(COBALT_SECURE_STORE_TYPE)]
+        return self.create_service(name=name, application=application, parameters=parameters)
 
-    def create_keystore_service(self, name='generated-keystore', parameters={}, zone=None):
-        return self.create_service(name=name, type='builtin:cobalt_secure_store', parameters=parameters, zone=zone)
+    def create_workflow_service(self, name='generated-workflow', policies=None, zone=None):
+        parameters = {'configuration.policies': json.dumps(policies or {})}
+        application = self.applications[system_application_types(WORKFLOW_SERVICE_TYPE)]
+        return self.create_service(name=name, application=application, parameters=parameters)
 
-    def create_workflow_service(self, name='generated-workflow', policies={}, zone=None):
-        parameters = {'configuration.policies': json.dumps(policies)}
-        return self.create_service(name=name, type='builtin:workflow_service', parameters=parameters, zone=zone)
+    def create_shared_service(self, name='generated-shared', instances=None, zone=None):
+        parameters = {'configuration.shared-instances': json.dumps(instances or {})}
+        application = self.applications[system_application_types(SHARED_INSTANCE_CATALOG_TYPE)]
+        return self.create_service(name=name, application=application, parameters=parameters)
 
-    def create_shared_service(self, name='generated-shared', instances={}, zone=None):
-        parameters = {'configuration.shared-instances': json.dumps(instances)}
-        return self.create_service(name=name, type='builtin:shared_instances_catalog', parameters=parameters, zone=zone)
+    get_service = get_instance
 
-    def get_service(self, id):
-        log.info("Picking service: %s" % id)
-        from qubell.api.private.service import Service
-        serv = Service(self.auth, organization=self, id=id)
-        self.services.append(serv)
-        return serv
+    def list_services_json(self):
+        return router.get_services(org_id=self.organizationId).json()
 
-    def list_services(self):
-        url = self.auth.api+'/organizations/'+self.organizationId+'/services.json'
-        resp = requests.get(url, cookies=self.auth.cookies, verify=False)
-        log.debug(resp.request.body)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.ApiError('Unable to get services list, got error: %s' % resp.text)
-
-    def delete_service(self, id):
-        srv = self.get_service(id)
-        return srv.delete()
-
-    def get_or_create_service(self, id=None, name=None, type=None, parameters={}, zone=None):
+    def get_or_create_service(self, id=None, application=None, revision=None, environment=None, name=None, parameters=None,
+                              destroyInterval=None):
         """ Get by name or create service with given parameters"""
-        if name:
-            servs = [srv for srv in self.list_services() if srv['name'] == name]
-            # service found by name
-            if len(servs):
-                return self.get_service(servs[0]['id']) # pick first
-            elif type:
-                return self.create_service(name, type, parameters, zone)
-        else:
-            name = 'generated-service'
-            if id:
-                return self.get_service(id)
-            elif type:
-                return self.create_service(name, type, parameters, zone)
-        raise exceptions.NotFoundError('Service not found or not enough parameters to create service: %s' % name)
+        try:
+            return self.get_instance(id=id, name=name)
+        except exceptions.NotFoundError:
+            return self.create_service(application, revision, environment, name, parameters, destroyInterval)
 
-    def service(self, id=None, name=None, type=None, parameters={}, zone=None):
-        """ Get, modify or create service
-        """
-        # TODO: modify service if differs
-        return self.get_or_create_service(id=id, name=name, type=type, parameters=parameters, zone=zone)
+    service = get_or_create_service
+
+    def remove_service(self, service):
+        service.environment.remove_service(service)
+        service.delete()
 
 ### ENVIRONMENT
     def create_environment(self, name, default=False, zone=None):
-        log.info("Creating environment: %s" % name)
-        if not zone:
-            zone = self.zone.zoneId
-        data = {'isDefault': default,
-                'name': name,
-                'backend': zone,
-                'organizationId': self.organizationId}
-
-        url = self.auth.api+'/organizations/'+self.organizationId+'/environments.json'
-        headers = {'Content-Type': 'application/json'}
-        resp = requests.post(url, cookies=self.auth.cookies, data=json.dumps(data), verify=False, headers=headers)
-        log.debug(resp.request.body)
-        log.debug(resp.text)
-
-        if resp.status_code == 200:
-            return self.get_environment(resp.json()['id'])
-        raise exceptions.ApiError('Unable to create environment %s, got error: %s' % (name, resp.text))
-
-    def list_environments(self):
-        url = self.auth.api+'/organizations/'+self.organizationId+'/environments.json'
-        resp = requests.get(url, cookies=self.auth.cookies, verify=False)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.ApiError('Unable to get environments list, got error: %s' % resp.text)
-
-    def get_environment(self, id):
+        """ Creates environment and returns Environment object.
+        """
         from qubell.api.private.environment import Environment
-        env = Environment(self.auth, self, id)
-        self.environments.append(env)
-        return env
+        return Environment.new(organization=self,name=name, zone=zone, default=default)
+
+    def list_environments_json(self):
+        return router.get_environments(org_id=self.organizationId).json()
+
+    def get_environment(self, id=None, name=None):
+        """ Get environment object by name or id.
+        """
+        criteria = id or name
+        return self.environments[criteria]
 
     def delete_environment(self, id):
         env = self.get_environment(id)
-        self.environments.remove(env)
         return env.delete()
 
     def get_or_create_environment(self, id=None, name=None, zone=None, default=False):
-        """ Get env by name or create with parameters"""
-        if name:
-            envs = [env for env in self.list_environments() if env['name'] == name]
-            # environment found by name
-            if len(envs):
-                return self.get_environment(envs[0]['id']) # pick first
-            else:
-                return self.create_environment(name=name, zone=zone, default=default)
+        """ Get environment by id or name.
+        If not found: create with given or generated parameters
+        """
+        if id:
+            return self.get_environment(id=id)
+        elif name:
+            try:
+                env = self.get_environment(name=name)
+            except exceptions.NotFoundError:
+                env = self.create_environment(name=name, zone=zone, default=default)
+            return env
         else:
-            name = 'generated-env'
-            if id:
-                return self.get_environment(id)
-            else:
-                return self.create_environment(name=name, zone=zone, default=default)
+            name = 'auto-generated-env'
+            return self.create_environment(name=name, zone=zone, default=default)
 
     def environment(self, id=None, name=None, zone=None, default=False):
-        return self.get_or_create_environment(id=id, name=name, zone=zone, default=default)
+        """ Smart method. Creates, picks or modifies environment.
+        If environment found by name or id parameters not changed: return env.
+        If env found by id, but other parameters differs: change them.
+        If no environment found, create with given parameters.
+        """
+
+        modify = False
+        found = False
+
+        # Try to find environment by name or id
+        if name and id:
+            found = self.get_environment(id=id)
+            if not found.name == name:
+                modify = True
+        elif id:
+            found = self.get_environment(id=id)
+            name = found.name
+        elif name:
+            try:
+                found = self.get_environment(name=name)
+                id = found.applicationId
+            except exceptions.NotFoundError:
+                pass
+
+        # If found - compare parameters
+        if found:
+            if default and not found.isDefault:
+                # We cannot set it to non default
+                found.set_default()
+
+            # TODO: add abilities to change zone and name.
+            """
+            if name and not name == found.name:
+                found.rename(name)
+            if zone and not zone == found.zone:
+                modify = True
+            """
+        if not found:
+            created = self.create_environment(name=name, zone=zone, default=default)
+        return found or created
+
 
     def get_default_environment(self):
-        envs = self.list_environments()
-        defaults = [x for x in envs if x['isDefault']==True]
-        if len(defaults):
-            envId = defaults[0]['id'] # If we had several default environments, pick first
-            return self.get_environment(id=envId)
+        def_envs = [x for x in self.environments if x.isDefault == True]
+        if len(def_envs)>1:
+            log.warning('Found more than one default environment. Picking last.')
+            return def_envs[-1]
+        elif len(def_envs)==1:
+            return def_envs[0]
         raise exceptions.NotFoundError('Unable to get default environment')
 
-    def set_default_environment(self, id):
-        url = self.auth.api+'/organizations/'+self.organizationId+'/defaultEnvironment.json'
-        headers = {'Content-Type': 'application/json'}
-        data = json.dumps({'environmentId': id})
-        resp = requests.put(url, cookies=self.auth.cookies, headers=headers, data=data, verify=False)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.ApiError('Unable to set default environment, got error: %s' % resp.text)
+    def set_default_environment(self, environment):
+        return environment.set_as_default()
+
 
 ### PROVIDER
     def create_provider(self, name, parameters):
         log.info("Creating provider: %s" % name)
         parameters['name'] = name
+        resp = router.post_provider(org_id=self.organizationId, data=json.dumps(parameters))
+        return self.get_provider(resp.json()['id'])
 
-        url = self.auth.api+'/organizations/'+self.organizationId+'/providers.json'
-        headers = {'Content-Type': 'application/json'}
-        resp = requests.post(url, cookies=self.auth.cookies, data=json.dumps(parameters), verify=False, headers=headers)
-        log.debug(resp.text)
+    def list_providers_json(self):
+        return router.get_providers(org_id=self.organizationId).json()
 
-        if resp.status_code == 200:
-            return self.get_provider(resp.json()['id'])
-        raise exceptions.ApiError('Unable to create provider %s, got error: %s' % (name, resp.text))
-
-    def list_providers(self):
-        url = self.auth.api+'/organizations/'+self.organizationId+'/providers.json'
-        resp = requests.get(url, cookies=self.auth.cookies, verify=False)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.ApiError('Unable to get providers list, got error: %s' % resp.text)
+    @deprecated("use list_providers_json instead")
+    def list_providers(self): return self.list_providers_json()
 
     def get_provider(self, id):
         from qubell.api.private.provider import Provider
-        prov = Provider(self.auth, organization=self, id=id)
+        prov = Provider(organization=self, id=id)
         self.providers.append(prov)
         return prov
 
@@ -320,10 +408,9 @@ class Organization(object):
 
     def get_or_create_provider(self,id=None, name=None, parameters=None):
 
-
         """ Smart object. Will create provider or pick one, if exists"""
         if name:
-            provs = [prov for prov in self.list_providers() if prov['name'] == name]
+            provs = [prov for prov in self.list_providers_json() if prov['name'] == name]
             # provider found by name
             if len(provs):
                 return self.get_provider(provs[0]['id']) # pick first
@@ -344,19 +431,24 @@ class Organization(object):
 
 ### ZONES
 
-    def list_zones(self):
-        url = self.auth.api+'/organizations/'+self.organizationId+'/zones.json'
-        resp = requests.get(url, cookies=self.auth.cookies, verify=False)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.ApiError('Unable to get zones list, got error: %s' % resp.text)
+    def list_zones_json(self):
+        return router.get_zones(org_id=self.organizationId).json()
 
-    def get_zone(self, id):
-        from qubell.api.private.zone import Zone
-        zone = Zone(self.auth, organization=self, id=id)
-        self.zones.append(zone)
-        return zone
+    def get_zone(self, id=None, name=None):
+        """ Get zone object by name or id.
+        """
+        if id:
+            zones = [x for x in self.zones if x.id == id]
+        elif name:
+            zones = [x for x in self.zones if x.name == name]
+        else:
+            raise exceptions.NotEnoughParams('No name nor id given. Unable to get application')
+        if len(zones) == 1:
+            return zones[0]
+        elif len(zones) > 1:
+            log.warning('Found several zones with name %s. Picking last' % name)
+            return zones[-1]
+        raise exceptions.NotFoundError('Unable to get zone by id: %s' % id)
 
     def get_default_zone(self):
     # Zones(backends) are factor we can't controll. So, get them.
@@ -366,3 +458,12 @@ class Organization(object):
             zoneId = zones[0]['id']
             return self.get_zone(id=zoneId)
         raise exceptions.NotFoundError('Unable to get default zone')
+
+class OrganizationList(EntityList):
+    def __init__(self, list_json_method):
+        self.json = list_json_method
+        EntityList.__init__(self)
+    def _id_name_list(self):
+        self._list = [IdName(ent['id'], ent['name']) for ent in self.json()]
+    def _get_item(self, id_name):
+        return Organization(id=id_name.id)

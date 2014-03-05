@@ -18,6 +18,7 @@ import os
 import sys
 import yaml
 from qubell.api.private.platform import QubellPlatform, Auth
+import logging
 
 
 """
@@ -40,6 +41,9 @@ or
 Will use default.env
 
 """
+
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
 
 default_env = os.path.join(os.path.dirname(__file__), 'default.env')
 

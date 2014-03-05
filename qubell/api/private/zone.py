@@ -18,33 +18,27 @@ __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
 __email__ = "vkhomenko@qubell.com"
 
-import logging as log
-import requests
-
 from qubell.api.private import exceptions
+from qubell.api.private.common import QubellEntityList, Entity
+from qubell.api.provider.router import ROUTER as router
 
-
-class Zone(object):
-    def __init__(self, auth, organization, id):
-        self.auth = auth
-        self.zoneId = id
+class Zone(Entity):
+    def __init__(self, organization, id):
+        self.zoneId = self.id = id
+        self.organizationId = organization.organizationId
         self.organization = organization
-        my = self.json()
-        self.name = my['name']
 
-    def __getattr__(self, key):
-        resp = self.json()
-        if resp.has_key(key):
-            return resp[key]
-        raise exceptions.NotFoundError('Cannot get zone property %s' % key)
-
+    @property
+    def name(self):
+        return self.json()['name']
 
     def json(self):
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/zones.json'
-        resp = requests.get(url, cookies=self.auth.cookies, verify=False)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            zone = [x for x in resp.json() if x['id'] == self.zoneId]
-            if len(zone)>0:
-                return zone[0]
-        raise exceptions.ApiError('Unable to get zones list, got error: %s' % resp.text)
+        resp = router.get_zones(org_id=self.organizationId)
+        zone = [x for x in resp.json() if x['id'] == self.zoneId]
+        if len(zone)>0:
+            return zone[0]
+
+class ZoneList(QubellEntityList):
+    base_clz = Zone
+    def __init__(self, organization):
+        QubellEntityList.__init__(self, organization.list_zones_json, organization)

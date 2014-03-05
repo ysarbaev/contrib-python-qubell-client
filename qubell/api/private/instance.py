@@ -12,6 +12,11 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import warnings
+from qubell import deprecated
+from qubell.api.private.environment import EnvironmentList
+from qubell.api.private.revision import Revision
+from qubell.api.private.service import ServiceMixin
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
@@ -19,112 +24,227 @@ __license__ = "Apache"
 __email__ = "vkhomenko@qubell.com"
 
 import logging as log
-import requests
 import simplejson as json
+import time
+from qubell.api.tools import lazyproperty
 
 from qubell.api.tools import waitForStatus as waitForStatus
 from qubell.api.private import exceptions
+from qubell.api.private.common import QubellEntityList, Entity
+from qubell.api.provider.router import ROUTER as router
 
+DEAD_STATUS = ['Destroyed', 'Destroying']
 
-
-class Instance(object):
+class Instance(Entity, ServiceMixin):
     """
     Base class for application instance. Manifest required.
     """
 
-    def __parse(self, values):
-        ret = {}
-        for val in values:
-            ret[val['id']] = val['value']
-        return ret
+    def __init__(self, organization, id):
+        self.instanceId = self.id = id
+        self.organization = organization
+        self.organizationId = organization.organizationId
 
-    def __init__(self, auth, application, id):
-        self.instanceId = id
-        self.application = application
-        self.auth = auth
-        self.auth.instanceId = self.instanceId
-        self.name = self.name
+        self.__cached_json = None
+        self._last_workflow_started_time = None
+
+    @lazyproperty
+    def applicationId(self): return self.json()['applicationId']
+
+    @lazyproperty
+    def application(self):
+        return self.organization.applications[self.applicationId]
+
+    @lazyproperty
+    def environmentId(self): return self.json()['environmentId']
+
+    @lazyproperty
+    def environment(self): return self.organization.get_environment(self.environmentId)
+
+    @lazyproperty
+    def submodules(self):
+        return InstanceList(list_json_method=lambda: self.json()['submodules'], organization=self.organization)
+
+    @property
+    def status(self): return self.json()['status']
+
+    @property
+    def name(self): return self.json()['name']
+
+    def __parse(self, values):
+        return dict({val['id']: val['value'] for val in values})
+
+    @property
+    def return_values(self): return self.__parse(self.json()['returnValues'])
+
+    @property
+    def error(self): return self.json()['errorMessage']
+
+    #aliases
+    returnValues = return_values
+    errorMessage = error
+
+    @property
+    def parameters(self): return self.json()['revision']['parameters']
 
     def __getattr__(self, key):
-        url = self.auth.api+'/organizations/'+self.application.organizationId+'/instances/'+self.instanceId+'.json'
-        resp = requests.get(url, cookies=self.auth.cookies, data="{}", verify=False)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            # return same way old_public api does
-            if key in ['returnValues', ]:
-                return self.__parse(resp.json()[key])
-            else:
-                return resp.json()[key]
-        raise exceptions.NotFoundError('Unable to get instance properties, got error: %s' % resp.text)
+        if key in ['instanceId',]:
+            raise exceptions.NotFoundError('Unable to get instance property: %s' % key)
+        if key == 'ready':
+            log.debug('Checking instance status')
+            return self.ready()
+        else:
+            log.debug('Getting instance attribute: %s' % key)
+            return self.json()[key]
 
-    def ready(self, timeout=3):  # Shortcut for convinience. Temeout = 3 min (ask timeout*6 times every 10 sec)
-        return waitForStatus(instance=self, final='Running', accepted=['Launching', 'Requested', 'Executing', 'Unknown'], timeout=[timeout*6, 10, 1])
+    def _cache_free(self):
+        """Frees cache"""
+        self.__cached_json = None
+
+    def fresh(self):
+        #todo: create decorator from this
+        if self.__cached_json is None:
+            return False
+        now = time.time()
+        elapsed = (now - self.__last_read_time) * 1000.0
+        return elapsed < 300
+
+    def json(self):
+        '''
+        return __cached_json, if accessed withing 300 ms.
+        This allows to optimize calls when many parameters of entity requires withing short time.
+        '''
+
+        if self.fresh():
+            return self.__cached_json
+        self.__last_read_time = time.time()
+        self.__cached_json = router.get_instance(org_id=self.organizationId, instance_id=self.instanceId).json()
+        return self.__cached_json
+
+    @staticmethod
+    def new(application, revision=None, environment=None, name=None, parameters=None, destroyInterval=None):
+        if not parameters: parameters = {}
+        if environment:  # if environment set, it overrides parameter
+            parameters['environmentId'] = environment.environmentId
+        elif not 'environmentId' in parameters.keys():  # if not set and not in params, use default
+            parameters['environmentId'] = application.organization.defaultEnvironment.environmentId
+        if name:
+            parameters['instanceName'] = name
+        if destroyInterval:
+            parameters['destroyInterval'] = str(destroyInterval)
+        if revision:
+            parameters['revisionId'] = revision.revisionId
+
+        data = json.dumps(parameters)
+        before_creation = time.gmtime(time.time())
+        resp = router.post_organization_instance(org_id=application.organizationId, app_id=application.applicationId, data=data)
+        instance = Instance(organization=application.organization, id=resp.json()['id'])
+        instance._last_workflow_started_time = before_creation
+        return instance
+
+    def ready(self, timeout=3):  # Shortcut for convinience. Timeout = 3 min (ask timeout*6 times every 10 sec)
+        return waitForStatus(instance=self, final='Running', accepted=['Launching', 'Requested', 'Executing', 'Unknown'], timeout=[timeout*20, 3, 1])
         # TODO: Unknown status  should be removed
 
         #TODO: not available
     def destroyed(self, timeout=3):  # Shortcut for convinience. Temeout = 3 min (ask timeout*6 times every 10 sec)
-        return waitForStatus(instance=self, final='Destroyed', accepted=['Destroying', 'Running'], timeout=[timeout*6, 10, 1])
+        return waitForStatus(instance=self, final='Destroyed', accepted=['Destroying', 'Running'], timeout=[timeout*20, 3, 1])
 
     def run_workflow(self, name, parameters={}):
         log.info("Running workflow %s" % name)
-
-        url = self.auth.api+'/organizations/'+self.application.organizationId+'/instances/'+self.instanceId+'/workflows/'+name+'.json'
-        headers = {'Content-Type': 'application/json'}
-        payload = json.dumps(parameters)
-        resp = requests.post(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return True
-        raise exceptions.ApiError('Unable to run workflow %s, got error: %s' % (name, resp.text))
-
+        self._last_workflow_started_time = time.gmtime(time.time())
+        router.post_instance_workflow(org_id=self.organizationId, instance_id=self.instanceId, wf_name=name, data=json.dumps(parameters))
+        return True
 
     def get_manifest(self):
-        url = self.auth.api+'/organizations/'+self.application.organizationId+'/applications/'+self.auth.applicationId+'/refreshManifest.json'
-        headers = {'Content-Type': 'application/json'}
-        payload = json.dumps({})
-        resp = requests.post(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.ApiError('Unable to get manifest, got error: %s' % resp.text)
+        return router.post_application_refresh(org_id=self.organizationId, app_id=self.applicationId).json()
 
+    def reconfigure(self, revision=None, parameters=None):
+        #note: be carefull refactoring this, or you might have unpredictable results
+        #todo: private api seems requires at least presence of submodule names if exist
+        payload = {}
+        payload['parameters'] = self.parameters
 
+        if revision:
+            payload['revisionId'] = revision.revisionId
 
-    def reconfigure(self, name='reconfigured', **kwargs):
-        revisionId = kwargs.get('revisionId', '')
-        parameters = kwargs.get('parameters', {})
-        submodules = kwargs.get('submodules', {})
-        url = self.auth.api+'/organizations/'+self.application.organizationId+'/instances/'+self.instanceId+'/configuration.json'
-        headers = {'Content-Type': 'application/json'}
-        payload = json.dumps({
-                   'parameters': parameters,
-                   'submodules': submodules,
-                   'revisionId': revisionId,
-                   'instanceName': name})
-        resp = requests.put(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
+        submodules = (parameters or {}).pop('submodules', None)
+        if submodules:
+            payload['submodules'] = submodules
+        if parameters is not None:
+            payload['parameters'] = parameters
 
-        log.debug('--- INSTANCE RECONFIGUREATION REQUEST ---')
-        log.debug('REQUEST HEADERS: %s' % resp.request.headers)
-        log.debug('REQUEST: %s' % resp.request.body)
-        log.debug('RESPONSE: %s' % resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.ApiError('Unable to reconfigure instance, got error: %s' % resp.text)
+        resp = router.put_instance_configuration(org_id=self.organizationId, instance_id=self.instanceId, data=json.dumps(payload))
+        return resp.json()
 
+    def rename(self, name):
+        payload = json.dumps({'instanceName': name})
+        return router.put_instance_configuration(org_id=self.organizationId, instance_id=self.instanceId, data=payload)
 
     def delete(self):
-        return self.destroy()
+        self.destroy()
+        #todo: remove, if destroyed
+        return True
 
     def destroy(self):
         log.info("Destroying")
-        url = self.auth.api+'/organizations/'+self.application.organizationId+'/instances/'+self.instanceId+'/workflows/destroy.json'
-        headers = {'Content-Type': 'application/json'}
-        resp = requests.post(url, cookies=self.auth.cookies, data=json.dumps({}), verify=False, headers=headers)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.ApiError('Unable to destroy instance, got error: %s' % resp.text)
+        return self.run_workflow("destroy")
 
-    def __del__(self):
-        pass
+    @property
+    def serve_environments(self):
+        return EnvironmentList(lambda: self.json()["environments"], organization=self.organization)
 
+    def add_as_service(self, environments=None, environment_ids=None):
+        if not environments or environment_ids:
+            # Use default if not set
+            environments = [self.environment,]
+        if environments:
+            data = [env.environmentId for env in environments]
+        else:
+            assert isinstance(environment_ids, list)
+            data = environment_ids
+        router.post_instance_services(org_id=self.organizationId, instance_id=self.instanceId, data=json.dumps(data))
+
+    def remove_as_service(self, environments=None):
+        if not environments:
+            # Use default if not set
+            environments = [self.environment,]
+        for env in environments:
+            env.remove_service(self)
+
+    @property
+    def serviceId(self):
+        raise AttributeError("Service is instance reference now, use instanceId")
+
+    @property
+    def most_recent_update_time(self):
+        """
+        Indicated most recent update of the instance, assumption based on:
+        - if currentWorkflow exists, its startedAt time is most recent update.
+        - else max of workflowHistory startedAt is most recent update.
+        """
+        parse_time = lambda t: time.gmtime(t/1000)
+        j = self.json()
+        cw_started_at = j.get('startedAt')
+        if cw_started_at: return parse_time(cw_started_at)
+        try:
+            max_wf_started_at = max([i['startedAt'] for i in j['workflowHistory']])
+            return parse_time(max_wf_started_at)
+        except ValueError:
+            return None
+
+    def _is_projection_updated_instance(self):
+        """
+        This method tries to guess if instance was update since last time.
+        If return True, definitely Yes, if False, this means more unknonw
+        :return: bool
+        """
+        last = self._last_workflow_started_time
+        most_recent = self.most_recent_update_time
+        if last and most_recent:
+            return last < most_recent
+        return False  # can be more clever
+
+
+class InstanceList(QubellEntityList):
+    base_clz = Instance

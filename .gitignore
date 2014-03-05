@@ -38,7 +38,6 @@ output.xml
 *.xml
 .idea
 
-test_qubell_client
 .DS_Store
 .secure
 .universe
@@ -48,5 +47,4 @@ test_qubell_client
 *.ipr
 *.iws
 .idea/
-test_qubell_client
 contrib-cli-launcher

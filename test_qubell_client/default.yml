@@ -1,0 +1,41 @@
+# Default manifest
+
+application:
+  interfaces:
+    in:
+      app_input: bind(wfapp#input.in)
+    out:
+      app_output: bind(wfapp#result.out)
+    action:
+      default: bind(wfapp#actions.wf)
+
+  configuration:
+    in.app_input: "This is default manifest"
+
+  components:
+
+    wfapp:
+      type: workflow.Instance
+      interfaces:
+        input:
+          in: configuration(string)
+        result:
+          out: publish-signal(string)
+        actions:
+          wf: receive-command()
+
+      configuration:
+        configuration.triggers: {}
+        configuration.workflows:
+          launch:
+            steps: []
+            return:
+              out:
+                value: ${in}
+          wf:
+            steps: []
+            return:
+              out:
+                value: "Action WF launched"
+          destroy:
+            steps: []

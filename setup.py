@@ -13,10 +13,11 @@ install_requires = [
 test_requires = [
     'testtools',
     'nose',
+    'mock',
     ]
 
 setup(name='qubell-api-python-client',
-      version='1.0.27',
+      version='1.2.0',
       description='Qubell platform client library',
       long_description=open('README').read(),
       author='Vasyl Khomenko',

@@ -12,27 +12,26 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from qubell.api.private.common import EntityList, Entity, IdName
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
 __email__ = "vkhomenko@qubell.com"
 
-import logging as log
-import requests
-
 from qubell.api.private import exceptions
+from qubell.api.provider.router import ROUTER as router
 
-
-class Revision(object):
+class Revision(Entity):
     """
     Base class for revision
     """
 
-    def __init__(self, auth, application, id):
-        self.revisionId = id
+    def __init__(self, application, id):
+        self.revisionId = self.id = id
         self.application = application
-        self.auth = auth
+        self.organizationId = self.application.organizationId
+        self.applicationId = self.application.applicationId
         my = self.json()
         self.name = my['name']
 
@@ -43,17 +42,21 @@ class Revision(object):
         raise exceptions.NotFoundError('Cannot get revision property %s' % key)
 
     def json(self):
-        url = self.auth.api+'/organizations/'+self.application.organizationId+'/applications/'+self.application.applicationId+'/revisions/'+self.revisionId+'.json'
-        resp = requests.get(url, cookies=self.auth.cookies, verify=False)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.ApiError('Unable to get revision properties, got error: %s' % resp.text)
+        return router.get_revision(org_id=self.organizationId, app_id=self.applicationId, rev_id=self.revisionId).json()
 
     def delete(self):
-        url = self.auth.api+'/organizations/'+self.application.organizationId+'/applications/'+self.application.applicationId+'/revisions/'+self.revisionId+'.json'
-        resp = requests.delete(url, cookies=self.auth.cookies, verify=False)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return True
-        raise exceptions.ApiError('Unable to delete revision, got error: %s' % resp.text)
+        router.delete_revision(org_id=self.organizationId, app_id=self.applicationId, rev_id=self.revisionId)
+        return True
+
+class RevisionList(EntityList):
+    def __init__(self, list_json_method, application):
+        self.json = list_json_method
+        self.application=application
+        self.applicationId=application.id
+        self.organization=application.organization
+        self.organization=application.organization.organizationId
+        EntityList.__init__(self)
+    def _id_name_list(self):
+        self._list = [IdName(ent['id'], ent['name']) for ent in self.json()]
+    def _get_item(self, id_name):
+        return Revision(id=id_name.id, application=self.application)

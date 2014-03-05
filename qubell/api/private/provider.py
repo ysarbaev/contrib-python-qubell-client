@@ -18,21 +18,17 @@ __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
 __email__ = "vkhomenko@qubell.com"
 
-import logging as log
-
-import requests
-import simplejson as json
-
-from qubell.api.private.organization import Organization
 from qubell.api.private import exceptions
+from qubell.api.provider.router import ROUTER as router
 
 
 class Provider(object):
 
-    def __init__(self, auth, organization, id):
+    def __init__(self, organization, id, auth=None):
         self.auth = auth
         self.providerId = id
         self.organization = organization
+        self.organizationId = organization.organizationId
         my = self.json()
         #self.__dict__.update(my)
 
@@ -43,20 +39,11 @@ class Provider(object):
         return resp[key] or False
 
     def json(self):
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/providers.json'
-        resp = requests.get(url, cookies=self.auth.cookies, verify=False)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            provider = [x for x in resp.json() if x['id'] == self.providerId]
-            if len(provider)>0:
-                return provider[0]
-        raise exceptions.ApiError('Unable to get provider %s properties, got error: %s' % (self.providerId, resp.text))
+        resp = router.get_providers(org_id=self.organizationId)
+        provider = [x for x in resp.json() if x['id'] == self.providerId]
+        if len(provider)>0:
+            return provider[0]
 
     def delete(self):
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/providers/'+self.providerId+'.json'
-        headers = {'Content-Type': 'application/json'}
-        resp = requests.delete(url, cookies=self.auth.cookies, data=json.dumps({}), verify=False, headers=headers)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return True
-        raise exceptions.ApiError('Unable to delete provider %s, got error: %s' % (self.providerId, resp.text))
+        router.delete_provider(org_id=self.organizationId,prov_id=self.providerId)
+        return True

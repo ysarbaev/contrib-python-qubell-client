@@ -12,6 +12,11 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import functools
+from qubell import deprecated
+from qubell.api.private.instance import InstanceList, DEAD_STATUS, Instance
+from qubell.api.private.revision import RevisionList
+from qubell.api.tools import lazyproperty, retry
 
 
 __author__ = "Vasyl Khomenko"
@@ -20,68 +25,79 @@ __license__ = "Apache"
 __email__ = "vkhomenko@qubell.com"
 
 import logging as log
-
-import requests
 import simplejson as json
 
-from qubell.api.private.organization import Organization
 from qubell.api.private import exceptions
+from qubell.api.private.common import QubellEntityList, Entity
+from qubell.api.provider.router import ROUTER as router
 
 
-class Application(object):
+class Application(Entity):
     """
     Base class for applications. It should create application and services+environment requested
     """
 
-    def __init__(self, organization, auth, id):
-        self.instances = []
-        self.revisions = []
-        self.auth = auth
+    def __init__(self, organization, id):
         self.organization = organization
-        self.applicationId = id
-        self.defaultEnvironment = self.organization.get_default_environment()
+        self.organizationId = self.organization.organizationId
+        self.applicationId = self.id = id
 
-        my = self.json()
-        self.name = my['name']
+        self.launch = self.create_instance = functools.partial(organization.create_instance, application=self)
+
+    @lazyproperty
+    def instances(self):
+        return InstanceList(list_json_method=self.list_instances_json, organization=self.organization)
+
+    @lazyproperty
+    def revisions(self):
+        return RevisionList(list_json_method=self.list_revisions_json, application=self)
+
+    @property
+    def defaultEnvironment(self):
+        return self.organization.get_default_environment()
+
+    @property
+    def name(self):
+        return self.json()['name']
 
 
+
+    #TODO: Is not used yet, think how to restore revisions
     def __parse(self, values):
         ret = {}
         for val in values:
             ret[val['id']] = val['value']
         return ret
 
-    def restore(self, config):
-        for instance in config.pop('instances',[]):
-            launched = self.get_or_launch_instance(id=instance.pop('id', None), name=instance.pop('name'), **instance)
-            assert launched.ready()
+    @staticmethod
+    def new(organization, name, manifest):
+        log.info("Creating application: %s" % name)
 
-        #TODO: Think how to restore revisions
+        resp = router.post_organization_application(org_id=organization.organizationId,
+                                                    files={'path': manifest.content},
+                                                    data={'manifestSource': 'upload', 'name': name})
+        app = Application(organization, resp.json()['id'])
+        app.manifest = manifest
+        return app
 
     def delete(self):
         log.info("Removing application: %s" % self.name)
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/applications/'+self.applicationId+'.json'
-        resp = requests.delete(url, verify=False, cookies=self.auth.cookies)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return True
-        raise exceptions.ApiError('Unable to delete application: %s' % resp.text)
+        router.delete_application(org_id=self.organizationId, app_id=self.applicationId)
+        return True
 
     def update(self, **kwargs):
+        if kwargs.get('manifest'):
+            self.upload(kwargs.pop('manifest'))
         log.info("Updating application: %s" % self.name)
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/applications/'+self.applicationId+'.json'
-        headers = {'Content-Type': 'application/json'}
+
         data = json.dumps(kwargs)
-        resp = requests.put(url, headers=headers, verify=False, data=data, cookies=self.auth.cookies)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.ApiError('Unable to update application %s, got error: %s' % (self.name, resp.text))
+        resp = router.put_application(org_id=self.organizationId, app_id=self.applicationId, data=data)
+        return resp.json()
 
     def clean(self, timeout=3):
         for ins in self.instances:
             st = ins.status
-            if st not in ['Destroyed', 'Destroying', 'Launching', 'Executing']: # Tests could fail and we can get any statye here
+            if st not in ['Destroyed', 'Destroying', 'Launching', 'Executing']: # Tests could fail and we can get any state here
                 log.info("Destroying instance %s" % ins.name)
                 ins.delete()
                 assert ins.destroyed(timeout=timeout)
@@ -90,15 +106,21 @@ class Application(object):
         for rev in self.revisions:
             self.revisions.remove(rev)
             rev.delete()
+
+        @retry(5, 1 , 2 , AssertionError)
+        def eventually_clean():
+            for ins in self.instances:
+                assert ins.status == 'Destroyed'
+
+        eventually_clean()
         return True
 
     def json(self):
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/applications/'+self.applicationId+'.json'
-        resp = requests.get(url, cookies=self.auth.cookies, data="{}", verify=False)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.ApiError('Unable to get application by url %s\n, got error: %s' % (url, resp.text))
+        return router.get_application(org_id=self.organizationId, app_id=self.applicationId).json()
+
+    def list_instances_json(self):
+        instances = self.json()['instances']
+        return [ins for ins in instances if ins['status'] not in DEAD_STATUS]
 
     def __getattr__(self, key):
         resp = self.json()
@@ -106,60 +128,19 @@ class Application(object):
             raise exceptions.NotFoundError('Cannot get property %s' % key)
         return resp[key] or False
 
-# INSTANCE
-    def launch(self, environment=None, **argv):
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/applications/'+self.applicationId+'/launch.json'
-        headers = {'Content-Type': 'application/json'}
-        if environment:
-            argv['environmentId'] = environment.environmentId
-        elif not 'environmentId' in argv.keys():
-            argv['environmentId'] = self.defaultEnvironment.environmentId
-
-        data = json.dumps(argv)
-        resp = requests.post(url, cookies=self.auth.cookies, data=data, verify=False, headers=headers)
-
-        log.debug('--- APPLICATION LAUNCH REQUEST ---')
-        log.debug('REQUEST HEADERS: %s' % resp.request.headers)
-        log.debug('REQUEST: %s' % resp.request.body)
-        log.debug('RESPONSE: %s' % resp.text)
-
-        if resp.status_code == 200:
-            instance_id = resp.json()['id']
-            return self.get_instance(id=instance_id)
-        raise exceptions.ApiError('Unable to launch application id: %s, got error: %s' % (self.applicationId, resp.text))
-
-    def get_instance(self, id):
-        from qubell.api.private.instance import Instance
-        instance = Instance(auth=self.auth, application=self, id=id)
-        self.instances.append(instance)
-        return instance
-
-    def delete_instance(self, id):
-        instance = self.get_instance(id)
-        self.instances.remove(instance)
-        return instance.delete()
-
-    def get_or_launch_instance(self, id=None, **kwargs):
-        if id:
-            return self.get_instance(id)
-        else:
-            return self.launch(**kwargs)
 
 # REVISION
     def get_revision(self, id):
         from qubell.api.private.revision import Revision
-        rev = Revision(auth=self.auth, application=self, id=id)
-        self.revisions.append(rev)
+        rev = Revision(application=self, id=id)
         return rev
 
-    def list_revisions(self):
-        return self.revisions()
+    def list_revisions_json(self):
+        return self.json()['revisions']
 
     def create_revision(self, name, instance, parameters=[], version=None):
         if not version:
             version=self.get_manifest()['manifestVersion']
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/applications/'+self.applicationId+'/revisions.json'
-        headers = {'Content-Type': 'application/json'}
         payload = json.dumps({ 'name': name,
                     'parameters': parameters,
                     'submoduleRevisions': {},
@@ -168,35 +149,38 @@ class Application(object):
                     'applicationName': self.name,
                     'version': version,
                     'instanceId': instance.instanceId})
-        resp = requests.post(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return self.get_revision(id=resp.json()['id'])
-        raise exceptions.ApiError('Unable to get revision, got error: %s' % resp.text)
+        resp = router.post_revision(org_id=self.organizationId, app_id=self.applicationId, data=payload)
+        return self.get_revision(id=resp.json()['id'])
 
     def delete_revision(self, id):
-        rev = self.get_revision(id)
-        self.revisions.remove(rev.name)
-        rev.delete()
+        self.get_revision(id).delete()
 
 # MANIFEST
 
     def get_manifest(self):
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/applications/'+self.applicationId+'/refreshManifest.json'
-        headers = {'Content-Type': 'application/json'}
-        payload = json.dumps({})
-        resp = requests.post(url, cookies=self.auth.cookies, data=payload, verify=False, headers=headers)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            return resp.json()
-        raise exceptions.ApiError('Unable to get manifest, got error: %s' % resp.text)
+        return router.post_application_refresh(org_id=self.organizationId, app_id=self.applicationId).json()
 
     def upload(self, manifest):
         log.info("Uploading manifest")
-        url = self.auth.api+'/organizations/'+self.organization.organizationId+'/applications/'+self.applicationId+'/manifests.json'
-        resp = requests.post(url, files={'path': manifest.content}, data={'manifestSource': 'upload', 'name': self.name}, verify=False, cookies=self.auth.cookies)
-        log.debug(resp.text)
-        if resp.status_code == 200:
-            self.manifest = manifest
-            return resp.json()
-        raise exceptions.ApiError('Unable to upload manifest, got error: %s' % resp.text)
+        self.manifest = manifest
+        return router.post_application_manifest(org_id=self.organizationId, app_id=self.applicationId,
+                                    files={'path': manifest.content},
+                                    data={'manifestSource': 'upload', 'name': self.name}).json()
+
+    def get_instance(self, id=None, name=None):
+        if id:  # submodule instances are invisible for lists
+            return Instance(id=id, organization=self.organization)
+        return self.instances[id or name]
+
+    #def create_instance(self, name=None, environment=None, revision=None, parameters={}, destroyInterval=None):
+    #    from qubell.api.private.instance import Instance
+    #    return Instance.new(name=name,
+    #                        application=self,
+    #                        environment=environment,
+    #                        revision=revision,
+    #                        parameters=parameters,
+    #                        destroyInterval=destroyInterval)
+
+
+class ApplicationList(QubellEntityList):
+    base_clz = Application

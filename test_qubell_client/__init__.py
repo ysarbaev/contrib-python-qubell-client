@@ -12,9 +12,13 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from qubell.api.provider import log_routes_stat
+
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
 __email__ = "vkhomenko@qubell.com"
 
+import atexit
+atexit.register(log_routes_stat)

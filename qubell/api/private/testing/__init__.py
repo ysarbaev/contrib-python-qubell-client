@@ -28,37 +28,49 @@ from functools import wraps
 
 from qubell.api.private.instance import Instance
 from qubell.api.private.manifest import Manifest
+from qubell.api.private.service import system_application_types, COBALT_SECURE_STORE_TYPE, WORKFLOW_SERVICE_TYPE
 
+
+from requests import api
+from requests import sessions
+
+import time
+import logging
+import re
+import types
+logging.getLogger("requests.packages.urllib3.connectionpool").setLevel(logging.WARN)
 
 def values(names):
+    """
+    Method decorator that allows inject return values into method parameters.
+    It tries to find desired value going deep. For convinience injects list with only one value as value.
+    :param names: dict of "value-name": "method-parameter-name"
+    """
     def wrapper(func):
         @wraps(func)
         def wrapped_func(*args, **kwargs):
-            instance = args[1]
+            instance = None
+            if len(args)>1:
+                instance=args[1]
+            else:
+                instance = kwargs['instance']
 
             def findReturnValues(rvalues):
                 for k, v in rvalues.iteritems():
                     if isinstance(v, dict):
-                        findReturnValues(v)
-                    elif isinstance(v, unicode):
-                        #TODO fix return values
-                        try:
-                            value = yaml.safe_load(v)
-                        except Exception:
-                            import re
-                            try:
-                                value = yaml.safe_load(re.sub(r': ([:/?a-zA-Z_0-9-\.]+)', r': "\1"', v))
-                            except Exception:
-                                value = None
-
-                        if not isinstance(value, dict) and k in names.keys():
-                            kwargs.update({names[k]: value})
-                        elif isinstance(value, dict):
-                            findReturnValues(value)
-                    elif k in names.keys():
-                        kwargs.update({names[k]: v})
+                        findReturnValues(v) #go deep, to find desired name
+                    if k in names.keys():
+                        if isinstance(v,list) and len(v)==1:
+                            kwargs.update({names[k]: v[0]})
+                        else:
+                            kwargs.update({names[k]: v})
 
             findReturnValues(instance.returnValues)
+
+            #ensure all names was set
+            missing_params = [k for k, v in names.items() if v not in kwargs]
+            if missing_params:
+                raise AttributeError("Parameters {0} for '{1}' were not found".format(missing_params, func.__name__), missing_params)
 
             func(*args, **kwargs)
         return wrapped_func
@@ -78,7 +90,7 @@ def workflow(name, parameters=None, timeout=10):
             assert instance.run_workflow(name, parameters)
             if not instance.ready(timeout):
                 self.fail(
-                    "Instance %s don't ready after run workflow: %s with parameters %s and timeout %s" % (
+                    "Instance %s isn't ready in appropriate time: %s with parameters %s and timeout %s" % (
                         instance.instanceId, name, parameters, timeout
                     )
                 )
@@ -88,29 +100,34 @@ def workflow(name, parameters=None, timeout=10):
 
 
 def environment(params):
+    """
+    Class decorator that allows to run tests in sandbox against different Qubell environments.
+    Each test method in suite is converted to <test_name>_on_environemnt_<environment_name>
+    :param params: dict
+    """
+    assert isinstance(params, dict), "@environment decorator should take 'dict' with environments"
+
     def copy(func, name=None):
-        import types
-
-        if not name:
-            name = func.func_name
-
         return types.FunctionType(func.func_code, func.func_globals, name=name,
                                   argdefs=func.func_defaults,
                                   closure=func.func_closure)
 
     def wraps_class(clazz):
+        if "environments" in clazz.__dict__:
+            log.warn("Class {0} environment attribute is overriden".format(clazz.__name__))
+
         clazz.environments = params
 
-        methods = filter(lambda (name, func): name.startswith("test"), clazz.__dict__.items())
+        methods = [method
+                   for _, method in clazz.__dict__.items()
+                   if isinstance(method, types.FunctionType) and method.func_name.startswith("test") ]
 
-        for name_method, _ in methods:
-            delattr(clazz, name_method)
-
-        for name in params.keys():
-            for name_method, method in methods:
-                new_name = name_method + "_on_environment_" + name
-                method = copy(method, new_name)
-                setattr(clazz, new_name, method)
+        for method in methods:
+            delattr(clazz, method.func_name)
+            log.info("Test '{0}' multiplied per environment in {1}".format(method.func_name, clazz.__name__))
+            for env_name in params.keys():
+                new_name = method.func_name + "_on_environment_" + env_name
+                setattr(clazz, new_name, copy(method, new_name))
 
         return clazz
     return wraps_class
@@ -156,17 +173,20 @@ class BaseTestCase(unittest.TestCase):
         import re
         if cls.environments:
             envs = {}
+            servs = []
             for name, value in cls.environments.items():
-                envs.update({str(re.sub("[^a-zA-Z0-9_]", "", name)): value})
+                key = str(re.sub("[^a-zA-Z0-9_]", "", name))
+                envs.update({key: value})
+
         else:
             envs = {"default": {}}
 
+        servs = [{"type": COBALT_SECURE_STORE_TYPE, "name": 'Default credentials service'},
+                 {"type": WORKFLOW_SERVICE_TYPE, "name": 'Default workflow service', "parameters": {'configuration.policies': '{}'}}]
+
         return {
             "organization": {"name": organization},
-            "services": [
-                {"type": 'builtin:cobalt_secure_store', "name": 'Keystore', "parameters": "{}"},
-                {"type": 'builtin:workflow_service', "name": 'Workflow', "parameters": {'configuration.policies': '{}'}}
-            ],
+            "services": servs,
             "instances": [],
             "cloudAccounts": [{
                                   "name": cls.parameters['provider_name'],
@@ -198,6 +218,8 @@ class BaseTestCase(unittest.TestCase):
 
     @classmethod
     def prepare(cls, organization, timeout=30):
+        import pprint
+        pprint.pprint(cls.environment(organization))
         cls.sandbox = SandBox(cls.platform, cls.environment(organization))
         cls.organization = cls.sandbox.make()
 
@@ -205,8 +227,8 @@ class BaseTestCase(unittest.TestCase):
         for app in cls.sandbox['applications']:
             for env in cls.sandbox['environments']:
                 if app.get('launch', True):
-                    environment_id = cls.organization.environment(name=env).id
-                    instance = cls.organization.application(name=app['name']).launch(environmentId=environment_id)
+                    environment = cls.organization.environment(name=env)
+                    instance = cls.organization.applications[app['name']].launch(environment=environment)
                     cls.instances.append(instance)
                     cls.sandbox.sandbox["instances"].append({
                         "id": instance.instanceId,
@@ -217,7 +239,7 @@ class BaseTestCase(unittest.TestCase):
         for instance in cls.instances:
             if not instance.ready(timeout=timeout):
                 cls.sandbox.clean()
-                assert False, "Instance %s don't ready" % instance.instanceId
+                assert False, "Instance %s not ready after timeout" % instance.instanceId
 
     @classmethod
     def tearDownClass(cls):
@@ -247,17 +269,21 @@ class SandBox(object):
         return SandBox(platform, yaml.safe_load(yaml_file))
 
     def __service(self, environment, service_data):
-        service = self.organization.service(type=service_data["type"], name=service_data["name"],
-                                            parameters=(service_data["parameters"] or "{}"))
+
+        application = self.organization.applications[system_application_types.get(service_data["type"],service_data["type"])]
+        service = self.organization.service(application=application, name=service_data["name"],
+                                            environment=environment,
+                                            parameters=(service_data.get("parameters")))
+        service.ready(1)
         environment.add_service(service)
-        if 'builtin:cobalt_secure_store' in service_data["type"]:
+        if COBALT_SECURE_STORE_TYPE is service_data["type"]:
             key_id = service.regenerate()['id']
             environment.add_policy({
                 "action": "provisionVms",
                 "parameter": "publicKeyId",
                 "value": key_id
             })
-        service_data["id"] = service.serviceId
+        service_data["id"] = service.instanceId
 
     def __cloud_account(self, environment, provider):
         cloud = self.organization.provider(parameters=provider, name=provider["name"])
@@ -270,7 +296,7 @@ class SandBox(object):
         app["id"] = application.applicationId
 
     def make(self):
-        log.info("preparing sandbox...")
+        log.info("Preparing sandbox...")
 
         for name, env in self.sandbox["environments"].items():
             environment = self.organization.environment(name=name)
@@ -288,20 +314,21 @@ class SandBox(object):
             for app in self.sandbox["applications"]:
                 self.__application(app)
 
-        log.info("sandbox prepared")
+        log.info("Sandbox prepared")
 
         return self.organization
 
     def clean(self, timeout=10):
-        log.info("cleaning sandbox...")
+        log.info("Cleaning sandbox...")
 
-        def destroy(instances):
+        def destroy(test_instances):
             return_instances = []
-            for instanceData in instances:
-                application = self.organization.get_application(instanceData['applicationId'])
-                instance = application.get_instance(instanceData['id'])
-                instance.destroy()
-                return_instances.append(instance)
+            instances = self.organization.instances
+            for instanceData in test_instances:
+                if instanceData['id'] in instances: #someone may removed it already
+                    instance = instances[instanceData['id']]
+                    instance.destroy()
+                    return_instances.append(instance)
             return return_instances
 
         for instance in destroy(self.sandbox['instances']):
@@ -310,7 +337,7 @@ class SandBox(object):
                     "Instance was not destroyed properly {0}: {1}", instance.id, instance.name
                 )
 
-        log.info("sandbox cleaned")
+        log.info("Sandbox cleaned")
 
     def __check_environment_name(self, name):
         import re
