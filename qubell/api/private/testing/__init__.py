@@ -218,8 +218,6 @@ class BaseTestCase(unittest.TestCase):
 
     @classmethod
     def prepare(cls, organization, timeout=30):
-        import pprint
-        pprint.pprint(cls.environment(organization))
         cls.sandbox = SandBox(cls.platform, cls.environment(organization))
         cls.organization = cls.sandbox.make()
 
