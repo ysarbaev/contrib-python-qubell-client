@@ -46,7 +46,7 @@ def route(route_str):  # decorator param
 
             defs = defaults_dict()
 
-            route_args = dict(kwargs.items() + defs.items())
+            route_args = dict(defs.items() + kwargs.items())
 
             def get_destination_url():
                 try:

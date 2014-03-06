@@ -72,6 +72,11 @@ class RouterDecoratorTests(unittest2.TestCase):
         self.router.get_named(some_name="12345")
         request_mock.assert_called_once_with('GET', 'http://nowhere.com/named/id12345', verify=False)
 
+    def test_override_default_parameter(self, request_mock):
+        request_mock.return_value = gen_response()
+        self.router.get_named(some_name="12345", prefix="ko")
+        request_mock.assert_called_once_with('GET', 'http://nowhere.com/named/ko12345', verify=False)
+
     def test_parameter_without_name(self, request_mock):
         """Route parameters should be defined explicitly"""
         with self.assertRaises(AttributeError) as context:
