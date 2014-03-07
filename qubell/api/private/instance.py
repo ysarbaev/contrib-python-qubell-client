@@ -157,6 +157,9 @@ class Instance(Entity, ServiceMixin):
         router.post_instance_workflow(org_id=self.organizationId, instance_id=self.instanceId, wf_name=name, data=json.dumps(parameters))
         return True
 
+    #alias
+    run_command = run_workflow
+
     def get_manifest(self):
         return router.post_application_refresh(org_id=self.organizationId, app_id=self.applicationId).json()
 
