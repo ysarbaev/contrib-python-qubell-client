@@ -46,6 +46,10 @@ class Environment(Entity):
         return self.json()['backend']
 
     @lazyproperty
+    def backends(self):
+        return self.json()['backends']
+
+    @lazyproperty
     def services(self):
         from qubell.api.private.instance import InstanceList
         return InstanceList(list_json_method=self.list_services_json, organization=self)

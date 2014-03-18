@@ -24,11 +24,12 @@ import logging as log
 import testtools
 import nose.plugins.attrib
 
-from qubell.api.private.platform import QubellPlatform, Auth
-from qubell.api.public.platform import QubellPlatform as QubellPlatformPublic
+from qubell.api.private.platform import QubellPlatform
+from qubell.api.private.common import Auth
+
 from qubell.api.private.manifest import Manifest
 from qubell.api.tools import rand
-from qubell.api.provider.router import ROUTER as router
+#from qubell.api.provider.router import ROUTER as router
 
 log.getLogger().setLevel(log.DEBUG)
 
@@ -57,13 +58,11 @@ def attr(*args, **kwargs):
 
 
 
-_multiprocess_shared_ = True
 class BaseTestCase(testtools.TestCase):
     ## TODO: Main preparation should be here
     """ Here we prepare global env. (load config, etc)
     """
-    #_multiprocess_shared_ = True
-    _multiprocess_can_split_ = True
+
     @classmethod
     def setUpClass(cls):
         cls.prefix = prefix or rand()

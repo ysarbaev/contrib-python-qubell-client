@@ -79,7 +79,7 @@ def waitForStatus(instance, final='Running', accepted=None, timeout=(20, 10, 1))
         We have to deal with lag when projection updates instance.
         :return:
         """
-        return instance.status != final and instance._is_projection_updated_instance()
+        return instance.status != final# and instance._is_projection_updated_instance()
     projection_update_monitor()
 
     @retry(*timeout)  # ask status 20 times every 10 sec.

@@ -49,21 +49,34 @@ class Instance(Entity, ServiceMixin):
         self._last_workflow_started_time = None
 
     @lazyproperty
-    def applicationId(self): return self.json()['applicationId']
-
-    @lazyproperty
     def application(self):
         return self.organization.applications[self.applicationId]
 
     @lazyproperty
+    def applicationId(self): return self.json()['applicationId']
+
+    @lazyproperty
+    def applicationName(self): return self.organization.applications[self.applicationId].name
+
+    @lazyproperty
     def environmentId(self): return self.json()['environmentId']
+
+    @lazyproperty
+    def environmentName(self): return self.organization.get_environment(self.environmentId).name
 
     @lazyproperty
     def environment(self): return self.organization.get_environment(self.environmentId)
 
     @lazyproperty
     def submodules(self):
-        return InstanceList(list_json_method=lambda: self.json()['submodules'], organization=self.organization)
+        # Public api returns 'components'
+        params = self.json()
+        if params.get('submodules'):
+            return InstanceList(list_json_method=lambda: self.json()['submodules'], organization=self.organization)
+        elif params.get('components'):
+            return InstanceList(list_json_method=lambda: self.json()['components'], organization=self.organization)
+        else:
+            raise exceptions.NotFoundError('Unable to get instance submodules(components).')
 
     @property
     def status(self): return self.json()['status']
@@ -75,7 +88,14 @@ class Instance(Entity, ServiceMixin):
         return dict({val['id']: val['value'] for val in values})
 
     @property
-    def return_values(self): return self.__parse(self.json()['returnValues'])
+    def return_values(self):
+        """ Guess what api we are using and return as public api does.
+        Private has {'id':'key', 'value':'keyvalue'} format, public has {'key':'keyvalue'}
+        """
+        retvals = self.json()['returnValues']
+        if retvals.get('id') and retvals.get('value'):
+            return self.__parse(retvals)
+        return retvals
 
     @property
     def error(self): return self.json()['errorMessage']
@@ -85,7 +105,13 @@ class Instance(Entity, ServiceMixin):
     errorMessage = error
 
     @property
-    def parameters(self): return self.json()['revision']['parameters']
+    def parameters(self):
+        ins = self.json()
+        # We do not have 'revision' in public api
+        if ins.get('revision'):
+            return self.json()['revision']['parameters']
+        else:
+            return self.json()['parameters']
 
     def __getattr__(self, key):
         if key in ['instanceId',]:
@@ -131,7 +157,7 @@ class Instance(Entity, ServiceMixin):
         if name:
             parameters['instanceName'] = name
         if destroyInterval:
-            parameters['destroyInterval'] = str(destroyInterval)
+            parameters['destroyInterval'] = destroyInterval
         if revision:
             parameters['revisionId'] = revision.revisionId
 
@@ -220,34 +246,36 @@ class Instance(Entity, ServiceMixin):
     def serviceId(self):
         raise AttributeError("Service is instance reference now, use instanceId")
 
-    @property
-    def most_recent_update_time(self):
-        """
-        Indicated most recent update of the instance, assumption based on:
-        - if currentWorkflow exists, its startedAt time is most recent update.
-        - else max of workflowHistory startedAt is most recent update.
-        """
-        parse_time = lambda t: time.gmtime(t/1000)
-        j = self.json()
-        cw_started_at = j.get('startedAt')
-        if cw_started_at: return parse_time(cw_started_at)
-        try:
-            max_wf_started_at = max([i['startedAt'] for i in j['workflowHistory']])
-            return parse_time(max_wf_started_at)
-        except ValueError:
-            return None
-
-    def _is_projection_updated_instance(self):
-        """
-        This method tries to guess if instance was update since last time.
-        If return True, definitely Yes, if False, this means more unknonw
-        :return: bool
-        """
-        last = self._last_workflow_started_time
-        most_recent = self.most_recent_update_time
-        if last and most_recent:
-            return last < most_recent
-        return False  # can be more clever
+    # WTF is this? Why it is here? it's not simple solution (slim client) and not compatible with public api
+    # @property
+    # def most_recent_update_time(self):
+    #
+    #     """
+    #     Indicated most recent update of the instance, assumption based on:
+    #     - if currentWorkflow exists, its startedAt time is most recent update.
+    #     - else max of workflowHistory startedAt is most recent update.
+    #     """
+    #     parse_time = lambda t: time.gmtime(t/1000)
+    #     j = self.json()
+    #     cw_started_at = j.get('startedAt')
+    #     if cw_started_at: return parse_time(cw_started_at)
+    #     try:
+    #         max_wf_started_at = max([i['startedAt'] for i in j['workflowHistory']])
+    #         return parse_time(max_wf_started_at)
+    #     except ValueError:
+    #         return None
+    #
+    # def _is_projection_updated_instance(self):
+    #     """
+    #     This method tries to guess if instance was update since last time.
+    #     If return True, definitely Yes, if False, this means more unknonw
+    #     :return: bool
+    #     """
+    #     last = self._last_workflow_started_time
+    #     most_recent = self.most_recent_update_time
+    #     if last and most_recent:
+    #         return last < most_recent
+    #     return False  # can be more clever
 
 
 class InstanceList(QubellEntityList):

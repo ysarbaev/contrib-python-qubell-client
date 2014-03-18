@@ -44,10 +44,13 @@ class ServiceMixin(object):
 
     def add_shared_instance(self, revision, instance):
         params = self.parameters
-        if SHARED_INSTANCES_PARAMETER_NAME in params:
+
+        try:
+            # Param could contain invalid yaml
             old = yaml.safe_load(params[SHARED_INSTANCES_PARAMETER_NAME])
-        else:
-            old = {}
+        except:
+            old = params[SHARED_INSTANCES_PARAMETER_NAME]
+
         old[revision.revisionId.split('-')[0]] = instance.instanceId
         params[SHARED_INSTANCES_PARAMETER_NAME] = yaml.safe_dump(old, default_flow_style=False)
         self.reconfigure(parameters=params)
@@ -55,7 +58,11 @@ class ServiceMixin(object):
     def remove_shared_instance(self, instance):
         params = self.parameters
         if SHARED_INSTANCES_PARAMETER_NAME in params:
-            old = yaml.safe_load(params[SHARED_INSTANCES_PARAMETER_NAME])
+            try:
+                # Param could contain invalid yaml
+                old = yaml.safe_load(params[SHARED_INSTANCES_PARAMETER_NAME])
+            except:
+                old = params[SHARED_INSTANCES_PARAMETER_NAME]
             if instance.instanceId in old.values():
                 val = [x for x, y in old.items() if y == instance.instanceId]
                 del old[val[0]]
