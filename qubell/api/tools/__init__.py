@@ -38,6 +38,8 @@ def retry(tries=5, delay=3, backoff=2, retry_exception=None):
     Without exception success means when function returns valid object.
     With exception success when no exceptions
     """
+    assert tries > 0, "tries must be 1 or greater"
+    catching_mode = bool(retry_exception)
 
     def deco_retry(f):
         def f_retry(*args, **kwargs):
@@ -46,20 +48,22 @@ def retry(tries=5, delay=3, backoff=2, retry_exception=None):
             while mtries > 0:
                 try:
                     rv = f(*args, **kwargs)
+                    if not catching_mode and rv:
+                        return rv
                 except retry_exception:
-                    rv = False
+                    pass
                 else:
-                    #if we expect to catch something, but f, doesn't return anything
-                    #another word, nice indicator if no exceptions
-                    if retry_exception:
-                        rv = True
-                if rv:
-                    return True
+                    if catching_mode:
+                        return rv
                 mtries -= 1
-                log.debug("...{0} sleeping for {1} s in retry".format(f.__name__,mdelay))
+                if mtries is 0 and not catching_mode:
+                    return False
+                if mtries is 0 and catching_mode:
+                    return f(*args, **kwargs)  # extra try, to avoid except-raise syntax
+                log.debug("...{0} sleeping for {1} s in retry".format(f.__name__, mdelay))
                 time.sleep(mdelay)
                 mdelay *= backoff
-            return f(*args, **kwargs)
+            raise Exception("unreachable code")
         return f_retry
     return deco_retry
 
@@ -69,7 +73,7 @@ def waitForStatus(instance, final='Running', accepted=None, timeout=(20, 10, 1))
     log.debug('Waiting status: %s' % final)
     import time
 
-    @retry(3, 1, 2) # max = 1 + 2 + 4 = 7 seconds + routes time
+    @retry(3, 1, 2)  # max = 1 + 2 + 4 = 7 seconds + routes time
     def projection_update_monitor():
         """
         We have to deal with lag when projection updates instance.
@@ -78,7 +82,7 @@ def waitForStatus(instance, final='Running', accepted=None, timeout=(20, 10, 1))
         return instance.status != final and instance._is_projection_updated_instance()
     projection_update_monitor()
 
-    @retry(*timeout) # ask status 20 times every 10 sec.
+    @retry(*timeout)  # ask status 20 times every 10 sec.
     def instance_status_waiter():
         cur_status = instance.status
         if cur_status in final:
