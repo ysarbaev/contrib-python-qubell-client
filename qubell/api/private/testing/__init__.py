@@ -226,7 +226,9 @@ class BaseTestCase(unittest.TestCase):
             for env in cls.sandbox['environments']:
                 if app.get('launch', True):
                     environment = cls.organization.environment(name=env)
-                    instance = cls.organization.applications[app['name']].launch(environment=environment)
+                    parameters = {'parameters': app.get('parameters', {})}
+                    instance = cls.organization.applications[app['name']].launch(
+                        environment=environment, parameters=parameters)
                     cls.instances.append(instance)
                     cls.sandbox.sandbox["instances"].append({
                         "id": instance.instanceId,
