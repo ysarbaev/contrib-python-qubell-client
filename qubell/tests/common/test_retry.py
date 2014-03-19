@@ -4,10 +4,10 @@ from qubell.api.tools import retry
 
 
 class RetryTest(unittest2.TestCase):
-
     def setUp(self):
         class Counter(object):
             i = 0
+
         self.counter = Counter()
 
     def test_bypass_return_with_only_try(self):
@@ -66,6 +66,7 @@ class RetryTest(unittest2.TestCase):
             if self.counter.i < 3:
                 raise ArithmeticError("boom")
             return "good"
+
         with self.assertRaises(ArithmeticError):
             return_smth()
         self.assertEqual(self.counter.i, 1)
@@ -77,6 +78,7 @@ class RetryTest(unittest2.TestCase):
             if self.counter.i < 3:
                 assert False
             return "good"
+
         self.assertEqual(return_good(), "good")
 
     def test_fail_on_exception_for_non_cathching_mode(self):
@@ -84,6 +86,7 @@ class RetryTest(unittest2.TestCase):
         def return_exception():
             self.counter.i += 1
             raise ArithmeticError("boom")
+
         with self.assertRaises(ArithmeticError):
             return_exception()
         self.assertEqual(self.counter.i, 1)
@@ -93,6 +96,7 @@ class RetryTest(unittest2.TestCase):
         def return_smth():
             self.counter.i += 1
             raise ArithmeticError("boom")
+
         with self.assertRaises(ArithmeticError):
             return_smth()
         self.assertEqual(self.counter.i, 6)
@@ -105,6 +109,7 @@ class RetryTest(unittest2.TestCase):
             if self.counter.i % 2 == 0:
                 raise TypeError("boom_even")
             raise ArithmeticError("boom_odd")
+
         with self.assertRaises(TypeError):
             return_smth()
         self.assertEqual(self.counter.i, 6)

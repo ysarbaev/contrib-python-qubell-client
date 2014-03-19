@@ -88,9 +88,5 @@ class EntityListTests(unittest2.TestCase):
         for e in self.entity_list:
             assert isinstance(e, EntityListTests.DummyEntity)
 
-    def test_deprecation_visually(self):
-        self.entity_list[0].plain_old()
-        self.entity_list["name2"].plain_old_with_message()
-
     def test__repr(self):
         assert repr(self.entity_list) == "DummyEntityList([IdName(id='1', name='name1'), IdName(id='2', name='name2'), IdName(id='3', name='name3dup'), IdName(id='4', name='name3dup'), IdName(id='1234567890abcd1234567890', name='with_bson_id')])"
