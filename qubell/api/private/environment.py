@@ -155,11 +155,12 @@ class Environment(Entity):
         resp = self._put_environment(data=json.dumps(data))
         self.properties.append({'name': name, 'type': type, 'value': value})
         return resp.json()
+    set_property = add_property
 
     def remove_property(self, name):
         data = self.json()
         property = [p for p in data['properties'] if p['name'] == name]
-        if len(property)<1:
+        if len(property) < 1:
             log.error('Unable to remove property %s. Not found.' % name)
         data['properties'].remove(property[0])
 

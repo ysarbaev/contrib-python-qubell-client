@@ -40,11 +40,7 @@ class Organization(object):
 
     def __init__(self, id, auth=None):
         self.providers = []
-
         self.organizationId = id
-
-        my = self.json()
-        self.name = my['name']
 
     @staticmethod
     def new(name):
@@ -79,12 +75,11 @@ class Organization(object):
     @property
     def zone(self): return self.get_default_zone()
 
+    @property
+    def name(self): return self.json()['name']
+
     def json(self):
-        resp = router.get_organizations()
-        org = [x for x in resp.json() if x['id'] == self.organizationId]
-        if len(org)>0:
-            return org[0]
-        return resp.json()
+        return router.get_organization(self.organizationId).json()
 
     def restore(self, config):
         for instance in config.pop('instances', []):
