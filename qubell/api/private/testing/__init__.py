@@ -220,26 +220,43 @@ class BaseTestCase(unittest.TestCase):
     def prepare(cls, organization, timeout=30):
         cls.sandbox = SandBox(cls.platform, cls.environment(organization))
         cls.organization = cls.sandbox.make()
-
         cls.instances = []
+
+        def launch_in_env(app, env):
+            environment = cls.organization.environment(name=env)
+            parameters = {'parameters': app.get('parameters', {})}
+            instance = cls.organization.applications[app['name']].launch(
+                environment=environment, parameters=parameters)
+            cls.instances.append(instance)
+            if app.get('add_as_service', False):
+                environment.add_service(instance)
+            cls.sandbox.sandbox["instances"].append({
+                "id": instance.instanceId,
+                "name": instance.name,
+                "applicationId":  app['id']
+            })
+            return instance
+
+        def check_instances(instances):
+            for instance in cls.instances:
+                if not instance.ready(timeout=timeout):
+                    cls.sandbox.clean()
+                    assert False, "Instance %s not ready after timeout" % instance.instanceId
+
+        # launch service instances first
         for app in cls.sandbox['applications']:
             for env in cls.sandbox['environments']:
-                if app.get('launch', True):
-                    environment = cls.organization.environment(name=env)
-                    parameters = {'parameters': app.get('parameters', {})}
-                    instance = cls.organization.applications[app['name']].launch(
-                        environment=environment, parameters=parameters)
-                    cls.instances.append(instance)
-                    cls.sandbox.sandbox["instances"].append({
-                        "id": instance.instanceId,
-                        "name": instance.name,
-                        "applicationId":  app['id']
-                    })
+                if app.get('launch', True) and app.get('add_as_service', False):
+                    launch_in_env(app, env)
+        check_instances(cls.instances)
 
-        for instance in cls.instances:
-            if not instance.ready(timeout=timeout):
-                cls.sandbox.clean()
-                assert False, "Instance %s not ready after timeout" % instance.instanceId
+        # then launch regular instances
+        regular_instances = []
+        for app in cls.sandbox['applications']:
+            for env in cls.sandbox['environments']:
+                if app.get('launch', True) and not app.get('add_as_service', False):
+                    regular_instances.append(launch_in_env(app, env))
+        check_instances(regular_instances)
 
     @classmethod
     def tearDownClass(cls):
