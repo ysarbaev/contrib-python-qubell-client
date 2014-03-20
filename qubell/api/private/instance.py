@@ -53,24 +53,27 @@ class Instance(Entity, ServiceMixin):
         return self.organization.applications[self.applicationId]
 
     @lazyproperty
+    def environment(self):
+        return self.organization.environments[self.environmentId]
+
+    @lazyproperty
     def applicationId(self): return self.json()['applicationId']
 
     @lazyproperty
-    def applicationName(self): return self.organization.applications[self.applicationId].name
+    def applicationName(self): return self.application.name
 
     @lazyproperty
     def environmentId(self): return self.json()['environmentId']
 
     @lazyproperty
-    def environmentName(self): return self.organization.get_environment(self.environmentId).name
-
-    @lazyproperty
-    def environment(self): return self.organization.get_environment(self.environmentId)
+    def environmentName(self): return self.environment.name
 
     @lazyproperty
     def submodules(self):
         # Public api returns 'components'
         params = self.json()
+        # TODO: Public api hack.
+        # Private returns 'submodules', public returns 'components'
         if params.get('submodules'):
             return InstanceList(list_json_method=lambda: self.json()['submodules'], organization=self.organization)
         elif params.get('components'):
@@ -85,15 +88,17 @@ class Instance(Entity, ServiceMixin):
     def name(self): return self.json()['name']
 
     def __parse(self, values):
-        return dict({val['id']: val['value'] for val in values})
+        return {val['id']: val['value'] for val in values}
 
     @property
     def return_values(self):
         """ Guess what api we are using and return as public api does.
         Private has {'id':'key', 'value':'keyvalue'} format, public has {'key':'keyvalue'}
         """
+        # TODO: Public api hack.
         retvals = self.json()['returnValues']
-        if retvals.get('id') and retvals.get('value'):
+        if isinstance(retvals, list):
+            #if retvals[0].get('id') and retvals[0].get('value'):
             return self.__parse(retvals)
         return retvals
 
@@ -107,6 +112,7 @@ class Instance(Entity, ServiceMixin):
     @property
     def parameters(self):
         ins = self.json()
+        # TODO: Public api hack.
         # We do not have 'revision' in public api
         if ins.get('revision'):
             return self.json()['revision']['parameters']
@@ -246,7 +252,7 @@ class Instance(Entity, ServiceMixin):
     def serviceId(self):
         raise AttributeError("Service is instance reference now, use instanceId")
 
-    # WTF is this? Why it is here? it's not simple solution (slim client) and not compatible with public api
+    # TODO: Public api hack. It has no such information
     # @property
     # def most_recent_update_time(self):
     #

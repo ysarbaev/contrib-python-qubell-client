@@ -449,8 +449,9 @@ class Organization(Entity):
 
     def get_default_zone(self):
     # Zones(backends) are factor we can't controll. So, get them.
+    # TODO: Public api hack.
     # Public api has no zones route, get it through environment.
-        backends = self.get_default_environment().backends
+        backends = self.get_default_environment().json()['backends']
         zones = [bk for bk in backends if bk['isDefault']==True]
         if len(zones):
             zoneId = zones[0]['id']

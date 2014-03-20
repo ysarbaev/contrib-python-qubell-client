@@ -108,7 +108,7 @@ class QubellEntityList(EntityList):
         try:
             self._list = [IdName(ent['id'], ent['name']) for ent in self.json()]
         except KeyError:
-            # TODO: find general solution.
+            # TODO: Public api hack.
             # Public api returns components list with instanceId instead of id
             self._list = [IdName(ent['instanceId'], ent['name']) for ent in self.json()]
         # end = time.time()
