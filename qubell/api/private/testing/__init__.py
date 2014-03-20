@@ -315,6 +315,9 @@ class SandBox(object):
     def make(self):
         log.info("Preparing sandbox...")
 
+        for app in self.sandbox["applications"]:
+            self.__application(app)
+
         for name, env in self.sandbox["environments"].items():
             environment = self.organization.environment(name=name)
             environment.clean()
@@ -327,9 +330,6 @@ class SandBox(object):
 
             for police in env.get('policies', []):
                 environment.add_policy(police)
-
-            for app in self.sandbox["applications"]:
-                self.__application(app)
 
         log.info("Sandbox prepared")
 
