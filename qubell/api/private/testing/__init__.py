@@ -250,7 +250,7 @@ class BaseTestCase(unittest.TestCase):
                     launch_in_env(app, env)
         check_instances(cls.instances)
 
-        # then launch regular instances
+        # then launch non-service instances
         regular_instances = []
         for app in cls.sandbox['applications']:
             for env in cls.sandbox['environments']:
@@ -339,14 +339,24 @@ class SandBox(object):
         log.info("Cleaning sandbox...")
 
         def destroy(test_instances):
-            return_instances = []
             instances = self.organization.instances
+            services_to_destroy = []
+            instances_to_destroy = []
             for instanceData in test_instances:
                 if instanceData['id'] in instances: #someone may removed it already
                     instance = instances[instanceData['id']]
-                    instance.destroy()
-                    return_instances.append(instance)
-            return return_instances
+                    if instance.serve_environments:
+                        services_to_destroy.append(instance)
+                    else:
+                        instances_to_destroy.append(instance)
+
+            # destroy non-service instances first
+            for instance in instances_to_destroy:
+                instance.destroy()
+            for instance in services_to_destroy:
+                instance.destroy()
+
+            return services_to_destroy + instances_to_destroy
 
         for instance in destroy(self.sandbox['instances']):
             if not instance.destroyed(timeout):
