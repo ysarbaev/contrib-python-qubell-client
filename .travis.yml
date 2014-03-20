@@ -1,7 +1,7 @@
 language: python
 python:
   - '2.7'
-  - '3.2'
+  # - '3.3' //todo: need plenty of improvements https://travis-ci.org/qubell/contrib-python-qubell-client/jobs/21157898
 install: pip install -r requirements.txt
 script:
   - nosetests qubell/tests

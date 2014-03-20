@@ -1,11 +1,11 @@
 from qubell import deprecated
-import unittest2
+import unittest
 
 from qubell.api.private.common import EntityList, IdName
 from qubell.api.private import exceptions
 
 
-class EntityListTests(unittest2.TestCase):
+class EntityListTests(unittest.TestCase):
     class DummyEntity:
         def __init__(self, id, name):
             self.id = id

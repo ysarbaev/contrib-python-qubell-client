@@ -1,8 +1,8 @@
-import unittest2
+import unittest
 from qubell.api.private.testing import environment
 
 __author__ = 'dmakhno'
-class EnvironmentDecoratorTests(unittest2.TestCase):
+class EnvironmentDecoratorTests(unittest.TestCase):
 
     class DummyTests(object):
         #environment = None

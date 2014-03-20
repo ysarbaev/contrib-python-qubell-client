@@ -1,9 +1,9 @@
-import unittest2
+import unittest
 
 from qubell.api.tools import retry
 
 
-class RetryTest(unittest2.TestCase):
+class RetryTest(unittest.TestCase):
     def setUp(self):
         class Counter(object):
             i = 0

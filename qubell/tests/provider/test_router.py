@@ -1,11 +1,11 @@
 from mock import patch, Mock
-import unittest2
+import unittest
 
 from qubell.api.private.exceptions import ApiUnauthorizedError
 from qubell.api.provider.router import Router
 
 
-class RouterTests(unittest2.TestCase):
+class RouterTests(unittest.TestCase):
     def setUp(self):
         self.router = Router("http://router.org")
 
