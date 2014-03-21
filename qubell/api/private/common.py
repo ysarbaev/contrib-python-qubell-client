@@ -95,16 +95,22 @@ class QubellEntityList(EntityList):
     This is base class for entities that depends on organization
     """
 
-    def __init__(self, list_json_method, organization):
-        self.organization = organization
-        self.organizationId = self.organization.organizationId
+    def __init__(self, list_json_method, organization=None):
+        if organization:
+            self.organization = organization
+            self.organizationId = self.organization.organizationId
         self.json = list_json_method
         EntityList.__init__(self)
 
 
     def _id_name_list(self):
         # start = time.time()
-        self._list = [IdName(ent['id'], ent['name']) for ent in self.json()]
+        try:
+            self._list = [IdName(ent['id'], ent['name']) for ent in self.json()]
+        except KeyError:
+            # TODO: Public api hack.
+            # Public api returns components list with instanceId instead of id
+            self._list = [IdName(ent['instanceId'], ent['name']) for ent in self.json()]
         # end = time.time()
         # elapsed = int((end - start) * 1000.0)
         # log.debug(
@@ -114,11 +120,14 @@ class QubellEntityList(EntityList):
     def _get_item(self, id_name):
         assert self.base_clz, "Define 'base_clz' in constructor or override this method"
         start = time.time()
-        entity = self.base_clz(organization=self.organization, id=id_name.id)
+        try:
+            entity = self.base_clz(organization=self.organization, id=id_name.id)
+        except AttributeError:
+            entity = self.base_clz(id=id_name.id)
         end = time.time()
         elapsed = int((end - start) * 1000.0)
         log.debug(
-            "  Listing Time: Fetching {0}='{name}' with id={id} took {elapsed} ms".format(self.base_clz.__name__,
+            "Listing Time: Fetching {0}='{name}' with id={id} took {elapsed} ms".format(self.base_clz.__name__,
                                                                                           id=id_name.id,
                                                                                           name=id_name.name,
                                                                                           elapsed=elapsed))

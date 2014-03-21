@@ -49,20 +49,25 @@ class Instance(Entity, ServiceMixin):
         self._last_workflow_started_time = None
 
     @lazyproperty
-    def applicationId(self): return self.json()['applicationId']
-
-    @lazyproperty
     def application(self):
         return self.organization.applications[self.applicationId]
+
+    @lazyproperty
+    def environment(self):
+        return self.organization.environments[self.environmentId]
+
+    @lazyproperty
+    def applicationId(self): return self.json()['applicationId']
 
     @lazyproperty
     def environmentId(self): return self.json()['environmentId']
 
     @lazyproperty
-    def environment(self): return self.organization.get_environment(self.environmentId)
-
-    @lazyproperty
     def submodules(self):
+        # TODO: Public api hack.
+        # Private returns 'submodules', public returns 'components'
+        if router.public_api_in_use:
+            return InstanceList(list_json_method=lambda: self.json()['components'], organization=self.organization)
         return InstanceList(list_json_method=lambda: self.json()['submodules'], organization=self.organization)
 
     @property
@@ -72,10 +77,19 @@ class Instance(Entity, ServiceMixin):
     def name(self): return self.json()['name']
 
     def __parse(self, values):
-        return dict({val['id']: val['value'] for val in values})
+        return {val['id']: val['value'] for val in values}
 
     @property
-    def return_values(self): return self.__parse(self.json()['returnValues'])
+    def return_values(self):
+        """ Guess what api we are using and return as public api does.
+        Private has {'id':'key', 'value':'keyvalue'} format, public has {'key':'keyvalue'}
+        """
+        # TODO: Public api hack.
+        retvals = self.json()['returnValues']
+        if router.public_api_in_use:
+            return retvals
+        return self.__parse(retvals)
+
 
     @property
     def error(self): return self.json()['errorMessage']
@@ -85,7 +99,13 @@ class Instance(Entity, ServiceMixin):
     errorMessage = error
 
     @property
-    def parameters(self): return self.json()['revision']['parameters']
+    def parameters(self):
+        ins = self.json()
+        # TODO: Public api hack.
+        # We do not have 'revision' in public api
+        if router.public_api_in_use:
+            return self.json()['parameters']
+        return self.json()['revision']['parameters']
 
     def __getattr__(self, key):
         if key in ['instanceId',]:
@@ -131,7 +151,7 @@ class Instance(Entity, ServiceMixin):
         if name:
             parameters['instanceName'] = name
         if destroyInterval:
-            parameters['destroyInterval'] = str(destroyInterval)
+            parameters['destroyInterval'] = destroyInterval
         if revision:
             parameters['revisionId'] = revision.revisionId
 
@@ -222,6 +242,7 @@ class Instance(Entity, ServiceMixin):
 
     @property
     def most_recent_update_time(self):
+
         """
         Indicated most recent update of the instance, assumption based on:
         - if currentWorkflow exists, its startedAt time is most recent update.
@@ -244,7 +265,10 @@ class Instance(Entity, ServiceMixin):
         :return: bool
         """
         last = self._last_workflow_started_time
-        most_recent = self.most_recent_update_time
+        if not router.public_api_in_use:
+            most_recent = self.most_recent_update_time
+        else:
+            most_recent = None
         if last and most_recent:
             return last < most_recent
         return False  # can be more clever

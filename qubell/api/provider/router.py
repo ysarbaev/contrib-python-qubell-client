@@ -4,7 +4,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 
 from qubell.api.private.exceptions import ApiUnauthorizedError
-from qubell.api.provider import route, play_auth
+from qubell.api.provider import route, play_auth, basic_auth
 
 
 class Router(object):
@@ -15,6 +15,7 @@ class Router(object):
 
         self._cookies = None
         self._auth = None
+        self.public_api_in_use = False
 
     @property
     def is_connected(self):
@@ -34,6 +35,8 @@ class Router(object):
             raise ApiUnauthorizedError("Authentication failed, please check settings")
 
         self._auth = HTTPBasicAuth(email, password)
+
+class PrivatePath(Router):
 
     @route("POST /signIn")
     def post_sign_in(self, body): pass
@@ -177,5 +180,62 @@ class Router(object):
     @route("POST /organizations/{org_id}/services/{instance_id}/keys/generate{ctype}")
     def post_service_generate(self, org_id, instance_id, cookies, data="{}", ctype=".json"): pass
 
+class PublicPath(PrivatePath):
+# TODO: Public api hack.
+# We replace private routes with public ones. Fixing response reaction in code.
+# Yes, it's hack, but it costs less and acceptable for now
 
-ROUTER = Router(os.environ.get('QUBELL_TENANT'))
+#Organization
+    @basic_auth
+    @route("GET /api/1/organizations")
+    def get_organizations(self, auth): pass
+
+#Application
+    @basic_auth
+    @route("POST /api/1/applications/{app_id}/launch")
+    def post_organization_instance(self, org_id, app_id, data, auth): pass
+
+    # TODO: Error here!!!!
+    @basic_auth
+    @route("PUT /api/1/applications/{app_id}/manifest")
+    def post_application_manifest(self, org_id, app_id, data, auth, content_type="yaml"): pass
+
+    @basic_auth
+    @route("GET /api/1/organizations/{org_id}/applications")
+    def get_applications(self, org_id, auth, data="{}"): pass
+
+    @basic_auth
+    @route("GET /api/1/applications/{app_id}/revisions")
+    def get_revisions(self, org_id, app_id, rev_id, auth): pass
+
+#Instance
+    @basic_auth
+    @route("GET /api/1/instances/{instance_id}")
+    def get_instance(self, org_id, instance_id, auth): pass
+
+    @basic_auth
+    @route("POST /api/1/instances/{instance_id}/{wf_name}")
+    def post_instance_workflow(self, org_id, instance_id, wf_name, auth, data="{}"): pass
+
+# Environment
+    # It returns policies yaml... Not usable
+    #@basic_auth
+    #@route("GET /api/1/environments/{env_id}")
+    #def get_environment(self, org_id, env_id, auth): pass
+
+    # TODO: Expected Yaml as payload..
+    #@basic_auth
+    #@route("PUT /api/1/environments/{env_id}")
+    #def put_environment(self, org_id, env_id, data, auth, content_type="yaml"): pass
+
+    @basic_auth
+    @route("GET /api/1/organizations/{org_id}/environments")
+    def get_environments(self, org_id, auth): pass
+
+# TODO: Public api hack.
+# To use public api routes, set QUBELL_USE_PUBLIC env to not None
+if os.environ.get('QUBELL_USE_PUBLIC', None):
+    ROUTER = PublicPath(os.environ.get('QUBELL_TENANT'))
+    ROUTER.public_api_in_use = True
+else:
+    ROUTER = PrivatePath(os.environ.get('QUBELL_TENANT'))

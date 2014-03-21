@@ -34,13 +34,15 @@ from qubell.api.private.application import ApplicationList
 from qubell.api.private.environment import EnvironmentList
 from qubell.api.private.zone import ZoneList
 from qubell.api.provider.router import ROUTER as router
+from qubell.api.private.common import QubellEntityList, Entity
 
 
-class Organization(object):
+
+class Organization(Entity):
 
     def __init__(self, id, auth=None):
         self.providers = []
-        self.organizationId = id
+        self.organizationId = self.id = id
 
     @staticmethod
     def new(name):
@@ -112,8 +114,7 @@ class Organization(object):
     def get_application(self, id=None, name=None):
         """ Get application object by name or id.
         """
-        criteria = id or name
-        return self.applications[criteria]
+        return self.applications[id or name]
 
     def list_applications_json(self):
         """ Return raw json
@@ -245,8 +246,6 @@ class Organization(object):
 ### SERVICE
     def create_service(self, application, revision=None, environment=None, name=None, parameters=None,
                        destroyInterval=None):
-        if application.name in system_application_types.values():
-             destroyInterval = -1  # never for system applications
 
         instance = self.create_instance(application, revision, environment, name, parameters, destroyInterval)
         instance.environment.add_service(instance)
@@ -447,14 +446,23 @@ class Organization(object):
 
     def get_default_zone(self):
     # Zones(backends) are factor we can't controll. So, get them.
-        backends = self.json()['backends']
+    # TODO: Public api hack.
+    # Public api has no zones route, get it through environment.
+        if router.public_api_in_use:
+            backends = self.get_default_environment().json()['backends']
+        else:
+            backends = self.json()['backends']
         zones = [bk for bk in backends if bk['isDefault']==True]
         if len(zones):
             zoneId = zones[0]['id']
             return self.get_zone(id=zoneId)
         raise exceptions.NotFoundError('Unable to get default zone')
 
-class OrganizationList(EntityList):
+
+class OrganizationList(QubellEntityList):
+    base_clz = Organization
+
+    """
     def __init__(self, list_json_method):
         self.json = list_json_method
         EntityList.__init__(self)
@@ -462,3 +470,4 @@ class OrganizationList(EntityList):
         self._list = [IdName(ent['id'], ent['name']) for ent in self.json()]
     def _get_item(self, id_name):
         return Organization(id=id_name.id)
+    """

@@ -30,7 +30,7 @@ def route(route_str):  # decorator param
             "max": max(elapsed, last_stat["max"]),
             "avg": (last_count * last_stat["avg"] + elapsed) / (last_count + 1)
         }
-        log.debug(' Route Time: {0} took {1} ms'.format(route_str, elapsed))
+        log.debug('Route Time: {0} took {1} ms'.format(route_str, elapsed))
 
 
     def wrapper(f):  # decorated function
@@ -57,7 +57,7 @@ def route(route_str):  # decorator param
             destination_url = self.base_url + get_destination_url()
             f(*args, **kwargs)  # generally this is "pass"
 
-            bypass_args = {param: route_args[param] for param in ["data", "cookies", "auth", "files"] if param in route_args}
+            bypass_args = {param: route_args[param] for param in ["data", "cookies", "auth", "files", "content_type"] if param in route_args}
 
             #add json content type for:
             # - all public api, meaning have basic auth
@@ -65,6 +65,10 @@ def route(route_str):  # decorator param
             # - unless files are sent
             if "files" not in bypass_args and (destination_url.endswith('.json') or "auth" in route_args):
                 bypass_args['headers'] = {'Content-Type': 'application/json'}
+
+            if "content_type" in bypass_args and bypass_args['content_type']=="yaml":
+                del bypass_args["content_type"]
+                bypass_args['headers'] = {'Content-Type': 'application/x-yaml'}
 
             start = time.time()
             response = requests.request(method, destination_url, verify=self.verify_ssl, **bypass_args)

@@ -163,6 +163,10 @@ class Application(Entity):
     def upload(self, manifest):
         log.info("Uploading manifest")
         self.manifest = manifest
+        if router.public_api_in_use:
+            return router.post_application_manifest(org_id=self.organizationId, app_id=self.applicationId,
+                                    data=manifest.content)
+
         return router.post_application_manifest(org_id=self.organizationId, app_id=self.applicationId,
                                     files={'path': manifest.content},
                                     data={'manifestSource': 'upload', 'name': self.name}).json()

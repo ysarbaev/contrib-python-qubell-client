@@ -12,7 +12,7 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from qubell.api.public import application
+
 
 __author__ = "Anton Panasenko"
 __copyright__ = "Copyright 2013, Qubell.com"
@@ -26,18 +26,12 @@ import logging as log
 
 from functools import wraps
 
-from qubell.api.private.instance import Instance
 from qubell.api.private.manifest import Manifest
 from qubell.api.private.service import system_application_types, COBALT_SECURE_STORE_TYPE, WORKFLOW_SERVICE_TYPE
 
-
-from requests import api
-from requests import sessions
-
-import time
 import logging
-import re
 import types
+
 logging.getLogger("requests.packages.urllib3.connectionpool").setLevel(logging.WARN)
 
 def values(names):
@@ -153,7 +147,7 @@ def instance(byApplication):
 
             def find_by_application_name(app):
                 for inst in self.instances:
-                    if inst.applicationName == app and inst.environmentName == env:
+                    if inst.application.name == app and inst.environment.name == env:
                         return inst
                 return None
 
@@ -254,7 +248,7 @@ class BaseTestCase(unittest.TestCase):
     # noinspection PyPep8Naming
     def findByApplicationName(self, name):
         for instance in self.instances:
-            if instance.applicationName == name:
+            if instance.application.name == name:
                 return instance
 
 
