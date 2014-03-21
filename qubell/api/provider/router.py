@@ -15,6 +15,7 @@ class Router(object):
 
         self._cookies = None
         self._auth = None
+        self.public_api_in_use = False
 
     @property
     def is_connected(self):
@@ -183,8 +184,8 @@ class PublicPath(PrivatePath):
 # TODO: Public api hack.
 # We replace private routes with public ones. Fixing response reaction in code.
 # Yes, it's hack, but it costs less and acceptable for now
-#Organization
 
+#Organization
     @basic_auth
     @route("GET /api/1/organizations")
     def get_organizations(self, auth): pass
@@ -235,5 +236,6 @@ class PublicPath(PrivatePath):
 # To use public api routes, set QUBELL_USE_PUBLIC env to not None
 if os.environ.get('QUBELL_USE_PUBLIC', None):
     ROUTER = PublicPath(os.environ.get('QUBELL_TENANT'))
+    ROUTER.public_api_in_use = True
 else:
     ROUTER = PrivatePath(os.environ.get('QUBELL_TENANT'))

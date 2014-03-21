@@ -246,9 +246,6 @@ class Organization(Entity):
 ### SERVICE
     def create_service(self, application, revision=None, environment=None, name=None, parameters=None,
                        destroyInterval=None):
-        # Is it client's task??
-        #if application.name in system_application_types.values():
-        #     destroyInterval = -1  # never for system applications
 
         instance = self.create_instance(application, revision, environment, name, parameters, destroyInterval)
         instance.environment.add_service(instance)
@@ -451,12 +448,16 @@ class Organization(Entity):
     # Zones(backends) are factor we can't controll. So, get them.
     # TODO: Public api hack.
     # Public api has no zones route, get it through environment.
-        backends = self.get_default_environment().json()['backends']
+        if router.public_api_in_use:
+            backends = self.get_default_environment().json()['backends']
+        else:
+            backends = self.json()['backends']
         zones = [bk for bk in backends if bk['isDefault']==True]
         if len(zones):
             zoneId = zones[0]['id']
             return self.get_zone(id=zoneId)
         raise exceptions.NotFoundError('Unable to get default zone')
+
 
 class OrganizationList(QubellEntityList):
     base_clz = Organization

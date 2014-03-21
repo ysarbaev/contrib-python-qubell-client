@@ -29,7 +29,6 @@ from qubell.api.private.common import Auth
 
 from qubell.api.private.manifest import Manifest
 from qubell.api.tools import rand
-#from qubell.api.provider.router import ROUTER as router
 
 log.getLogger().setLevel(log.DEBUG)
 

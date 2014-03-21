@@ -147,7 +147,7 @@ def instance(byApplication):
 
             def find_by_application_name(app):
                 for inst in self.instances:
-                    if inst.applicationName == app and inst.environmentName == env:
+                    if inst.application.name == app and inst.environment.name == env:
                         return inst
                 return None
 
@@ -248,7 +248,7 @@ class BaseTestCase(unittest.TestCase):
     # noinspection PyPep8Naming
     def findByApplicationName(self, name):
         for instance in self.instances:
-            if instance.applicationName == name:
+            if instance.application.name == name:
                 return instance
 
 

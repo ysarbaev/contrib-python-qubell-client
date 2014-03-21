@@ -122,7 +122,7 @@ class QubellEntityList(EntityList):
         start = time.time()
         try:
             entity = self.base_clz(organization=self.organization, id=id_name.id)
-        except:
+        except AttributeError:
             entity = self.base_clz(id=id_name.id)
         end = time.time()
         elapsed = int((end - start) * 1000.0)
