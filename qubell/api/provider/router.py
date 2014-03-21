@@ -196,9 +196,9 @@ class PublicPath(PrivatePath):
     def post_organization_instance(self, org_id, app_id, data, auth): pass
 
     # TODO: Error here!!!!
-    #@basic_auth
-    #@route("PUT /api/1/applications/{app_id}/manifest")
-    #def post_application_manifest(self, org_id, app_id, data, files, auth): pass
+    @basic_auth
+    @route("PUT /api/1/applications/{app_id}/manifest")
+    def post_application_manifest(self, org_id, app_id, data, auth, content_type="yaml"): pass
 
     @basic_auth
     @route("GET /api/1/organizations/{org_id}/applications")
@@ -226,7 +226,7 @@ class PublicPath(PrivatePath):
     # TODO: Expected Yaml as payload..
     #@basic_auth
     #@route("PUT /api/1/environments/{env_id}")
-    #def put_environment(self, org_id, env_id, data, auth): pass
+    #def put_environment(self, org_id, env_id, data, auth, content_type="yaml"): pass
 
     @basic_auth
     @route("GET /api/1/organizations/{org_id}/environments")
