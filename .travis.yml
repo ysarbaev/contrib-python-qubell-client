@@ -7,6 +7,6 @@ env:
     - secure: "QcSqX5RpgSMg+N5c0MbTbAKBFyFrc7EwBVbaB7Hy9OXM/+MGNWfyxMuhvMCfo5isZ3uLdXnNGE920not0i5dTiRDvSr1ugjRpqtaYHkqgNlUCFU4zDVQl71kTxfzEiafqxKzxCnk7QPal/AZ/WZyy/Sjs4PyOi/XOH6dp4NVgB4="
     - secure: "GSIjKuNLmR5Ml5hW8puACRBMnblwdYxiVvpmbS4s9pmhMhzXFUY7OtIraO4vx8sVQ6LO0+ob3SAGva7zUhXMMBetzdej6TDMjVQdzhfvx1l/MPQ//cwTEHXViplK23uqeMvZ1z5e5Gklra4sY5fpaPKz0mCedL/owsae4JxoRPE="
     - secure: "H8IloaOJMK9T7WmIxEMxGFJx9DmIykITrRE0Q6388q9CDWhnvLYud6hy6bylBvLKm1Gx7ESoB10JmZpZer5LteqCVRV1mFXHX/ABORQuec8Mht8CoCHzk79HGES40riIbjP4jnFor6ntBsn7nLHH5kJTWChmnq2xFrH3t3++rXY="
-    - secure: "NisHDC0TQScFz6We7KyYlq/c1+s1JTqv6Hkw9z4DiFt9Kg9RcBZUXvd+o5yGdbx6PqpR2YEqulW+CTRB6vgX8XkqJi7+is3BFt2s1SR6JJRzENUvqZrr7HRfC7zh+4KcBLYFrnUwXSHSF5TjE1BLtlxkiYA7Dl3kfvEhJVz41Ag="
+    - secure: "JIgZlbWD1CkgoHvpSclMyiVaRBCOWnR0UtZgI1DuZWEp7fgphEDiWAYadEf+WVBfy6N6038f82xLMNqopx2sNdNsIYX9867WiWjWKd9j5tiiqIQ1Gb6lYv9t+33rbzxy/ZfR1/1RAYLU1J7AtB+vvvB/8d5v+sQMkSRarlVEsTg="
 install: pip install -r requirements.txt
 script: ./build.sh
