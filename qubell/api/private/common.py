@@ -75,12 +75,12 @@ class EntityList(object):
                 return item in [item.name for item in self._list]
         return item.id in [item.id for item in self._list]
 
-    @deprecated('Entity List is updated via _id_name_list, this is dangerous to use this method')
     def add(self, entry):
+        log.warn('Entity List is updated via _id_name_list, this is dangerous to use this method')
         self._list.append(IdName(entry.id, entry.name))
 
-    @deprecated('Entity List is updated via _id_name_list, this is dangerous to use this method')
     def remove(self, entry):
+        log.warn('Entity List is updated via _id_name_list, this is dangerous to use this method')
         self._list.remove(IdName(entry.id, entry.name))
 
     def _id_name_list(self):
@@ -104,33 +104,20 @@ class QubellEntityList(EntityList):
 
 
     def _id_name_list(self):
-        # start = time.time()
         try:
             self._list = [IdName(ent['id'], ent['name']) for ent in self.json()]
         except KeyError:
             # TODO: Public api hack.
             # Public api returns components list with instanceId instead of id
             self._list = [IdName(ent['instanceId'], ent['name']) for ent in self.json()]
-        # end = time.time()
-        # elapsed = int((end - start) * 1000.0)
-        # log.debug(
-        #     "  Listing Time: Fetching List {0} took {elapsed} ms".format(self.__class__.__name__, elapsed=elapsed))
 
     # noinspection PyUnresolvedReferences
     def _get_item(self, id_name):
         assert self.base_clz, "Define 'base_clz' in constructor or override this method"
-        start = time.time()
         try:
             entity = self.base_clz(organization=self.organization, id=id_name.id)
         except AttributeError:
             entity = self.base_clz(id=id_name.id)
-        end = time.time()
-        elapsed = int((end - start) * 1000.0)
-        log.debug(
-            "Listing Time: Fetching {0}='{name}' with id={id} took {elapsed} ms".format(self.base_clz.__name__,
-                                                                                          id=id_name.id,
-                                                                                          name=id_name.name,
-                                                                                          elapsed=elapsed))
         return entity
 
 

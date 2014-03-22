@@ -81,7 +81,7 @@ class Organization(Entity):
     def name(self): return self.json()['name']
 
     def json(self):
-        return router.get_organization(self.organizationId).json()
+        return router.get_organization(org_id=self.organizationId).json()
 
     def restore(self, config):
         for instance in config.pop('instances', []):
@@ -297,8 +297,7 @@ class Organization(Entity):
     def get_environment(self, id=None, name=None):
         """ Get environment object by name or id.
         """
-        criteria = id or name
-        return self.environments[criteria]
+        return self.environments[id or name]
 
     def delete_environment(self, id):
         env = self.get_environment(id)
@@ -407,7 +406,7 @@ class Organization(Entity):
             provs = [prov for prov in self.list_providers_json() if prov['name'] == name]
             # provider found by name
             if len(provs):
-                return self.get_provider(provs[0]['id']) # pick first
+                return self.get_provider(provs[0]['id'])  # pick first
             elif parameters:
                 return self.create_provider(name=name, parameters=parameters)
         else:
@@ -431,28 +430,11 @@ class Organization(Entity):
     def get_zone(self, id=None, name=None):
         """ Get zone object by name or id.
         """
-        if id:
-            zones = [x for x in self.zones if x.id == id]
-        elif name:
-            zones = [x for x in self.zones if x.name == name]
-        else:
-            raise exceptions.NotEnoughParams('No name nor id given. Unable to get application')
-        if len(zones) == 1:
-            return zones[0]
-        elif len(zones) > 1:
-            log.warning('Found several zones with name %s. Picking last' % name)
-            return zones[-1]
-        raise exceptions.NotFoundError('Unable to get zone by id: %s' % id)
+        return self.zones[id or name]
 
     def get_default_zone(self):
-    # Zones(backends) are factor we can't controll. So, get them.
-    # TODO: Public api hack.
-    # Public api has no zones route, get it through environment.
-        if router.public_api_in_use:
-            backends = self.get_default_environment().json()['backends']
-        else:
-            backends = self.json()['backends']
-        zones = [bk for bk in backends if bk['isDefault']==True]
+        backends = self.get_default_environment().json()['backends']
+        zones = [bk for bk in backends if bk['isDefault'] == True]
         if len(zones):
             zoneId = zones[0]['id']
             return self.get_zone(id=zoneId)
