@@ -1,0 +1,15 @@
+root:
+
+  interfaces:
+    foo:
+      stringValue: bind(constants#foo.stringValue)
+
+  components:
+    constants:
+      type: cobalt.common.Constants
+      interfaces:
+        foo:
+          stringValue: publish-signal(string)
+      configuration:
+        configuration.values:
+          foo.stringValue: "hello"
