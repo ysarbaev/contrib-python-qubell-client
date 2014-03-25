@@ -71,7 +71,7 @@ def values(names):
     return wrapper
 
 
-def workflow(name, parameters=None, timeout=10):
+def workflow(name, parameters=None, timeout=100):
     if not parameters:
         parameters = dict()
 
@@ -200,7 +200,7 @@ class BaseTestCase(unittest.TestCase):
 
     @classmethod
     def timeout(cls):
-        return 15
+        return 150
 
     @classmethod
     def setUpClass(cls):
@@ -211,7 +211,7 @@ class BaseTestCase(unittest.TestCase):
             cls.prepare(cls.__name__, cls.timeout())
 
     @classmethod
-    def prepare(cls, organization, timeout=180):
+    def prepare(cls, organization, timeout=30):
         cls.sandbox = SandBox(cls.platform, cls.environment(organization))
         cls.organization = cls.sandbox.make()
 
@@ -233,7 +233,7 @@ class BaseTestCase(unittest.TestCase):
         for instance in cls.instances:
             if not instance.ready(timeout=timeout):
                 cls.sandbox.clean()
-                assert False, "Instance %s not ready after timeout %s seconds" % (instance.instanceId, timeout)
+                assert False, "Instance %s not ready after timeout %s minutes" % (instance.instanceId, timeout)
 
     @classmethod
     def tearDownClass(cls):
