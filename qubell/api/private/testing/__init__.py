@@ -71,7 +71,7 @@ def values(names):
     return wrapper
 
 
-def workflow(name, parameters=None, timeout=10):
+def workflow(name, parameters=None, timeout=100):
     if not parameters:
         parameters = dict()
 
@@ -233,7 +233,7 @@ class BaseTestCase(unittest.TestCase):
         for instance in cls.instances:
             if not instance.ready(timeout=timeout):
                 cls.sandbox.clean()
-                assert False, "Instance %s not ready after timeout" % instance.instanceId
+                assert False, "Instance %s not ready after timeout %s minutes" % (instance.instanceId, timeout)
 
     @classmethod
     def tearDownClass(cls):

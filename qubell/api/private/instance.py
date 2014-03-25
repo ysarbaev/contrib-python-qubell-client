@@ -205,6 +205,9 @@ class Instance(Entity, ServiceMixin):
         payload = json.dumps({'instanceName': name})
         return router.put_instance_configuration(org_id=self.organizationId, instance_id=self.instanceId, data=payload)
 
+    def force_remove(self):
+        return router.delete_organizaton_instance_force(org_id=self.organizationId, instance_id=self.instanceId)
+
     def delete(self):
         self.destroy()
         #todo: remove, if destroyed

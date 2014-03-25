@@ -132,6 +132,10 @@ class PrivatePath(Router):
     @route("POST /organizations/{org_id}/environments/updateServiceEnvs/{instance_id}{ctype}")
     def post_instance_services(self, org_id, instance_id, data, cookies, ctype=".json"): pass
 
+    @play_auth
+    @route("DELETE /organizations/{org_id}/instances/{instance_id}{ctype}?force=1")
+    def delete_organizaton_instance_force(self, org_id, instance_id, cookies, data="{}", ctype=".json"): pass
+
     #Environment
     @play_auth
     @route("GET /organizations/{org_id}/environments{ctype}")
