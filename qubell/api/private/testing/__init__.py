@@ -200,7 +200,7 @@ class BaseTestCase(unittest.TestCase):
 
     @classmethod
     def timeout(cls):
-        return 150
+        return 15
 
     @classmethod
     def setUpClass(cls):
