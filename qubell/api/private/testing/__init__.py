@@ -71,7 +71,7 @@ def values(names):
     return wrapper
 
 
-def workflow(name, parameters=None, timeout=100):
+def workflow(name, parameters=None, timeout=10):
     if not parameters:
         parameters = dict()
 
