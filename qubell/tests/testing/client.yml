@@ -1,0 +1,12 @@
+application:
+
+  interfaces:
+    serv:
+      stringValue: bind(service#foo.stringValue)
+
+  components:
+    service:
+      type: reference.Service
+      interfaces:
+        foo:
+          stringValue: publish-signal(string)
