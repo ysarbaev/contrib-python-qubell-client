@@ -49,6 +49,7 @@ class InstanceClassTest(BaseTestCase):
         self.assertEqual(org.instances['Self-InstanceClassTest-Instance'].id, ins.id)
 
         for x in org.instances:
+            x.ready()
             self.assertEqual(x.status, 'Running')
             self.assertEqual(x.organizationId, org.organizationId)
 

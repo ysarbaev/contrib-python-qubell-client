@@ -1,7 +1,7 @@
 import os
+from integration_tests import base
 from qubell.api.private.platform import QubellPlatform
 from qubell.api.private.testing import environment, instance, values, BaseTestCase
-from test_qubell_client import base
 
 def manifest(name):
     return os.path.realpath(os.path.join(os.path.dirname(__file__), name))
