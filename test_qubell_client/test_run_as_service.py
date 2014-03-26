@@ -11,14 +11,13 @@ class RunAsServiceTest(BaseTestCase):
     service_name = "service"
     client_name = "client"
     platform = QubellPlatform.connect(base.tenant, base.user, base.password)
-    platform.authenticate()
     parameters = {
         "organization": base.org,
-        'provider_name': os.getenv('PROVIDER_NAME', "test-provider"),
-        'provider_type': os.environ['PROVIDER_TYPE'],
-        'provider_identity': os.environ['PROVIDER_IDENTITY'],
-        'provider_credential': os.environ['PROVIDER_CREDENTIAL'],
-        'provider_region': os.environ['PROVIDER_REGION']
+        'provider_name': os.getenv('PROVIDER_NAME', 'test-provider'),
+        'provider_type': os.getenv('PROVIDER_TYPE', 'aws-ec2'),
+        'provider_identity': os.getenv('PROVIDER_IDENTITY', 'fake'),
+        'provider_credential': os.getenv('PROVIDER_CREDENTIAL', 'fake'),
+        'provider_region': os.getenv('PROVIDER_REGION', 'us-east-1')
     }
     apps = [
         {"name": client_name, "file": manifest("client.yml")},
