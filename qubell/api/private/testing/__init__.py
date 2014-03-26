@@ -214,26 +214,43 @@ class BaseTestCase(unittest.TestCase):
     def prepare(cls, organization, timeout=30):
         cls.sandbox = SandBox(cls.platform, cls.environment(organization))
         cls.organization = cls.sandbox.make()
-
         cls.instances = []
+
+        def launch_in_env(app, env):
+            environment = cls.organization.environment(name=env)
+            parameters = {'parameters': app.get('parameters', {})}
+            instance = cls.organization.applications[app['name']].launch(
+                environment=environment, parameters=parameters)
+            cls.instances.append(instance)
+            if app.get('add_as_service', False):
+                environment.add_service(instance)
+            cls.sandbox.sandbox["instances"].append({
+                "id": instance.instanceId,
+                "name": instance.name,
+                "applicationId":  app['id']
+            })
+            return instance
+
+        def check_instances(instances):
+            for instance in cls.instances:
+                if not instance.ready(timeout=timeout):
+                    cls.sandbox.clean()
+                    assert False, "Instance %s not ready after timeout %s minutes" % (instance.instanceId, timeout)
+
+        # launch service instances first
         for app in cls.sandbox['applications']:
             for env in cls.sandbox['environments']:
-                if app.get('launch', True):
-                    environment = cls.organization.environment(name=env)
-                    parameters = {'parameters': app.get('parameters', {})}
-                    instance = cls.organization.applications[app['name']].launch(
-                        environment=environment, parameters=parameters)
-                    cls.instances.append(instance)
-                    cls.sandbox.sandbox["instances"].append({
-                        "id": instance.instanceId,
-                        "name": instance.name,
-                        "applicationId":  app['id']
-                    })
+                if app.get('launch', True) and app.get('add_as_service', False):
+                    launch_in_env(app, env)
+        check_instances(cls.instances)
 
-        for instance in cls.instances:
-            if not instance.ready(timeout=timeout):
-                cls.sandbox.clean()
-                assert False, "Instance %s not ready after timeout %s minutes" % (instance.instanceId, timeout)
+        # then launch non-service instances
+        regular_instances = []
+        for app in cls.sandbox['applications']:
+            for env in cls.sandbox['environments']:
+                if app.get('launch', True) and not app.get('add_as_service', False):
+                    regular_instances.append(launch_in_env(app, env))
+        check_instances(regular_instances)
 
     @classmethod
     def tearDownClass(cls):
@@ -292,6 +309,9 @@ class SandBox(object):
     def make(self):
         log.info("Preparing sandbox...")
 
+        for app in self.sandbox["applications"]:
+            self.__application(app)
+
         for name, env in self.sandbox["environments"].items():
             environment = self.organization.environment(name=name)
             environment.clean()
@@ -305,9 +325,6 @@ class SandBox(object):
             for police in env.get('policies', []):
                 environment.add_policy(police)
 
-            for app in self.sandbox["applications"]:
-                self.__application(app)
-
         log.info("Sandbox prepared")
 
         return self.organization
@@ -316,14 +333,24 @@ class SandBox(object):
         log.info("Cleaning sandbox...")
 
         def destroy(test_instances):
-            return_instances = []
             instances = self.organization.instances
+            services_to_destroy = []
+            instances_to_destroy = []
             for instanceData in test_instances:
                 if instanceData['id'] in instances: #someone may removed it already
                     instance = instances[instanceData['id']]
-                    instance.destroy()
-                    return_instances.append(instance)
-            return return_instances
+                    if instance.serve_environments:
+                        services_to_destroy.append(instance)
+                    else:
+                        instances_to_destroy.append(instance)
+
+            # destroy non-service instances first
+            for instance in instances_to_destroy:
+                instance.destroy()
+            for instance in services_to_destroy:
+                instance.destroy()
+
+            return services_to_destroy + instances_to_destroy
 
         for instance in destroy(self.sandbox['instances']):
             if not instance.destroyed(timeout):
