@@ -33,7 +33,15 @@ system_application_types = {COBALT_SECURE_STORE_TYPE: 'Secure Vault 2.0', WORKFL
                             SHARED_INSTANCE_CATALOG_TYPE: 'Shared Instances Catalog',
                             STATIC_RESOURCE_POOL_TYPE: 'Resource Pool'}
 
-SHARED_INSTANCES_PARAMETER_NAME = 'configuration.shared-instances'
+system_application_parameters = {
+    COBALT_SECURE_STORE_TYPE: None,
+    WORKFLOW_SERVICE_TYPE: None,
+    SHARED_INSTANCE_CATALOG_TYPE: 'configuration.shared-instances',
+    STATIC_RESOURCE_POOL_TYPE: 'configuration.resources'}
+
+
+
+SHARED_INSTANCES_PARAMETER_NAME = system_application_parameters[SHARED_INSTANCE_CATALOG_TYPE]
 
 
 # noinspection PyUnresolvedReferences

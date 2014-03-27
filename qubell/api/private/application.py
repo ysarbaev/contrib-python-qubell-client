@@ -61,8 +61,6 @@ class Application(Entity):
         return self.json()['name']
 
 
-
-    #TODO: Is not used yet, think how to restore revisions
     def __parse(self, values):
         ret = {}
         for val in values:
@@ -175,15 +173,6 @@ class Application(Entity):
         if id:  # submodule instances are invisible for lists
             return Instance(id=id, organization=self.organization)
         return self.instances[id or name]
-
-    #def create_instance(self, name=None, environment=None, revision=None, parameters={}, destroyInterval=None):
-    #    from qubell.api.private.instance import Instance
-    #    return Instance.new(name=name,
-    #                        application=self,
-    #                        environment=environment,
-    #                        revision=revision,
-    #                        parameters=parameters,
-    #                        destroyInterval=destroyInterval)
 
 
 class ApplicationList(QubellEntityList):

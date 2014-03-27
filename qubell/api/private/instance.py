@@ -144,18 +144,20 @@ class Instance(Entity, ServiceMixin):
     @staticmethod
     def new(application, revision=None, environment=None, name=None, parameters=None, destroyInterval=None):
         if not parameters: parameters = {}
+        conf = {}
+        conf['parameters'] = parameters
         if environment:  # if environment set, it overrides parameter
-            parameters['environmentId'] = environment.environmentId
+            conf['environmentId'] = environment.environmentId
         elif not 'environmentId' in parameters.keys():  # if not set and not in params, use default
-            parameters['environmentId'] = application.organization.defaultEnvironment.environmentId
+            conf['environmentId'] = application.organization.defaultEnvironment.environmentId
         if name:
-            parameters['instanceName'] = name
+            conf['instanceName'] = name
         if destroyInterval:
-            parameters['destroyInterval'] = destroyInterval
+            conf['destroyInterval'] = destroyInterval
         if revision:
-            parameters['revisionId'] = revision.revisionId
-
-        data = json.dumps(parameters)
+            conf['revisionId'] = revision.revisionId
+        log.info("Creating instance: %s" % conf)
+        data = json.dumps(conf)
         before_creation = time.gmtime(time.time())
         resp = router.post_organization_instance(org_id=application.organizationId, app_id=application.applicationId, data=data)
         instance = Instance(organization=application.organization, id=resp.json()['id'])
@@ -214,7 +216,7 @@ class Instance(Entity, ServiceMixin):
         return True
 
     def destroy(self):
-        log.info("Destroying")
+        log.info("Destroying instance %s" % self.name)
         return self.run_workflow("destroy")
 
     @property
