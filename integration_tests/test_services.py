@@ -108,7 +108,7 @@ class ServiceClassTest(BaseTestCase):
         """ Check shared instance catalog service could be created
         """
         from qubell.api.private.service import SHARED_INSTANCE_CATALOG_TYPE
-        serv = self.org.create_service(type=SHARED_INSTANCE_CATALOG_TYPE, environment=self.env)
+        serv = self.org.create_service(type=SHARED_INSTANCE_CATALOG_TYPE, environment=self.env, parameters={'configuration.shared-instances':{}})
 
         self.assertTrue(serv.ready())
         self.assertTrue(serv in self.org.services)
@@ -126,7 +126,7 @@ class ServiceClassTest(BaseTestCase):
         """ Check resource pool service could be created
         """
         from qubell.api.private.service import STATIC_RESOURCE_POOL_TYPE
-        serv = self.org.create_service(type=STATIC_RESOURCE_POOL_TYPE, environment=self.env)
+        serv = self.org.create_service(type=STATIC_RESOURCE_POOL_TYPE, environment=self.env, parameters={'configuration.resources':{}})
 
         self.assertTrue(serv.ready())
         self.assertTrue(serv in self.org.services)
@@ -139,29 +139,3 @@ class ServiceClassTest(BaseTestCase):
         self.assertTrue(serv.destroyed())
         self.assertFalse(serv in self.org.services)
         self.assertFalse(serv in self.env.services)
-
-    def test_system_services_methods(self):
-        keystore = self.org.create_keystore_service(environment=self.env)
-        workflow = self.org.create_workflow_service(environment=self.env)
-        shared = self.org.create_shared_service(environment=self.env)
-        rpool = self.org.create_resource_pool_service(environment=self.env)
-
-        self.assertTrue(keystore.ready)
-        self.assertTrue(workflow.ready)
-        self.assertTrue(shared.ready)
-        self.assertTrue(rpool.ready)
-
-        self.assertTrue(keystore in self.env.services)
-        self.assertTrue(workflow in self.env.services)
-        self.assertTrue(shared in self.env.services)
-        self.assertTrue(rpool in self.env.services)
-
-        keystore.destroy()
-        workflow.destroy()
-        shared.destroy()
-        rpool.destroy()
-
-        self.assertTrue(keystore.destroyed())
-        self.assertTrue(workflow.destroyed())
-        self.assertTrue(shared.destroyed())
-        self.assertTrue(rpool.destroyed())

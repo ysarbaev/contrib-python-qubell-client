@@ -90,7 +90,7 @@ class Environment(Entity):
             self.add_provider(prov)
         for service in config.pop('services', []):
             type=service.pop('type', None)
-            serv = self.organization.get_or_create_service(id=service.pop('id', None), name=service.pop('name'), type=type )
+            serv = self.organization.get_service(id=service.pop('id', None), name=service.pop('name'))
             self.add_service(serv)
             if type == COBALT_SECURE_STORE_TYPE:
                 # TODO: We do not need to regenerate key every time. Find better way.

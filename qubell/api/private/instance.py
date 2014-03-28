@@ -156,7 +156,8 @@ class Instance(Entity, ServiceMixin):
             conf['destroyInterval'] = destroyInterval
         if revision:
             conf['revisionId'] = revision.revisionId
-        log.info("Creating instance: %s" % conf)
+        log.info("Creating instance: %s" % name)
+        log.debug("Instance configuration: %s" % conf)
         data = json.dumps(conf)
         before_creation = time.gmtime(time.time())
         resp = router.post_organization_instance(org_id=application.organizationId, app_id=application.applicationId, data=data)

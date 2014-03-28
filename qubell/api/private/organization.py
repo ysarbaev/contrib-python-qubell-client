@@ -90,13 +90,13 @@ class Organization(Entity):
         for prov in config.get('providers', []):
             self.get_or_create_provider(id=prov.pop('id', None), name=prov.pop('name'), parameters=prov)
 
+        for serv in config.pop('services',[]):
+            self.get_or_create_service(id=serv.pop('id', None), name=serv.pop('name'), type=serv.pop('type', None), parameters=serv.pop('parameters', None))
+
         for env in config.pop('environments',[]):
             restored_env = self.get_or_create_environment(id=env.pop('id', None), name=env.pop('name', 'default'),zone=env.pop('zone', None), default=env.pop('default', False))
             restored_env.clean()
             restored_env.restore(env)
-
-        for serv in config.pop('services',[]):
-            self.get_or_create_service(id=serv.pop('id', None), name=serv.pop('name'), type=serv.pop('type', None), parameters=serv.pop('parameters', None))
 
         for app in config.pop('applications'):
             mnf = app.pop('manifest', None)
@@ -258,25 +258,10 @@ class Organization(Entity):
         if type and system_application_types.has_key(type):
             if application: log.warning('Ignoring application parameter (%s) while creating system service' % application)
             application = self.applications[system_application_types[type]]
-            if not type in [COBALT_SECURE_STORE_TYPE, WORKFLOW_SERVICE_TYPE]:
-                parameters = parameters or {system_application_parameters[type]:"{}"}
 
         instance = self.create_instance(application, revision, environment, name, parameters)
         instance.environment.add_service(instance)
         return instance
-
-    def create_keystore_service(self, name='autocreated-keystore-service', parameters=None, environment=None):
-        return self.create_service(name=name, type=COBALT_SECURE_STORE_TYPE, parameters=parameters, environment=environment)
-
-    def create_workflow_service(self, name='autocreated-workflow-service', parameters=None, environment=None):
-        return self.create_service(name=name, type=WORKFLOW_SERVICE_TYPE, parameters=parameters, environment=environment)
-
-    def create_shared_service(self, name='autocreated-shared-instance-catalog', parameters=None, environment=None):
-        return self.create_service(name=name, type=SHARED_INSTANCE_CATALOG_TYPE, parameters=parameters, environment=environment)
-
-    def create_resource_pool_service(self, name='autocreated-resource-pool', parameters=None, environment=None):
-        return self.create_service(name=name, type=STATIC_RESOURCE_POOL_TYPE, parameters=parameters, environment=environment)
-
 
     get_service = get_instance
 
