@@ -20,6 +20,8 @@ __email__ = "vkhomenko@qubell.com"
 
 from qubell.api.private import exceptions
 from qubell.api.provider.router import ROUTER as router
+from qubell.api.private.common import QubellEntityList, Entity
+
 
 
 class Provider(object):
@@ -45,5 +47,10 @@ class Provider(object):
             return provider[0]
 
     def delete(self):
-        router.delete_provider(org_id=self.organizationId,prov_id=self.providerId)
+        router.delete_provider(org_id=self.organizationId, prov_id=self.providerId)
         return True
+
+class ProviderList(QubellEntityList):
+    base_clz = Provider
+    def __init__(self, organization):
+        QubellEntityList.__init__(self, organization.list_providers_json, organization)

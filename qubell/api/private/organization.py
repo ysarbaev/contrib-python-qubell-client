@@ -15,8 +15,8 @@
 import warnings
 from qubell import deprecated
 from qubell.api.private.common import EntityList, IdName
-from qubell.api.private.service import system_application_types, COBALT_SECURE_STORE_TYPE, WORKFLOW_SERVICE_TYPE, \
-    SHARED_INSTANCE_CATALOG_TYPE
+from qubell.api.private.service import system_application_types, system_application_parameters, COBALT_SECURE_STORE_TYPE, WORKFLOW_SERVICE_TYPE, \
+    SHARED_INSTANCE_CATALOG_TYPE, STATIC_RESOURCE_POOL_TYPE
 from qubell.api.tools import lazyproperty
 
 __author__ = "Vasyl Khomenko"
@@ -33,15 +33,14 @@ from qubell.api.private.instance import InstanceList, DEAD_STATUS, Instance
 from qubell.api.private.application import ApplicationList
 from qubell.api.private.environment import EnvironmentList
 from qubell.api.private.zone import ZoneList
+from qubell.api.private.provider import ProviderList
 from qubell.api.provider.router import ROUTER as router
 from qubell.api.private.common import QubellEntityList, Entity
-
 
 
 class Organization(Entity):
 
     def __init__(self, id, auth=None):
-        self.providers = []
         self.organizationId = self.id = id
 
     @staticmethod
@@ -71,6 +70,9 @@ class Organization(Entity):
     @lazyproperty
     def zones(self): return ZoneList(self)
 
+    @lazyproperty
+    def providers(self): return ProviderList(self)
+
     @property
     def defaultEnvironment(self): return self.get_default_environment()
 
@@ -84,21 +86,26 @@ class Organization(Entity):
         return router.get_organization(org_id=self.organizationId).json()
 
     def restore(self, config):
-        for instance in config.pop('instances', []):
-            launched = self.get_or_launch_instance(id=instance.pop('id', None), name=instance.pop('name'), **instance)
-            assert launched.ready()
-        for serv in config.pop('services',[]):
-            self.get_or_create_service(id=serv.pop('id', None), name=serv.pop('name'), type=serv.pop('type', None))
+
         for prov in config.get('providers', []):
             self.get_or_create_provider(id=prov.pop('id', None), name=prov.pop('name'), parameters=prov)
+
+        for serv in config.pop('services',[]):
+            self.get_or_create_service(id=serv.pop('id', None), name=serv.pop('name'), type=serv.pop('type', None), parameters=serv.pop('parameters', None))
+
         for env in config.pop('environments',[]):
             restored_env = self.get_or_create_environment(id=env.pop('id', None), name=env.pop('name', 'default'),zone=env.pop('zone', None), default=env.pop('default', False))
             restored_env.clean()
             restored_env.restore(env)
+
         for app in config.pop('applications'):
             mnf = app.pop('manifest', None)
             restored_app = self.application(id=app.pop('id', None), manifest=Manifest(**mnf), name=app.pop('name'))
-            restored_app.restore(app)
+            #restored_app.restore(app)
+
+        for instance in config.pop('instances', []):
+            launched = self.get_or_launch_instance(id=instance.pop('id', None), name=instance.pop('name'), **instance)
+            assert launched.ready()
 
 ### APPLICATION
     def create_application(self, name=None, manifest=None):
@@ -114,6 +121,7 @@ class Organization(Entity):
     def get_application(self, id=None, name=None):
         """ Get application object by name or id.
         """
+        log.info("Picking application: %s" % (id or name))
         return self.applications[id or name]
 
     def list_applications_json(self):
@@ -192,6 +200,7 @@ class Organization(Entity):
         """ Get instance object by name or id.
         If application set, search within the application.
         """
+        log.info("Picking instance: %s" % (id or name))
         if id:  # submodule instances are invisible for lists
             return Instance(id=id, organization=self)
         return self.instances[id or name]
@@ -244,26 +253,15 @@ class Organization(Entity):
 
 
 ### SERVICE
-    def create_service(self, application, revision=None, environment=None, name=None, parameters=None,
-                       destroyInterval=None):
+    def create_service(self, application=None, revision=None, environment=None, name=None, parameters=None, type=None):
 
-        instance = self.create_instance(application, revision, environment, name, parameters, destroyInterval)
+        if type and system_application_types.has_key(type):
+            if application: log.warning('Ignoring application parameter (%s) while creating system service' % application)
+            application = self.applications[system_application_types[type]]
+
+        instance = self.create_instance(application, revision, environment, name, parameters)
         instance.environment.add_service(instance)
         return instance
-
-    def create_keystore_service(self, name='generated-keystore', parameters=None):
-        application = self.applications[system_application_types(COBALT_SECURE_STORE_TYPE)]
-        return self.create_service(name=name, application=application, parameters=parameters)
-
-    def create_workflow_service(self, name='generated-workflow', policies=None, zone=None):
-        parameters = {'configuration.policies': json.dumps(policies or {})}
-        application = self.applications[system_application_types(WORKFLOW_SERVICE_TYPE)]
-        return self.create_service(name=name, application=application, parameters=parameters)
-
-    def create_shared_service(self, name='generated-shared', instances=None, zone=None):
-        parameters = {'configuration.shared-instances': json.dumps(instances or {})}
-        application = self.applications[system_application_types(SHARED_INSTANCE_CATALOG_TYPE)]
-        return self.create_service(name=name, application=application, parameters=parameters)
 
     get_service = get_instance
 
@@ -271,12 +269,12 @@ class Organization(Entity):
         return router.get_services(org_id=self.organizationId).json()
 
     def get_or_create_service(self, id=None, application=None, revision=None, environment=None, name=None, parameters=None,
-                              destroyInterval=None):
+                              type=None, destroyInterval=None):
         """ Get by name or create service with given parameters"""
         try:
             return self.get_instance(id=id, name=name)
         except exceptions.NotFoundError:
-            return self.create_service(application, revision, environment, name, parameters, destroyInterval)
+            return self.create_service(application, revision, environment, name, parameters, type)
 
     service = get_or_create_service
 
@@ -297,6 +295,7 @@ class Organization(Entity):
     def get_environment(self, id=None, name=None):
         """ Get environment object by name or id.
         """
+        log.info("Picking environment: %s" % (id or name))
         return self.environments[id or name]
 
     def delete_environment(self, id):
@@ -385,37 +384,22 @@ class Organization(Entity):
     def list_providers_json(self):
         return router.get_providers(org_id=self.organizationId).json()
 
-    @deprecated("use list_providers_json instead")
-    def list_providers(self): return self.list_providers_json()
-
-    def get_provider(self, id):
-        from qubell.api.private.provider import Provider
-        prov = Provider(organization=self, id=id)
-        self.providers.append(prov)
-        return prov
+    def get_provider(self, id=None, name=None):
+        log.info("Picking provider: %s" % (id or name))
+        return self.providers[id or name]
 
     def delete_provider(self, id):
         prov = self.get_provider(id)
-        self.providers.remove(prov)
         return prov.delete()
 
-    def get_or_create_provider(self,id=None, name=None, parameters=None):
+    def get_or_create_provider(self, id=None, name=None, parameters=None):
 
         """ Smart object. Will create provider or pick one, if exists"""
-        if name:
-            provs = [prov for prov in self.list_providers_json() if prov['name'] == name]
-            # provider found by name
-            if len(provs):
-                return self.get_provider(provs[0]['id'])  # pick first
-            elif parameters:
-                return self.create_provider(name=name, parameters=parameters)
-        else:
-            name = 'generated-provider'
-            if id:
-                return self.get_provider(id)
-            elif parameters:
-                return self.create_provider(name=name, parameters=parameters)
-        raise exceptions.NotFoundError('Provider not found or not enough parameters to create provider: %s' % name)
+
+        try:
+            return self.get_provider(id=id, name=name)
+        except exceptions.NotFoundError:
+            return self.create_provider(name, parameters)
 
     def provider(self, id=None, name=None, parameters=None):
         """ Get , create or modify provider
@@ -430,6 +414,7 @@ class Organization(Entity):
     def get_zone(self, id=None, name=None):
         """ Get zone object by name or id.
         """
+        log.info("Picking zone: %s" % (id or name))
         return self.zones[id or name]
 
     def get_default_zone(self):

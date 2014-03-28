@@ -27,6 +27,8 @@ from qubell.api.private import exceptions
 from qubell.api.private.common import QubellEntityList, Entity
 from qubell.api.provider.router import ROUTER as router
 
+from qubell.api.private.service import COBALT_SECURE_STORE_TYPE
+
 class Environment(Entity):
 
     def __init__(self, organization, id):
@@ -87,9 +89,10 @@ class Environment(Entity):
             prov = self.organization.get_or_create_provider(id=provider.pop('id', None), name=provider.pop('name'), parameters=provider)
             self.add_provider(prov)
         for service in config.pop('services', []):
-            serv = self.organization.get_or_create_service(id=service.pop('id', None), name=service.pop('name'), type=service.pop('type', None))
+            type=service.pop('type', None)
+            serv = self.organization.get_service(id=service.pop('id', None), name=service.pop('name'))
             self.add_service(serv)
-            if serv.type == 'builtin:cobalt_secure_store':
+            if type == COBALT_SECURE_STORE_TYPE:
                 # TODO: We do not need to regenerate key every time. Find better way.
                 myenv = self.organization.get_environment(self.environmentId)
                 myenv.add_policy(
