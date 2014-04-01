@@ -24,7 +24,6 @@ import os
 from base import BaseTestCase
 from qubell.api.private.manifest import Manifest
 
-
 class EnvironmentClassTest(BaseTestCase):
     name = 'Self-EnvironmentClassTest'
 
@@ -111,26 +110,29 @@ class EnvironmentClassTest(BaseTestCase):
         self.assertTrue(base_env.delete())
 
     def test_service_crud(self):
-        env = self.env
-        wf = self.org.get_service(name="Default workflow service")
-        env.add_service(wf)
-        env.add_service(wf)  # operation idempotent
-        assert len(env.services) == 1
-        service = self.org.create_service(self.app, environment=env)
-        assert len(env.services) == 2
-        service.ready()
-        assert service.id in env.services
-        assert service.instanceId in env.services
-        self.org.get_or_create_service(service.name)
-        assert len(env.services) == 2
-        self.org.get_or_create_service(service.id)
-        self.org.get_or_create_service(service.instanceId)
-        assert len(env.services) == 2
-        env.remove_service(wf)
-        assert len(env.services) == 1
-        service.destroy()
-        assert service.destroyed()
-        assert len(env.services) == 0
+        env = self.org.create_environment(name=self.name + " CRUD")
+        try:
+            wf = self.org.get_service(name="Default workflow service")
+            env.add_service(wf)
+            env.add_service(wf)  # operation idempotent
+            assert len(env.services) == 1
+            service = self.org.create_service(self.app, environment=env)
+            assert len(env.services) == 2
+            service.ready()
+            assert service.id in env.services
+            assert service.instanceId in env.services
+            self.org.get_or_create_service(service.name)
+            assert len(env.services) == 2
+            self.org.get_or_create_service(service.id)
+            self.org.get_or_create_service(service.instanceId)
+            assert len(env.services) == 2
+            env.remove_service(wf)
+            assert len(env.services) == 1
+            service.destroy()
+            assert service.destroyed()
+            assert len(env.services) == 0
+        finally:
+            env.delete()
 
     def test_policy_crud(self): pass
 

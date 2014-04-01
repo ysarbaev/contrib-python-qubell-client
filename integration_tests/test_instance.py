@@ -31,7 +31,7 @@ class InstanceClassTest(BaseTestCase):
         super(InstanceClassTest, cls).setUpClass()
         cls.org = cls.organization
         cls.app = cls.org.application(manifest=cls.manifest, name='Self-InstanceClassTest')
-        cls.ins = cls.org.create_instance(application=cls.app, name='Self-InstanceClassTest-Instance', parameters={'destroyInterval':300000})
+        cls.ins = cls.org.create_instance(application=cls.app, name='Self-InstanceClassTest-Instance', destroyInterval=300000)
         assert cls.ins.ready()
 
     @classmethod
@@ -106,14 +106,14 @@ class InstanceClassTest(BaseTestCase):
         self.assertEqual(ins, org.get_or_launch_instance(name=ins.name))
 
         # Create tests
-        my = org.get_or_launch_instance(name='Self-test_get_or_launch_instance', application=self.app, parameters={'destroyInterval':100000})
+        my = org.get_or_launch_instance(name='Self-test_get_or_launch_instance', application=self.app, destroyInterval=100000)
         self.assertTrue(my.id)
         self.assertTrue(my.ready())
         self.assertTrue(my in org.instances)
         self.assertEqual('Self-test_get_or_launch_instance', my.name)
         self.assertTrue(my.delete())
 
-        my = org.get_or_launch_instance(application=self.app, parameters={'destroyInterval':100000})
+        my = org.get_or_launch_instance(application=self.app, destroyInterval=100000)
         self.assertTrue(my.id)
         self.assertTrue(my.ready())
         self.assertTrue(my in org.instances)
