@@ -218,9 +218,8 @@ class BaseTestCase(unittest.TestCase):
 
         def launch_in_env(app, env):
             environment = cls.organization.environment(name=env)
-            parameters = {'parameters': app.get('parameters', {})}
             instance = cls.organization.applications[app['name']].launch(
-                environment=environment, parameters=parameters)
+                environment=environment, parameters=app.get('parameters', {}))
             cls.instances.append(instance)
             if app.get('add_as_service', False):
                 environment.add_service(instance)
