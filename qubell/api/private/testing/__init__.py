@@ -233,8 +233,10 @@ class BaseTestCase(unittest.TestCase):
         def check_instances(instances):
             for instance in cls.instances:
                 if not instance.ready(timeout=timeout):
+                    error = instance.error.strip()
                     cls.sandbox.clean()
-                    assert False, "Instance %s not ready after timeout %s minutes" % (instance.instanceId, timeout)
+                    assert not error, "Instance %s didn't launch properly and has error '%s'" % (instance.instanceId, error)
+                    assert False, "Instance %s is not ready after %s minutes and stop on timeout" % (instance.instanceId, timeout)
 
         # launch service instances first
         for app in cls.sandbox['applications']:
