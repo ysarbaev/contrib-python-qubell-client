@@ -203,12 +203,12 @@ class Organization(Entity):
 
 # INSTANCE
 
-    def create_instance(self, application, revision=None, environment=None, name=None, parameters=None,
+    def create_instance(self, application, revision=None, environment=None, name=None, parameters=None, submodules=None,
                         destroyInterval=None):
         """ Launches instance in application and returns Instance object.
         """
         from qubell.api.private.instance import Instance
-        return Instance.new(application, revision, environment, name, parameters, destroyInterval)
+        return Instance.new(application, revision, environment, name, parameters, submodules, destroyInterval)
 
     def get_instance(self, id=None, name=None):
         """ Get instance object by name or id.
@@ -228,7 +228,7 @@ class Organization(Entity):
             instances = router.get_instances(org_id=self.organizationId).json()
         return [ins for ins in instances if ins['status'] not in DEAD_STATUS]
 
-    def get_or_create_instance(self, id=None, application=None, revision=None, environment=None, name=None, parameters=None,
+    def get_or_create_instance(self, id=None, application=None, revision=None, environment=None, name=None, parameters=None, submodules=None,
                                destroyInterval=None):
         """ Get instance by id or name.
         If not found: create with given parameters
@@ -240,17 +240,17 @@ class Organization(Entity):
                 instance.ready()
             return instance
         except exceptions.NotFoundError:
-            return self.create_instance(application, revision, environment, name, parameters, destroyInterval)
+            return self.create_instance(application, revision, environment, name, parameters, submodules, destroyInterval)
     get_or_launch_instance = get_or_create_instance
 
-    def instance(self, id=None, application=None, name=None, revision=None, environment=None, parameters=None, destroyInterval=None):
+    def instance(self, id=None, application=None, name=None, revision=None, environment=None, parameters=None, submodules=None, destroyInterval=None):
         """ Smart method. It does everything, to return Instance with given parameters within the application.
         If instance found running and given parameters are actual: return it.
         If instance found, but parameters differs - reconfigure instance with new parameters.
         If instance not found: launch instance with given parameters.
         Return: Instance object.
         """
-        instance = self.get_or_create_instance(id, application, revision, environment, name, parameters, destroyInterval)
+        instance = self.get_or_create_instance(id, application, revision, environment, name, parameters, submodules, destroyInterval)
 
         reconfigure = False
         # if found:

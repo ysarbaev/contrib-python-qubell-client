@@ -36,6 +36,10 @@ import types
 logging.getLogger("requests.packages.urllib3.connectionpool").setLevel(logging.WARN)
 
 def format_as_api(data):
+    """
+    Accepts {'default':{},}
+    returns [{'name':'default',}]
+    """
     result = []
     if isinstance(data, dict):
         for name, value in data.items():
@@ -183,11 +187,7 @@ class BaseTestCase(unittest.TestCase):
                      {"name": "Default workflow service"}
                     ]}
 
-        if cls.environments:
-            envs = cls.environments
-        else:
-            envs = [{"name": "default"},]
-
+        envs = cls.environments or [{"name": "default"},]
 
         for env in envs:
             env.update(addon) # Add provider, keystore, workflow to every env.
@@ -225,6 +225,11 @@ class BaseTestCase(unittest.TestCase):
             cls.prepare(cls.__name__, cls.timeout())
 
     @classmethod
+    def tearDownClass(cls):
+        super(BaseTestCase, cls).tearDownClass()
+        cls.clean()
+
+    @classmethod
     def prepare(cls, organization, timeout=30):
         """ Create sandboxed test environment
         """
@@ -257,24 +262,35 @@ class BaseTestCase(unittest.TestCase):
                     assert not error, "Instance %s didn't launch properly and has error '%s'" % (instance.instanceId, error)
                     assert False, "Instance %s is not ready after %s minutes and stop on timeout" % (instance.instanceId, timeout)
 
-
         # launch service instances first
-        instances = []
+        cls.service_instances = []
         for app in cls.sandbox['applications']:
             for env in cls.sandbox['environments']:
-                if app.get('launch', True):
-                    instances.append(launch_in_env(app, env))
-        check_instances(instances)
+                if app.get('launch', True) and app.get('add_as_service', False):
+                    cls.service_instances.append(launch_in_env(app, env))
+        check_instances(cls.service_instances)
+
+        # then launch non-service instances
+        cls.regular_instances = []
+        for app in cls.sandbox['applications']:
+            for env in cls.sandbox['environments']:
+                if app.get('launch', True) and not app.get('add_as_service', False):
+                    cls.regular_instances.append(launch_in_env(app, env))
+        check_instances(cls.regular_instances)
 
     @classmethod
-    def tearDownClass(cls):
-        super(BaseTestCase, cls).tearDownClass()
-        cls.clean()
+    def clean(cls, timeout=10):
+        def destroy_instances(instances):
+            for instance in instances:
+                instance.destroy()
+                if not instance.destroyed(timeout):
+                    log.error(
+                        "Instance was not destroyed properly {0}: {1}", instance.id, instance.name)
 
-    @classmethod
-    def clean(cls):
-        if cls.sandbox:
-            cls.sandbox.clean()
+        log.info("Cleaning sandbox...")
+        destroy_instances(cls.regular_instances)
+        destroy_instances(cls.service_instances)
+        log.info("Sandbox cleaned")
 
     # noinspection PyPep8Naming
     def findByApplicationName(self, name):
@@ -297,19 +313,13 @@ class SandBox(object):
 
     def make(self):
         log.info("Preparing sandbox...")
-        import pprint
-        pprint.pprint(self.sandbox)
         self.organization.restore(self.sandbox)
         log.info("Sandbox prepared")
         return self.organization
 
-
-    def clean(self, timeout=10):
-        log.info("Cleaning sandbox...")
-        # TODO
-        # TODO: Need cleaning mechanism
-        # TODO
-        log.info("Sandbox cleaned")
+    def clean(self):
+        # TODO: need cleaning mechanism
+        pass
 
     def __check_environment_name(self, name):
         import re
