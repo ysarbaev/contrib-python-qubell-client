@@ -169,11 +169,15 @@ class PrivatePath(Router):
 
     @play_auth
     @route("POST /organizations/{org_id}/providers{ctype}")
-    def post_provider(self, org_id, data, cookies, ctype=".json"): pass
+    def post_organization_provider(self, org_id, data, cookies, ctype=".json"): pass
+
+    @play_auth
+    @route("POST /organizations/{org_id}/providers/{prov_id}{ctype}")
+    def post_provider(self, org_id, prov_id, data, cookies, ctype=".json"): pass
 
     @play_auth
     @route("DELETE /organizations/{org_id}/providers/{prov_id}{ctype}")
-    def delete_provider(self, org_id, prov_id, cookies, ctype=".json"): pass
+    def delete_provider(self, org_id, prov_id, cookies, data="{}", ctype=".json"): pass
 
     #Service
     @play_auth
