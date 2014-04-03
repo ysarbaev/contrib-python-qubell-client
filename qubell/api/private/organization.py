@@ -94,9 +94,12 @@ class Organization(Entity):
                                         parameters=prov)
 
         for app in config.pop('applications'):
-            manifest = Manifest(**{k: v for k, v in app.iteritems() if k in ["content", "url", "file"]})
-            #mnf = app.pop('manifest', None)
-            restored_app = self.application(id=app.pop('id', None),
+            manifest_param = {k: v for k, v in app.iteritems() if k in ["content", "url", "file"]}
+            if manifest_param:
+                manifest = Manifest(**manifest_param)
+            else:
+                manifest = None  # if application exists, manifest must be None
+            self.application(id=app.pop('id', None),
                                             manifest=manifest,
                                             name=app.pop('name'))
 
@@ -115,10 +118,9 @@ class Organization(Entity):
                                                           name=env.pop('name', 'default'),
                                                           zone=env.pop('zone', None),
                                                           default=env.pop('default', False))
-            #restored_env.clean()
             restored_env.restore(env)
 
-
+        #todo: make launch and ready async
         for instance in config.pop('instances', []):
             launched = self.get_or_launch_instance(application=self.get_application(name=instance.pop('application')),
                                                    id=instance.pop('id', None),
