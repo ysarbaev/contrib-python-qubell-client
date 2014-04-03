@@ -26,6 +26,7 @@ __email__ = "vkhomenko@qubell.com"
 
 import logging as log
 import simplejson as json
+import copy
 
 from qubell.api.private.manifest import Manifest
 from qubell.api.private import exceptions
@@ -86,25 +87,43 @@ class Organization(Entity):
         return router.get_organization(org_id=self.organizationId).json()
 
     def restore(self, config):
-
-        for prov in config.get('providers', []):
-            self.get_or_create_provider(id=prov.pop('id', None), name=prov.pop('name'), parameters=prov)
-
-        for serv in config.pop('services',[]):
-            self.get_or_create_service(id=serv.pop('id', None), name=serv.pop('name'), type=serv.pop('type', None), parameters=serv.pop('parameters', None))
-
-        for env in config.pop('environments',[]):
-            restored_env = self.get_or_create_environment(id=env.pop('id', None), name=env.pop('name', 'default'),zone=env.pop('zone', None), default=env.pop('default', False))
-            restored_env.clean()
-            restored_env.restore(env)
+        config = copy.deepcopy(config)
+        for prov in config.get('cloudAccounts', []):
+            self.get_or_create_provider(id=prov.pop('id', None),
+                                        name=prov.pop('name'),
+                                        parameters=prov)
 
         for app in config.pop('applications'):
-            mnf = app.pop('manifest', None)
-            restored_app = self.application(id=app.pop('id', None), manifest=Manifest(**mnf), name=app.pop('name'))
-            #restored_app.restore(app)
+            manifest = Manifest(**{k: v for k, v in app.iteritems() if k in ["content", "url", "file"]})
+            #mnf = app.pop('manifest', None)
+            restored_app = self.application(id=app.pop('id', None),
+                                            manifest=manifest,
+                                            name=app.pop('name'))
+
+        for serv in config.pop('services',[]):
+            app=serv.pop('application', None)
+            if app:
+                app = self.get_application(name=app)
+            self.get_or_create_service(id=serv.pop('id', None),
+                                       name=serv.pop('name'),
+                                       type=serv.pop('type', None),
+                                       application=app,
+                                       parameters=serv.pop('parameters', None))
+
+        for env in config.pop('environments',[]):
+            restored_env = self.get_or_create_environment(id=env.pop('id', None),
+                                                          name=env.pop('name', 'default'),
+                                                          zone=env.pop('zone', None),
+                                                          default=env.pop('default', False))
+            #restored_env.clean()
+            restored_env.restore(env)
+
 
         for instance in config.pop('instances', []):
-            launched = self.get_or_launch_instance(id=instance.pop('id', None), name=instance.pop('name'), **instance)
+            launched = self.get_or_launch_instance(application=self.get_application(name=instance.pop('application')),
+                                                   id=instance.pop('id', None),
+                                                   name=instance.pop('name', None),
+                                                   **instance)
             assert launched.ready()
 
 ### APPLICATION
@@ -189,12 +208,12 @@ class Organization(Entity):
 
 # INSTANCE
 
-    def create_instance(self, application, revision=None, environment=None, name=None, parameters=None,
+    def create_instance(self, application, revision=None, environment=None, name=None, parameters=None, submodules=None,
                         destroyInterval=None):
         """ Launches instance in application and returns Instance object.
         """
         from qubell.api.private.instance import Instance
-        return Instance.new(application, revision, environment, name, parameters, destroyInterval)
+        return Instance.new(application, revision, environment, name, parameters, submodules, destroyInterval)
 
     def get_instance(self, id=None, name=None):
         """ Get instance object by name or id.
@@ -214,7 +233,7 @@ class Organization(Entity):
             instances = router.get_instances(org_id=self.organizationId).json()
         return [ins for ins in instances if ins['status'] not in DEAD_STATUS]
 
-    def get_or_create_instance(self, id=None, application=None, revision=None, environment=None, name=None, parameters=None,
+    def get_or_create_instance(self, id=None, application=None, revision=None, environment=None, name=None, parameters=None, submodules=None,
                                destroyInterval=None):
         """ Get instance by id or name.
         If not found: create with given parameters
@@ -226,17 +245,17 @@ class Organization(Entity):
                 instance.ready()
             return instance
         except exceptions.NotFoundError:
-            return self.create_instance(application, revision, environment, name, parameters, destroyInterval)
+            return self.create_instance(application, revision, environment, name, parameters, submodules, destroyInterval)
     get_or_launch_instance = get_or_create_instance
 
-    def instance(self, id=None, application=None, name=None, revision=None, environment=None, parameters=None, destroyInterval=None):
+    def instance(self, id=None, application=None, name=None, revision=None, environment=None, parameters=None, submodules=None, destroyInterval=None):
         """ Smart method. It does everything, to return Instance with given parameters within the application.
         If instance found running and given parameters are actual: return it.
         If instance found, but parameters differs - reconfigure instance with new parameters.
         If instance not found: launch instance with given parameters.
         Return: Instance object.
         """
-        instance = self.get_or_create_instance(id, application, revision, environment, name, parameters, destroyInterval)
+        instance = self.get_or_create_instance(id, application, revision, environment, name, parameters, submodules, destroyInterval)
 
         reconfigure = False
         # if found:

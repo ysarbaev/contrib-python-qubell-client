@@ -142,7 +142,8 @@ class Instance(Entity, ServiceMixin):
         return self.__cached_json
 
     @staticmethod
-    def new(application, revision=None, environment=None, name=None, parameters=None, destroyInterval=None):
+    def new(application, revision=None, environment=None, name=None, parameters=None, submodules=None, destroyInterval=None):
+
         if not parameters: parameters = {}
         conf = {}
         conf['parameters'] = parameters
@@ -156,6 +157,7 @@ class Instance(Entity, ServiceMixin):
             conf['destroyInterval'] = destroyInterval
         if revision:
             conf['revisionId'] = revision.revisionId
+        conf['submodules'] = submodules or {}
         log.info("Creating instance: %s" % name)
         log.debug("Instance configuration: %s" % conf)
         data = json.dumps(conf)
@@ -186,7 +188,7 @@ class Instance(Entity, ServiceMixin):
     def get_manifest(self):
         return router.post_application_refresh(org_id=self.organizationId, app_id=self.applicationId).json()
 
-    def reconfigure(self, revision=None, parameters=None):
+    def reconfigure(self, revision=None, parameters=None, submodules=None):
         #note: be carefull refactoring this, or you might have unpredictable results
         #todo: private api seems requires at least presence of submodule names if exist
         payload = {}
@@ -195,7 +197,6 @@ class Instance(Entity, ServiceMixin):
         if revision:
             payload['revisionId'] = revision.revisionId
 
-        submodules = (parameters or {}).pop('submodules', None)
         if submodules:
             payload['submodules'] = submodules
         if parameters is not None:

@@ -22,6 +22,7 @@ __email__ = "vkhomenko@qubell.com"
 
 import logging as log
 import simplejson as json
+import copy
 
 from qubell.api.private import exceptions
 from qubell.api.private.common import QubellEntityList, Entity
@@ -79,19 +80,23 @@ class Environment(Entity):
         return Environment(organization, id=resp['id'])
 
     def restore(self, config):
+        config = copy.deepcopy(config)
         for marker in config.pop('markers', []):
             self.add_marker(marker)
         for policy in config.pop('policies', []):
             self.add_policy(policy)
         for property in config.pop('properties', []):
             self.add_property(**property)
-        for provider in config.pop('providers', []):
-            prov = self.organization.get_or_create_provider(id=provider.pop('id', None), name=provider.pop('name'), parameters=provider)
+        if config.get('provider', None):
+            provider = config.pop('provider')
+            prov = self.organization.get_provider(id=provider.pop('id', None), name=provider.pop('name'))
             self.add_provider(prov)
         for service in config.pop('services', []):
             type=service.pop('type', None)
             serv = self.organization.get_service(id=service.pop('id', None), name=service.pop('name'))
-            self.add_service(serv)
+            if not serv in self.services:
+                self.add_service(serv)
+
             if type == COBALT_SECURE_STORE_TYPE:
                 # TODO: We do not need to regenerate key every time. Find better way.
                 myenv = self.organization.get_environment(self.environmentId)
