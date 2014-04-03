@@ -397,7 +397,7 @@ class Organization(Entity):
     def create_provider(self, name, parameters):
         log.info("Creating provider: %s" % name)
         parameters['name'] = name
-        resp = router.post_provider(org_id=self.organizationId, data=json.dumps(parameters))
+        resp = router.post_organization_provider(org_id=self.organizationId, data=json.dumps(parameters))
         return self.get_provider(resp.json()['id'])
 
     def list_providers_json(self):
@@ -412,18 +412,24 @@ class Organization(Entity):
         return prov.delete()
 
     def get_or_create_provider(self, id=None, name=None, parameters=None):
-
-        """ Smart object. Will create provider or pick one, if exists"""
-
+        """ Get or create provider
+        """
+        assert id or name
         try:
             return self.get_provider(id=id, name=name)
         except exceptions.NotFoundError:
             return self.create_provider(name, parameters)
 
     def provider(self, id=None, name=None, parameters=None):
-        """ Get , create or modify provider
+        """ (Get and set) or create provider
         """
-        return self.get_or_create_provider(id=id, name=name, parameters=parameters)
+        assert id or name
+        try:
+            provider = self.get_provider(id=id, name=name)
+            provider.update(parameters=parameters)
+            return provider
+        except exceptions.NotFoundError:
+            return self.create_provider(name, parameters)
 
 ### ZONES
 
