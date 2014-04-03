@@ -89,7 +89,7 @@ class Organization(Entity):
     def restore(self, config):
         config = copy.deepcopy(config)
         for prov in config.get('cloudAccounts', []):
-            self.get_or_create_provider(id=prov.pop('id', None),
+            self.provider(id=prov.pop('id', None),
                                         name=prov.pop('name'),
                                         parameters=prov)
 
@@ -428,7 +428,7 @@ class Organization(Entity):
         assert id or name
         try:
             provider = self.get_provider(id=id, name=name)
-            provider.update(parameters=parameters)
+            provider.update(name=name or provider.name, parameters=parameters)
             return provider
         except exceptions.NotFoundError:
             return self.create_provider(name, parameters)
