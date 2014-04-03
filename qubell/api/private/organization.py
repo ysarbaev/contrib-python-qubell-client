@@ -93,10 +93,21 @@ class Organization(Entity):
                                         name=prov.pop('name'),
                                         parameters=prov)
 
+        for app in config.pop('applications'):
+            manifest = Manifest(**{k: v for k, v in app.iteritems() if k in ["content", "url", "file"]})
+            #mnf = app.pop('manifest', None)
+            restored_app = self.application(id=app.pop('id', None),
+                                            manifest=manifest,
+                                            name=app.pop('name'))
+
         for serv in config.pop('services',[]):
+            app=serv.pop('application', None)
+            if app:
+                app = self.get_application(name=app)
             self.get_or_create_service(id=serv.pop('id', None),
                                        name=serv.pop('name'),
                                        type=serv.pop('type', None),
+                                       application=app,
                                        parameters=serv.pop('parameters', None))
 
         for env in config.pop('environments',[]):
@@ -107,12 +118,6 @@ class Organization(Entity):
             #restored_env.clean()
             restored_env.restore(env)
 
-        for app in config.pop('applications'):
-            manifest = Manifest(**{k: v for k, v in app.iteritems() if k in ["content", "url", "file"]})
-            #mnf = app.pop('manifest', None)
-            restored_app = self.application(id=app.pop('id', None),
-                                            manifest=manifest,
-                                            name=app.pop('name'))
 
         for instance in config.pop('instances', []):
             launched = self.get_or_launch_instance(application=self.get_application(name=instance.pop('application')),

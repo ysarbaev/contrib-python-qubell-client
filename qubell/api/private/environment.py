@@ -94,7 +94,9 @@ class Environment(Entity):
         for service in config.pop('services', []):
             type=service.pop('type', None)
             serv = self.organization.get_service(id=service.pop('id', None), name=service.pop('name'))
-            self.add_service(serv)
+            if not serv in self.services:
+                self.add_service(serv)
+
             if type == COBALT_SECURE_STORE_TYPE:
                 # TODO: We do not need to regenerate key every time. Find better way.
                 myenv = self.organization.get_environment(self.environmentId)

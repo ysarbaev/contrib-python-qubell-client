@@ -258,7 +258,7 @@ class BaseTestCase(unittest.TestCase):
                     error = instance.error.strip()
 
                     # TODO: if instance fails to start during tests, add proper unittest log
-                    cls.sandbox.clean()
+                    cls.clean()
                     assert not error, "Instance %s didn't launch properly and has error '%s'" % (instance.instanceId, error)
                     assert False, "Instance %s is not ready after %s minutes and stop on timeout" % (instance.instanceId, timeout)
 
