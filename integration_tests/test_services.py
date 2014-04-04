@@ -45,10 +45,10 @@ class ServiceClassTest(BaseTestCase):
         serv = self.org.create_service(application=self.app)
         self.assertTrue(serv.ready())
         self.assertTrue(serv in self.org.services)
+        self.assertTrue(serv in self.environment.services)
         self.assertTrue(serv in self.org.instances)
         self.assertEqual('This is default manifest', serv.returnValues['out.app_output'])
         self.assertFalse(serv.destroyAt)
-        self.assertTrue(serv in self.environment.services)
 
         my_serv = self.org.get_service(id=serv.id)
         self.assertEqual(serv, my_serv)
@@ -57,9 +57,10 @@ class ServiceClassTest(BaseTestCase):
         self.assertEqual(self.org.services[my_serv.name], serv)
         self.assertEqual(self.org.services[my_serv.id].name, serv.name)
         self.assertEqual(self.org.services[my_serv.name].id, serv.id)
+        self.assertEqual(self.org.services[my_serv.name].status, 'Running')
 
         for x in self.org.services:
-            self.assertEqual(x.status, 'Running')
+            self.assertTrue(x.name)
             self.assertEqual(x.organizationId, self.org.organizationId)
 
         # clean
