@@ -29,6 +29,7 @@ from qubell.api.private.common import Auth
 
 from qubell.api.private.manifest import Manifest
 from qubell.api.tools import rand
+from qubell.api.private.service import COBALT_SECURE_STORE_TYPE, WORKFLOW_SERVICE_TYPE, SHARED_INSTANCE_CATALOG_TYPE
 
 log.getLogger().setLevel(log.DEBUG)
 
@@ -65,21 +66,15 @@ class BaseTestCase(testtools.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.prefix = prefix or rand()
-        #cls.auth = Auth(user=user, password=password, tenant=tenant)
-        #cls.context_public = cls.auth
 
     # Initialize platform and check access
         cls.platform = QubellPlatform.connect(tenant, user, password)
-        #assert cls.platform.authenticate()
-
-        ###cls.platform_public = QubellPlatformPublic(context=cls.context_public)
 
     # Set default manifest for app creation
         cls.manifest = Manifest(file=os.path.join(os.path.dirname(__file__), 'default.yml'), name='BaseTestManifest')
 
     # Initialize organization
         cls.organization = cls.platform.organization(name=org)
-        ###cls.organization_public = cls.platform_public.organization(name=org)
 
         if zone:
             z = [x for x in cls.organization.list_zones() if x['name'] == zone]
@@ -94,18 +89,10 @@ class BaseTestCase(testtools.TestCase):
             cls.environment.set_backend(cls.organization.zoneId)
         else:
             cls.environment = cls.organization.get_environment(name='default')
-        """
-        cls.environment_public = cls.organization_public.environment(id=cls.environment.environmentId)
 
-        cls.shared_service = cls.organization.service(name='BaseTestSharedService'+zone)
-        cls.wf_service = cls.organization.service(name='Workflow'+zone)
-        cls.key_service = cls.organization.service(name='Keystore'+zone)
-
-        # Cannot get services by Name (list not imlpemented)
-        cls.shared_service_public = cls.organization_public.service(id=cls.shared_service.serviceId)
-        cls.wf_service_public = cls.organization_public.service(id=cls.wf_service.serviceId)
-        cls.key_service_public = cls.organization_public.service(id=cls.key_service.serviceId)
-    """
+        cls.shared_service = cls.organization.get_or_create_service(name='BaseTestSharedService', type=SHARED_INSTANCE_CATALOG_TYPE, parameters={'configuration.shared-instances':{}})
+        cls.wf_service = cls.organization.get_or_create_service(name='Default workflow service', type=WORKFLOW_SERVICE_TYPE)
+        cls.key_service = cls.organization.get_or_create_service(name='Default credentials service', type=COBALT_SECURE_STORE_TYPE)
 
     @classmethod
     def tearDownClass(cls):

@@ -47,10 +47,10 @@ class InstanceClassTest(BaseTestCase):
         self.assertEqual(org.instances['Self-InstanceClassTest-Instance'], ins)
         self.assertEqual(org.instances['Self-InstanceClassTest-Instance'].name, ins.name)
         self.assertEqual(org.instances['Self-InstanceClassTest-Instance'].id, ins.id)
+        self.assertEqual(org.instances['Self-InstanceClassTest-Instance'].status, 'Running')
 
         for x in org.instances:
-            x.ready()
-            self.assertEqual(x.status, 'Running')
+            self.assertTrue(x.name)
             self.assertEqual(x.organizationId, org.organizationId)
 
     def test_create_instance_method(self):
