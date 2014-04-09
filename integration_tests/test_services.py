@@ -30,7 +30,7 @@ class ServiceClassTest(BaseTestCase):
     def setUpClass(cls):
         super(ServiceClassTest, cls).setUpClass()
         cls.org = cls.organization
-        cls.env = cls.org.create_environment(name='Self-ServiceClassTest')
+        cls.env = cls.org.create_environment(name='Self-ServiceClassTest-Env')
         cls.app = cls.org.application(manifest=cls.manifest, name='Self-ServiceClassTest')
 
     @classmethod
