@@ -12,7 +12,8 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from qubell import deprecated
+
+import time
 from qubell.api.tools import lazyproperty
 
 __author__ = "Vasyl Khomenko"
@@ -94,8 +95,7 @@ class Environment(Entity):
         for service in config.pop('services', []):
             type=service.pop('type', None)
             serv = self.organization.get_service(id=service.pop('id', None), name=service.pop('name'))
-            if not serv in self.services:
-                self.add_service(serv)
+            self.add_service(serv)
 
             if type == COBALT_SECURE_STORE_TYPE:
                 # TODO: We do not need to regenerate key every time. Find better way.
@@ -125,12 +125,15 @@ class Environment(Entity):
     _put_environment = lambda self, data: router.put_environment(org_id=self.organizationId, env_id=self.environmentId, data=data)
 
     def add_service(self, service):
-        data = self.json()
-        data['serviceIds'].append(service.instanceId)
-        data['services'].append(service.json())
+        if not service in self.services:
+            time.sleep(3) # TODO: Need to wait until strategy comes up
+            data = self.json()
+            data['serviceIds'].append(service.instanceId)
+            data['services'].append(service.json())
 
-        resp = self._put_environment(data=json.dumps(data))
-        return resp.json()
+            resp = self._put_environment(data=json.dumps(data))
+            return resp.json()
+        return None
 
     def remove_service(self, service):
         data = self.json()
@@ -141,6 +144,7 @@ class Environment(Entity):
         return resp.json()
 
     def add_marker(self, marker):
+        time.sleep(0.5) # TODO: Need to wait until strategy comes up
         data = self.json()
         data['markers'].append({'name': marker})
 
@@ -157,6 +161,7 @@ class Environment(Entity):
         return resp.json()
 
     def add_property(self, name, type, value):
+        time.sleep(0.5) # TODO: Need to wait until strategy comes up
         data = self.json()
         data['properties'].append({'name': name, 'type': type, 'value': value})
 
@@ -182,6 +187,7 @@ class Environment(Entity):
         return self._put_environment(data=json.dumps(data)).json()
 
     def add_policy(self, new):
+        time.sleep(0.5) # TODO: Need to wait until strategy comes up
         data = self.json()
         data['policies'].append(new)
 
@@ -193,6 +199,7 @@ class Environment(Entity):
         raise NotImplementedError
 
     def add_provider(self, provider):
+        time.sleep(0.5) # TODO: Need to wait until strategy comes up
         data = self.json()
         data.update({'providerId': provider.providerId})
 
