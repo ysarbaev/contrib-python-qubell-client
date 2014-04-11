@@ -132,7 +132,7 @@ def environment(envdata):
                    for _, method in clazz.__dict__.items()
                    if isinstance(method, types.FunctionType) and method.func_name.startswith("test") ]
         for env in params:
-            env['name'] += ' for %s' % clazz.__name__
+            env['name'] += '_for_%s' % clazz.__name__
 
         for method in methods:
             delattr(clazz, method.func_name)
