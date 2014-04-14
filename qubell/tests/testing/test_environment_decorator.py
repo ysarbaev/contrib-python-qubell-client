@@ -17,7 +17,7 @@ class EnvironmentDecoratorTests(unittest.TestCase):
 
     def test_apply(self):
         old_tests = ["test_nothing", "test_fail"]
-        new_tests = ["test_nothing_on_environment_a for DummyTests", "test_nothing_on_environment_b for DummyTests", "test_fail_on_environment_a for DummyTests", "test_fail_on_environment_b for DummyTests"]
+        new_tests = ["test_nothing_on_environment_a_for_DummyTests", "test_nothing_on_environment_b_for_DummyTests", "test_fail_on_environment_a_for_DummyTests", "test_fail_on_environment_b_for_DummyTests"]
         clazz = environment({"a":{"A":"AA"}, "b":{"B":"BB"}})(self.DummyTests)
         for name in old_tests:
             assert name not in clazz.__dict__
