@@ -82,6 +82,7 @@ class Environment(Entity):
 
     def restore(self, config):
         config = copy.deepcopy(config)
+        self.clean()
         for marker in config.pop('markers', []):
             self.add_marker(marker)
         for policy in config.pop('policies', []):
