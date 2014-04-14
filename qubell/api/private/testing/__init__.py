@@ -132,14 +132,14 @@ def environment(envdata):
                    for _, method in clazz.__dict__.items()
                    if isinstance(method, types.FunctionType) and method.func_name.startswith("test") ]
         for env in params:
-            if not env['name'] == 'default':
-                env['name'] += '_for_%s' % clazz.__name__
+            if env['name'] != 'default':
+                env['name'] += '_for_%s' % clazz.__name__   # Each test class should have it's own set of envs.
 
         for method in methods:
             delattr(clazz, method.func_name)
             log.info("Test '{0}' multiplied per environment in {1}".format(method.func_name, clazz.__name__))
             for env in params:
-                new_name = method.func_name + "_on_environment-" + env['name']
+                new_name = method.func_name + "_on_environment_" + env['name']
                 setattr(clazz, new_name, copy(method, new_name))
 
         return clazz
