@@ -124,19 +124,22 @@ def environment(envdata):
 
     def wraps_class(clazz):
         if "environments" in clazz.__dict__:
-            log.warn("Class {0} environment attribute is overriden".format(clazz.__name__))
+            log.warn("Class {0} environment attribute is overridden".format(clazz.__name__))
         params = format_as_api(envdata)
         clazz.environments = params
 
         methods = [method
                    for _, method in clazz.__dict__.items()
                    if isinstance(method, types.FunctionType) and method.func_name.startswith("test") ]
+        for env in params:
+            if not env['name'] == 'default':
+                env['name'] += '_for_%s' % clazz.__name__
 
         for method in methods:
             delattr(clazz, method.func_name)
             log.info("Test '{0}' multiplied per environment in {1}".format(method.func_name, clazz.__name__))
             for env in params:
-                new_name = method.func_name + "_on_environment_" + env['name']
+                new_name = method.func_name + "_on_environment-" + env['name']
                 setattr(clazz, new_name, copy(method, new_name))
 
         return clazz
