@@ -1,4 +1,4 @@
-import unittest2
+import unittest
 from mock import patch
 
 from qubell.api.private.exceptions import ApiUnauthorizedError, ApiAuthenticationError, ApiNotFoundError, ApiError
@@ -19,7 +19,7 @@ def gen_response(code=200, resp_text="enjoy"):
 
 
 @patch("requests.request", create=True)
-class RouterDecoratorTests(unittest2.TestCase):
+class RouterDecoratorTests(unittest.TestCase):
     class DummyRouter(Router):
         @property
         def is_connected(self): return True

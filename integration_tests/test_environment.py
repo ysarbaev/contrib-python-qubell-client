@@ -24,15 +24,15 @@ import os
 from base import BaseTestCase
 from qubell.api.private.manifest import Manifest
 
-
 class EnvironmentClassTest(BaseTestCase):
+    name = 'Self-EnvironmentClassTest'
 
     @classmethod
     def setUpClass(cls):
         super(EnvironmentClassTest, cls).setUpClass()
         cls.org = cls.organization
-        cls.app = cls.org.create_application(manifest=cls.manifest, name='Self-EnvironmentClassTest')
-        cls.env = cls.org.create_environment(name='Self-EnvironmentClassTest')
+        cls.app = cls.org.create_application(manifest=cls.manifest, name=cls.name)
+        cls.env = cls.org.create_environment(name=cls.name)
 
     @classmethod
     def tearDownClass(cls):
@@ -46,9 +46,9 @@ class EnvironmentClassTest(BaseTestCase):
         env = self.env
 
         self.assertTrue(env in org.environments)
-        self.assertEqual(org.environments['Self-EnvironmentClassTest'], env)
-        self.assertEqual(org.environments['Self-EnvironmentClassTest'].name, env.name)
-        self.assertEqual(org.environments['Self-EnvironmentClassTest'].id, env.id)
+        self.assertEqual(org.environments[self.name], env)
+        self.assertEqual(org.environments[self.name].name, env.name)
+        self.assertEqual(org.environments[self.name].id, env.id)
 
         for x in org.environments:
             self.assertTrue(x.name)
@@ -105,16 +105,14 @@ class EnvironmentClassTest(BaseTestCase):
         self.assertTrue(new_environment in org.environments)
         self.assertTrue(new_environment.delete())
 
-
         # Clean
         self.assertTrue(base_env.delete())
 
     def test_service_crud(self):
         env = self.env
-        initial_len = len(env.services)
         wf = self.org.get_service(name="Default workflow service")
         env.add_service(wf)
-        env.add_service(wf) #operation idempotent
+        env.add_service(wf)  # operation idempotent
         assert len(env.services) == 1
         service = self.org.create_service(self.app, environment=env)
         assert len(env.services) == 2
@@ -126,11 +124,9 @@ class EnvironmentClassTest(BaseTestCase):
         self.org.get_or_create_service(service.id)
         self.org.get_or_create_service(service.instanceId)
         assert len(env.services) == 2
-        env.remove_service(wf)
-        assert len(env.services) == 1
         service.destroy()
         assert service.destroyed()
-        assert len(env.services) == 0
+        assert len(env.services) == 1  # WF still there.
 
     def test_policy_crud(self): pass
 

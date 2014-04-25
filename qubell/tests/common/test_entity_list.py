@@ -1,11 +1,11 @@
 from qubell import deprecated
-import unittest2
+import unittest
 
 from qubell.api.private.common import EntityList, IdName
 from qubell.api.private import exceptions
 
 
-class EntityListTests(unittest2.TestCase):
+class EntityListTests(unittest.TestCase):
     class DummyEntity:
         def __init__(self, id, name):
             self.id = id
@@ -87,10 +87,6 @@ class EntityListTests(unittest2.TestCase):
         self.assertEqual(entity_ids, raw_ids)
         for e in self.entity_list:
             assert isinstance(e, EntityListTests.DummyEntity)
-
-    def test_deprecation_visually(self):
-        self.entity_list[0].plain_old()
-        self.entity_list["name2"].plain_old_with_message()
 
     def test__repr(self):
         assert repr(self.entity_list) == "DummyEntityList([IdName(id='1', name='name1'), IdName(id='2', name='name2'), IdName(id='3', name='name3dup'), IdName(id='4', name='name3dup'), IdName(id='1234567890abcd1234567890', name='with_bson_id')])"

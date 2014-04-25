@@ -1,4 +1,4 @@
-import unittest2
+import unittest
 
 from qubell.api.private.testing import values
 
@@ -6,7 +6,7 @@ from qubell.api.private.testing import values
 __author__ = 'dmakhno'
 
 # noinspection PyUnresolvedReferences
-class ValuesDecoratorTests(unittest2.TestCase):
+class ValuesDecoratorTests(unittest.TestCase):
     class FakeInstance(object):
         def __init__(self, return_value):
             self.returnValues = return_value

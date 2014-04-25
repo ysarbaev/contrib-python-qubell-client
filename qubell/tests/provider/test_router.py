@@ -1,11 +1,11 @@
 from mock import patch, Mock
-import unittest2
+import unittest
 
 from qubell.api.private.exceptions import ApiUnauthorizedError
 from qubell.api.provider.router import Router
 
 
-class RouterTests(unittest2.TestCase):
+class RouterTests(unittest.TestCase):
     def setUp(self):
         self.router = Router("http://router.org")
 
@@ -45,5 +45,5 @@ class RouterTests(unittest2.TestCase):
     def test_exception_if_not_get_connected(self):
         with self.assertRaises(ApiUnauthorizedError) as context, patch("requests.session"):
             self.router.connect("any@where", "**wrong**")
-        assert context.exception.message == "Authentication failed, please check settings"
+        assert str(context.exception) == "Authentication failed, please check settings"
 

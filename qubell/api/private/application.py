@@ -61,8 +61,6 @@ class Application(Entity):
         return self.json()['name']
 
 
-
-    #TODO: Is not used yet, think how to restore revisions
     def __parse(self, values):
         ret = {}
         for val in values:
@@ -163,6 +161,10 @@ class Application(Entity):
     def upload(self, manifest):
         log.info("Uploading manifest")
         self.manifest = manifest
+        if router.public_api_in_use:
+            return router.post_application_manifest(org_id=self.organizationId, app_id=self.applicationId,
+                                    data=manifest.content)
+
         return router.post_application_manifest(org_id=self.organizationId, app_id=self.applicationId,
                                     files={'path': manifest.content},
                                     data={'manifestSource': 'upload', 'name': self.name}).json()
@@ -171,15 +173,6 @@ class Application(Entity):
         if id:  # submodule instances are invisible for lists
             return Instance(id=id, organization=self.organization)
         return self.instances[id or name]
-
-    #def create_instance(self, name=None, environment=None, revision=None, parameters={}, destroyInterval=None):
-    #    from qubell.api.private.instance import Instance
-    #    return Instance.new(name=name,
-    #                        application=self,
-    #                        environment=environment,
-    #                        revision=revision,
-    #                        parameters=parameters,
-    #                        destroyInterval=destroyInterval)
 
 
 class ApplicationList(QubellEntityList):

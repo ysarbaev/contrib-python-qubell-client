@@ -49,20 +49,25 @@ class Instance(Entity, ServiceMixin):
         self._last_workflow_started_time = None
 
     @lazyproperty
-    def applicationId(self): return self.json()['applicationId']
-
-    @lazyproperty
     def application(self):
         return self.organization.applications[self.applicationId]
+
+    @lazyproperty
+    def environment(self):
+        return self.organization.environments[self.environmentId]
+
+    @lazyproperty
+    def applicationId(self): return self.json()['applicationId']
 
     @lazyproperty
     def environmentId(self): return self.json()['environmentId']
 
     @lazyproperty
-    def environment(self): return self.organization.get_environment(self.environmentId)
-
-    @lazyproperty
     def submodules(self):
+        # TODO: Public api hack.
+        # Private returns 'submodules', public returns 'components'
+        if router.public_api_in_use:
+            return InstanceList(list_json_method=lambda: self.json()['components'], organization=self.organization)
         return InstanceList(list_json_method=lambda: self.json()['submodules'], organization=self.organization)
 
     @property
@@ -72,10 +77,19 @@ class Instance(Entity, ServiceMixin):
     def name(self): return self.json()['name']
 
     def __parse(self, values):
-        return dict({val['id']: val['value'] for val in values})
+        return {val['id']: val['value'] for val in values}
 
     @property
-    def return_values(self): return self.__parse(self.json()['returnValues'])
+    def return_values(self):
+        """ Guess what api we are using and return as public api does.
+        Private has {'id':'key', 'value':'keyvalue'} format, public has {'key':'keyvalue'}
+        """
+        # TODO: Public api hack.
+        retvals = self.json()['returnValues']
+        if router.public_api_in_use:
+            return retvals
+        return self.__parse(retvals)
+
 
     @property
     def error(self): return self.json()['errorMessage']
@@ -85,7 +99,13 @@ class Instance(Entity, ServiceMixin):
     errorMessage = error
 
     @property
-    def parameters(self): return self.json()['revision']['parameters']
+    def parameters(self):
+        ins = self.json()
+        # TODO: Public api hack.
+        # We do not have 'revision' in public api
+        if router.public_api_in_use:
+            return self.json()['parameters']
+        return self.json()['revision']['parameters']
 
     def __getattr__(self, key):
         if key in ['instanceId',]:
@@ -122,20 +142,25 @@ class Instance(Entity, ServiceMixin):
         return self.__cached_json
 
     @staticmethod
-    def new(application, revision=None, environment=None, name=None, parameters=None, destroyInterval=None):
-        if not parameters: parameters = {}
-        if environment:  # if environment set, it overrides parameter
-            parameters['environmentId'] = environment.environmentId
-        elif not 'environmentId' in parameters.keys():  # if not set and not in params, use default
-            parameters['environmentId'] = application.organization.defaultEnvironment.environmentId
-        if name:
-            parameters['instanceName'] = name
-        if destroyInterval:
-            parameters['destroyInterval'] = str(destroyInterval)
-        if revision:
-            parameters['revisionId'] = revision.revisionId
+    def new(application, revision=None, environment=None, name=None, parameters=None, submodules=None, destroyInterval=None):
 
-        data = json.dumps(parameters)
+        if not parameters: parameters = {}
+        conf = {}
+        conf['parameters'] = parameters
+        if environment:  # if environment set, it overrides parameter
+            conf['environmentId'] = environment.environmentId
+        elif not 'environmentId' in parameters.keys():  # if not set and not in params, use default
+            conf['environmentId'] = application.organization.defaultEnvironment.environmentId
+        if name:
+            conf['instanceName'] = name
+        if destroyInterval:
+            conf['destroyInterval'] = destroyInterval
+        if revision:
+            conf['revisionId'] = revision.revisionId
+        conf['submodules'] = submodules or {}
+        log.info("Creating instance: %s" % name)
+        log.debug("Instance configuration: %s" % conf)
+        data = json.dumps(conf)
         before_creation = time.gmtime(time.time())
         resp = router.post_organization_instance(org_id=application.organizationId, app_id=application.applicationId, data=data)
         instance = Instance(organization=application.organization, id=resp.json()['id'])
@@ -157,10 +182,13 @@ class Instance(Entity, ServiceMixin):
         router.post_instance_workflow(org_id=self.organizationId, instance_id=self.instanceId, wf_name=name, data=json.dumps(parameters))
         return True
 
+    #alias
+    run_command = run_workflow
+
     def get_manifest(self):
         return router.post_application_refresh(org_id=self.organizationId, app_id=self.applicationId).json()
 
-    def reconfigure(self, revision=None, parameters=None):
+    def reconfigure(self, revision=None, parameters=None, submodules=None):
         #note: be carefull refactoring this, or you might have unpredictable results
         #todo: private api seems requires at least presence of submodule names if exist
         payload = {}
@@ -169,7 +197,6 @@ class Instance(Entity, ServiceMixin):
         if revision:
             payload['revisionId'] = revision.revisionId
 
-        submodules = (parameters or {}).pop('submodules', None)
         if submodules:
             payload['submodules'] = submodules
         if parameters is not None:
@@ -182,13 +209,16 @@ class Instance(Entity, ServiceMixin):
         payload = json.dumps({'instanceName': name})
         return router.put_instance_configuration(org_id=self.organizationId, instance_id=self.instanceId, data=payload)
 
+    def force_remove(self):
+        return router.delete_organizaton_instance_force(org_id=self.organizationId, instance_id=self.instanceId)
+
     def delete(self):
         self.destroy()
         #todo: remove, if destroyed
         return True
 
     def destroy(self):
-        log.info("Destroying")
+        log.info("Destroying instance %s" % self.name)
         return self.run_workflow("destroy")
 
     @property
@@ -219,6 +249,7 @@ class Instance(Entity, ServiceMixin):
 
     @property
     def most_recent_update_time(self):
+
         """
         Indicated most recent update of the instance, assumption based on:
         - if currentWorkflow exists, its startedAt time is most recent update.
@@ -241,7 +272,10 @@ class Instance(Entity, ServiceMixin):
         :return: bool
         """
         last = self._last_workflow_started_time
-        most_recent = self.most_recent_update_time
+        if not router.public_api_in_use:
+            most_recent = self.most_recent_update_time
+        else:
+            most_recent = None
         if last and most_recent:
             return last < most_recent
         return False  # can be more clever

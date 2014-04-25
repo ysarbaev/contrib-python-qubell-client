@@ -33,7 +33,15 @@ system_application_types = {COBALT_SECURE_STORE_TYPE: 'Secure Vault 2.0', WORKFL
                             SHARED_INSTANCE_CATALOG_TYPE: 'Shared Instances Catalog',
                             STATIC_RESOURCE_POOL_TYPE: 'Resource Pool'}
 
-SHARED_INSTANCES_PARAMETER_NAME = 'configuration.shared-instances'
+system_application_parameters = {
+    COBALT_SECURE_STORE_TYPE: None,
+    WORKFLOW_SERVICE_TYPE: None,
+    SHARED_INSTANCE_CATALOG_TYPE: 'configuration.shared-instances',
+    STATIC_RESOURCE_POOL_TYPE: 'configuration.resources'}
+
+
+
+SHARED_INSTANCES_PARAMETER_NAME = system_application_parameters[SHARED_INSTANCE_CATALOG_TYPE]
 
 
 # noinspection PyUnresolvedReferences
@@ -44,10 +52,13 @@ class ServiceMixin(object):
 
     def add_shared_instance(self, revision, instance):
         params = self.parameters
-        if SHARED_INSTANCES_PARAMETER_NAME in params:
+
+        try:
+            # Param could contain invalid yaml
             old = yaml.safe_load(params[SHARED_INSTANCES_PARAMETER_NAME])
-        else:
-            old = {}
+        except:
+            old = params[SHARED_INSTANCES_PARAMETER_NAME]
+
         old[revision.revisionId.split('-')[0]] = instance.instanceId
         params[SHARED_INSTANCES_PARAMETER_NAME] = yaml.safe_dump(old, default_flow_style=False)
         self.reconfigure(parameters=params)
@@ -55,7 +66,11 @@ class ServiceMixin(object):
     def remove_shared_instance(self, instance):
         params = self.parameters
         if SHARED_INSTANCES_PARAMETER_NAME in params:
-            old = yaml.safe_load(params[SHARED_INSTANCES_PARAMETER_NAME])
+            try:
+                # Param could contain invalid yaml
+                old = yaml.safe_load(params[SHARED_INSTANCES_PARAMETER_NAME])
+            except:
+                old = params[SHARED_INSTANCES_PARAMETER_NAME]
             if instance.instanceId in old.values():
                 val = [x for x, y in old.items() if y == instance.instanceId]
                 del old[val[0]]

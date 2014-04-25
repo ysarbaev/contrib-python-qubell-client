@@ -17,7 +17,7 @@
 import os
 import sys
 import yaml
-from qubell.api.private.platform import QubellPlatform, Auth
+from qubell.api.private.platform import QubellPlatform
 import logging
 
 
@@ -42,8 +42,11 @@ Will use default.env
 
 """
 
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+if os.getenv('QUBELL_LOG_LEVEL', 'info') == 'debug':
+    logging.getLogger().setLevel(logging.DEBUG)
+else:
+    logging.getLogger().setLevel(logging.INFO)
+
 
 default_env = os.path.join(os.path.dirname(__file__), 'default.env')
 
@@ -76,8 +79,7 @@ cloud_access = {
       "jcloudsRegions": region
     }
 
-# Qubell access info
-auth = Auth(user=user, password=password, tenant=tenant)
+
 env = None
 if len(sys.argv)>1:
     env = sys.argv[1]
@@ -92,11 +94,13 @@ cfg['organizations'][0].update({'providers': [cloud_access]})
 if org:
     cfg['organizations'][0].update({'name': org})
 
-platform = QubellPlatform(auth=auth)
+platform = QubellPlatform()
 
-assert platform.authenticate()
+platform.connect(user=user, password=password, tenant=tenant)
 print "Authorization passed"
 
+import pprint
+pprint.pprint(cfg)
 print "Restoring env: %s" % env
 platform.restore(cfg)
 print "Restore finished"

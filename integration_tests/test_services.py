@@ -1,0 +1,142 @@
+# Copyright (c) 2013 Qubell Inc., http://qubell.com
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+__author__ = "Vasyl Khomenko"
+__copyright__ = "Copyright 2013, Qubell.com"
+__license__ = "Apache"
+__version__ = "1.0.1"
+__email__ = "vkhomenko@qubell.com"
+
+
+from base import BaseTestCase
+from qubell.api.private.instance import Instance
+
+
+class ServiceClassTest(BaseTestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super(ServiceClassTest, cls).setUpClass()
+        cls.org = cls.organization
+        cls.env = cls.org.create_environment(name='Self-ServiceClassTest-Env')
+        cls.app = cls.org.application(manifest=cls.manifest, name='Self-ServiceClassTest')
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.env.delete()
+        super(ServiceClassTest, cls).tearDownClass()
+
+
+    def test_create_service_method(self):
+        """ Check basic service creation works
+        """
+        serv = self.org.create_service(application=self.app)
+        self.assertTrue(serv.ready())
+        self.assertTrue(serv in self.org.services)
+        self.assertTrue(serv in self.environment.services)
+        self.assertTrue(serv in self.org.instances)
+        self.assertEqual('This is default manifest', serv.returnValues['out.app_output'])
+        self.assertFalse(serv.destroyAt)
+
+        my_serv = self.org.get_service(id=serv.id)
+        self.assertEqual(serv, my_serv)
+
+        # Test Sugar
+        self.assertEqual(self.org.services[my_serv.name], serv)
+        self.assertEqual(self.org.services[my_serv.id].name, serv.name)
+        self.assertEqual(self.org.services[my_serv.name].id, serv.id)
+        self.assertEqual(self.org.services[my_serv.name].status, 'Running')
+
+        for x in self.org.services:
+            self.assertTrue(x.name)
+            self.assertEqual(x.organizationId, self.org.organizationId)
+
+        # clean
+        self.assertTrue(serv.delete())
+        self.assertTrue(serv.destroyed())
+        self.assertFalse(serv in self.org.services)
+        self.assertFalse(serv in self.environment.services)
+
+    def test_create_keystore_service(self):
+        """ Check keystore service could be created
+        """
+        from qubell.api.private.service import COBALT_SECURE_STORE_TYPE
+        serv = self.org.create_service(type=COBALT_SECURE_STORE_TYPE, environment=self.env)
+
+        self.assertTrue(serv.ready())
+        self.assertTrue(serv in self.org.services)
+        self.assertTrue(serv in self.org.instances)
+        self.assertFalse(serv.destroyAt) # Service has no destroy interval
+        self.assertTrue(serv in self.env.services)
+
+        # clean
+        self.assertTrue(serv.delete())
+        self.assertTrue(serv.destroyed())
+        self.assertFalse(serv in self.org.services)
+        self.assertFalse(serv in self.env.services)
+
+    def test_create_workflow_service(self):
+        """ Check workflow service could be created
+        """
+        from qubell.api.private.service import WORKFLOW_SERVICE_TYPE
+        serv = self.org.create_service(type=WORKFLOW_SERVICE_TYPE, environment=self.env)
+
+        self.assertTrue(serv.ready())
+        self.assertTrue(serv in self.org.services)
+        self.assertTrue(serv in self.org.instances)
+        self.assertFalse(serv.destroyAt) # Service has no destroy interval
+        self.assertTrue(serv in self.env.services)
+
+        # clean
+        self.assertTrue(serv.delete())
+        self.assertTrue(serv.destroyed())
+        self.assertFalse(serv in self.org.services)
+        self.assertFalse(serv in self.env.services)
+
+    def test_create_shared_service(self):
+        """ Check shared instance catalog service could be created
+        """
+        from qubell.api.private.service import SHARED_INSTANCE_CATALOG_TYPE
+        serv = self.org.create_service(type=SHARED_INSTANCE_CATALOG_TYPE, environment=self.env, parameters={'configuration.shared-instances':{}})
+
+        self.assertTrue(serv.ready())
+        self.assertTrue(serv in self.org.services)
+        self.assertTrue(serv in self.org.instances)
+        self.assertFalse(serv.destroyAt) # Service has no destroy interval
+        self.assertTrue(serv in self.env.services)
+
+        # clean
+        self.assertTrue(serv.delete())
+        self.assertTrue(serv.destroyed())
+        self.assertFalse(serv in self.org.services)
+        self.assertFalse(serv in self.env.services)
+
+    def test_create_resource_pool_service(self):
+        """ Check resource pool service could be created
+        """
+        from qubell.api.private.service import STATIC_RESOURCE_POOL_TYPE
+        serv = self.org.create_service(type=STATIC_RESOURCE_POOL_TYPE, environment=self.env, parameters={'configuration.resources':{}})
+
+        self.assertTrue(serv.ready())
+        self.assertTrue(serv in self.org.services)
+        self.assertTrue(serv in self.org.instances)
+        self.assertFalse(serv.destroyAt) # Service has no destroy interval
+        self.assertTrue(serv in self.env.services)
+
+        # clean
+        self.assertTrue(serv.delete())
+        self.assertTrue(serv.destroyed())
+        self.assertFalse(serv in self.org.services)
+        self.assertFalse(serv in self.env.services)

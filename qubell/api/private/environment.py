@@ -12,7 +12,8 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from qubell import deprecated
+
+import time
 from qubell.api.tools import lazyproperty
 
 __author__ = "Vasyl Khomenko"
@@ -22,10 +23,13 @@ __email__ = "vkhomenko@qubell.com"
 
 import logging as log
 import simplejson as json
+import copy
 
 from qubell.api.private import exceptions
 from qubell.api.private.common import QubellEntityList, Entity
 from qubell.api.provider.router import ROUTER as router
+
+from qubell.api.private.service import COBALT_SECURE_STORE_TYPE
 
 class Environment(Entity):
 
@@ -77,19 +81,24 @@ class Environment(Entity):
         return Environment(organization, id=resp['id'])
 
     def restore(self, config):
+        config = copy.deepcopy(config)
+        self.clean()
         for marker in config.pop('markers', []):
             self.add_marker(marker)
         for policy in config.pop('policies', []):
             self.add_policy(policy)
         for property in config.pop('properties', []):
             self.add_property(**property)
-        for provider in config.pop('providers', []):
-            prov = self.organization.get_or_create_provider(id=provider.pop('id', None), name=provider.pop('name'), parameters=provider)
+        if config.get('provider', None):
+            provider = config.pop('provider')
+            prov = self.organization.get_provider(id=provider.pop('id', None), name=provider.pop('name'))
             self.add_provider(prov)
         for service in config.pop('services', []):
-            serv = self.organization.get_or_create_service(id=service.pop('id', None), name=service.pop('name'), type=service.pop('type', None))
+            type=service.pop('type', None)
+            serv = self.organization.get_service(id=service.pop('id', None), name=service.pop('name'))
             self.add_service(serv)
-            if serv.type == 'builtin:cobalt_secure_store':
+
+            if type == COBALT_SECURE_STORE_TYPE:
                 # TODO: We do not need to regenerate key every time. Find better way.
                 myenv = self.organization.get_environment(self.environmentId)
                 myenv.add_policy(
@@ -117,12 +126,15 @@ class Environment(Entity):
     _put_environment = lambda self, data: router.put_environment(org_id=self.organizationId, env_id=self.environmentId, data=data)
 
     def add_service(self, service):
-        data = self.json()
-        data['serviceIds'].append(service.instanceId)
-        data['services'].append(service.json())
+        if not service in self.services:
+            time.sleep(3) # TODO: Need to wait until strategy comes up
+            data = self.json()
+            data['serviceIds'].append(service.instanceId)
+            data['services'].append(service.json())
 
-        resp = self._put_environment(data=json.dumps(data))
-        return resp.json()
+            resp = self._put_environment(data=json.dumps(data))
+            return resp.json()
+        return None
 
     def remove_service(self, service):
         data = self.json()
@@ -133,6 +145,7 @@ class Environment(Entity):
         return resp.json()
 
     def add_marker(self, marker):
+        time.sleep(0.5) # TODO: Need to wait until strategy comes up
         data = self.json()
         data['markers'].append({'name': marker})
 
@@ -149,17 +162,19 @@ class Environment(Entity):
         return resp.json()
 
     def add_property(self, name, type, value):
+        time.sleep(0.5) # TODO: Need to wait until strategy comes up
         data = self.json()
         data['properties'].append({'name': name, 'type': type, 'value': value})
 
         resp = self._put_environment(data=json.dumps(data))
         self.properties.append({'name': name, 'type': type, 'value': value})
         return resp.json()
+    set_property = add_property
 
     def remove_property(self, name):
         data = self.json()
         property = [p for p in data['properties'] if p['name'] == name]
-        if len(property)<1:
+        if len(property) < 1:
             log.error('Unable to remove property %s. Not found.' % name)
         data['properties'].remove(property[0])
 
@@ -173,6 +188,7 @@ class Environment(Entity):
         return self._put_environment(data=json.dumps(data)).json()
 
     def add_policy(self, new):
+        time.sleep(0.5) # TODO: Need to wait until strategy comes up
         data = self.json()
         data['policies'].append(new)
 
@@ -184,6 +200,7 @@ class Environment(Entity):
         raise NotImplementedError
 
     def add_provider(self, provider):
+        time.sleep(0.5) # TODO: Need to wait until strategy comes up
         data = self.json()
         data.update({'providerId': provider.providerId})
 

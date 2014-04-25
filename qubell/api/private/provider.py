@@ -12,6 +12,7 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import json
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
@@ -20,9 +21,11 @@ __email__ = "vkhomenko@qubell.com"
 
 from qubell.api.private import exceptions
 from qubell.api.provider.router import ROUTER as router
+from qubell.api.private.common import QubellEntityList, Entity
 
 
-class Provider(object):
+
+class Provider(Entity):
 
     def __init__(self, organization, id, auth=None):
         self.auth = auth
@@ -38,6 +41,10 @@ class Provider(object):
             raise exceptions.NotFoundError('Cannot get property %s' % key)
         return resp[key] or False
 
+    @property
+    def name(self):
+        return self.json()['name']
+
     def json(self):
         resp = router.get_providers(org_id=self.organizationId)
         provider = [x for x in resp.json() if x['id'] == self.providerId]
@@ -45,5 +52,16 @@ class Provider(object):
             return provider[0]
 
     def delete(self):
-        router.delete_provider(org_id=self.organizationId,prov_id=self.providerId)
+        router.delete_provider(org_id=self.organizationId, prov_id=self.providerId)
         return True
+
+    def update(self, name=None, parameters=None):
+        assert parameters
+        if name: parameters['name'] = name
+        resp = router.post_provider(org_id=self.organizationId, prov_id=self.providerId, data=json.dumps(parameters))
+        return resp.json()
+
+class ProviderList(QubellEntityList):
+    base_clz = Provider
+    def __init__(self, organization):
+        QubellEntityList.__init__(self, organization.list_providers_json, organization)

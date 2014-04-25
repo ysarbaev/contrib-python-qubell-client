@@ -69,17 +69,15 @@ class QubellPlatform(object):
 
     @lazyproperty
     def organizations(self):
-        return OrganizationList(self.list_organizations_json)
+        return OrganizationList(list_json_method=self.list_organizations_json)
 
     def create_organization(self, name):
         return Organization.new(name)
 
     def get_organization(self, id=None, name=None):
-        log.info("Picking organization: %s" % id)
-        if id:
-            return Organization(id) #speed-up, to avoid fetching all organizations
-        else:
-            return self.organizations[name]
+        log.info("Picking organization: %s" % (id or name))
+        return self.organizations[id or name]
+
 
     def get_or_create_organization(self, id=None, name=None):
         """ Smart object. Will create organization, modify or pick one"""
