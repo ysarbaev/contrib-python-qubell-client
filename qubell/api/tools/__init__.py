@@ -163,6 +163,17 @@ def full_dump(org):
     """
     pass
 
+def load_env(file):
+    env = yaml.load(open(file))
+
+    for org in env.get('organizations', []):
+        for app in org.get('applications', []):
+            if app.get('file'):
+
+                app['file']=os.path.realpath(os.path.join(os.path.dirname(file), app['file']))
+    return env
+
+
 def lazyproperty(fn):
     """
     Decorator, reads property once, on first use.

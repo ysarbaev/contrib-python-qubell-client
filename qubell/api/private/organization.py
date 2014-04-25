@@ -87,7 +87,7 @@ class Organization(Entity):
     def json(self):
         return router.get_organization(org_id=self.organizationId).json()
 
-    def restore(self, config):
+    def restore(self, config, clean=False, timeout=10):
         config = copy.deepcopy(config)
         for prov in config.get('cloudAccounts', []):
             self.provider(id=prov.pop('id', None),
@@ -112,27 +112,30 @@ class Organization(Entity):
             app=serv.pop('application', None)
             if app:
                 app = self.get_application(name=app)
+
             type = serv.pop('type', None)
-            self.get_or_create_service(id=serv.pop('id', None),
+            service = self.get_or_create_service(id=serv.pop('id', None),
                                        name=serv.pop('name'),
                                        type=type,
                                        application=app,
                                        parameters=serv.pop('parameters', None))
+            assert service.ready(timeout)
 
         for env in config.pop('environments', []):
             restored_env = self.get_or_create_environment(id=env.pop('id', None),
                                                           name=env.pop('name', DEFAULT_ENV_NAME()),
                                                           zone=zone_id,
                                                           default=env.pop('default', False))
-            restored_env.restore(env)
+            restored_env.restore(env, clean, timeout)
 
         #todo: make launch and ready async
         for instance in config.pop('instances', []):
             launched = self.get_or_launch_instance(application=self.get_application(name=instance.pop('application')),
                                                    id=instance.pop('id', None),
                                                    name=instance.pop('name', None),
+                                                   environment=self.get_or_create_environment(name=instance.pop('environment', 'default')),
                                                    **instance)
-            assert launched.ready()
+            assert launched.ready(timeout)
 
 ### APPLICATION
     def create_application(self, name=None, manifest=None):

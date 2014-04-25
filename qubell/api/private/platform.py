@@ -14,6 +14,7 @@
 # limitations under the License.
 import logging as log
 import warnings
+import copy
 
 import simplejson as json
 from qubell.api.private import exceptions
@@ -91,12 +92,14 @@ class QubellPlatform(object):
 
     organization = get_or_create_organization
 
-    def restore(self, config):
+    def restore(self, config, clean=False, timeout=10):
+        config = copy.deepcopy(config)
         for org in config.pop('organizations', []):
             restored_org = self.get_or_create_organization(id=org.get('id'), name=org.get('name'))
-            restored_org.restore(org)
+            restored_org.restore(org, clean, timeout)
 
     @deprecated
     def get_context(self):
         return self.auth
+
 
