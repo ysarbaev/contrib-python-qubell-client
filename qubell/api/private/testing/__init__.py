@@ -196,7 +196,7 @@ class BaseTestCase(unittest.TestCase):
             env.update(addon) # Add provider, keystore, workflow to every env.
 
         servs = [{"type": COBALT_SECURE_STORE_TYPE, "name": 'Default credentials service'},
-                 {"type": WORKFLOW_SERVICE_TYPE, "name": 'Default workflow service', "parameters": {'configuration.policies': '{}'}}]
+                 {"type": WORKFLOW_SERVICE_TYPE, "name": 'Default workflow service'}]
 
         return {
             "organization": {"name": organization},
