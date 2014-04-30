@@ -238,7 +238,6 @@ class BaseTestCase(unittest.TestCase):
         """
         cls.sandbox = SandBox(cls.platform, cls.environment(organization))
         cls.organization = cls.sandbox.make()
-        cls.instances = cls.organization.instances
 
         def launch_in_env(app, env):
             environment = cls.organization.environments[env['name']]
@@ -280,6 +279,8 @@ class BaseTestCase(unittest.TestCase):
                 if app.get('launch', True) and not app.get('add_as_service', False):
                     cls.regular_instances.append(launch_in_env(app, env))
         check_instances(cls.regular_instances)
+        
+        cls.instances = cls.service_instances + cls.regular_instances
 
     @classmethod
     def clean(cls, timeout=10):
