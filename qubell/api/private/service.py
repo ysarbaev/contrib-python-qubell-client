@@ -23,6 +23,7 @@ import yaml
 from qubell.api.private import exceptions
 from qubell.api.provider.router import ROUTER as router
 
+#ToDo: Move to Globals
 
 COBALT_SECURE_STORE_TYPE = 'builtin:cobalt_secure_store'
 WORKFLOW_SERVICE_TYPE = 'builtin:workflow_service'
@@ -86,3 +87,10 @@ class ServiceMixin(object):
 
     def list_shared_instances(self):
         return yaml.safe_load(self.parameters[SHARED_INSTANCES_PARAMETER_NAME])
+
+    @property
+    def is_secure_vault(self):
+        raw = self.json()
+        if 'templateId' in raw:
+            return raw['templateId'] == COBALT_SECURE_STORE_TYPE
+        return False

@@ -14,6 +14,7 @@
 # limitations under the License.
 import warnings
 from qubell import deprecated
+from qubell.api.globals import DEFAULT_ENV_NAME, ZONE_NAME
 from qubell.api.private.common import EntityList, IdName
 from qubell.api.private.service import system_application_types, system_application_parameters, COBALT_SECURE_STORE_TYPE, WORKFLOW_SERVICE_TYPE, \
     SHARED_INSTANCE_CATALOG_TYPE, STATIC_RESOURCE_POOL_TYPE
@@ -103,20 +104,25 @@ class Organization(Entity):
                                             manifest=manifest,
                                             name=app.pop('name'))
 
-        for serv in config.pop('services',[]):
+        zone_id = None
+        if ZONE_NAME:
+            zone_id = self.zones[ZONE_NAME].id
+
+        for serv in config.pop('services', []):
             app=serv.pop('application', None)
             if app:
                 app = self.get_application(name=app)
+            type = serv.pop('type', None)
             self.get_or_create_service(id=serv.pop('id', None),
                                        name=serv.pop('name'),
-                                       type=serv.pop('type', None),
+                                       type=type,
                                        application=app,
                                        parameters=serv.pop('parameters', None))
 
-        for env in config.pop('environments',[]):
+        for env in config.pop('environments', []):
             restored_env = self.get_or_create_environment(id=env.pop('id', None),
-                                                          name=env.pop('name', 'default'),
-                                                          zone=env.pop('zone', None),
+                                                          name=env.pop('name', DEFAULT_ENV_NAME()),
+                                                          zone=zone_id,
                                                           default=env.pop('default', False))
             restored_env.restore(env)
 
@@ -190,7 +196,6 @@ class Organization(Entity):
         elif name:
             try:
                 found = self.get_application(name=name)
-                id = found.applicationId
             except exceptions.NotFoundError:
                 pass
 
@@ -276,7 +281,7 @@ class Organization(Entity):
 ### SERVICE
     def create_service(self, application=None, revision=None, environment=None, name=None, parameters=None, type=None):
 
-        if type and system_application_types.has_key(type):
+        if type and type in system_application_types:
             if application: log.warning('Ignoring application parameter (%s) while creating system service' % application)
             application = self.applications[system_application_types[type]]
 
@@ -293,7 +298,10 @@ class Organization(Entity):
                               type=None, destroyInterval=None):
         """ Get by name or create service with given parameters"""
         try:
-            return self.get_instance(id=id, name=name)
+            serv = self.get_instance(id=id, name=name)
+            if environment:
+                environment.add_service(serv)
+            return serv
         except exceptions.NotFoundError:
             return self.create_service(application, revision, environment, name, parameters, type)
 
@@ -308,7 +316,7 @@ class Organization(Entity):
         """ Creates environment and returns Environment object.
         """
         from qubell.api.private.environment import Environment
-        return Environment.new(organization=self,name=name, zone=zone, default=default)
+        return Environment.new(organization=self, name=name, zone_id=zone, default=default)
 
     def list_environments_json(self):
         return router.get_environments(org_id=self.organizationId).json()
@@ -323,6 +331,10 @@ class Organization(Entity):
         env = self.get_environment(id)
         return env.delete()
 
+    def _assert_env_and_zone(self, env, zone_id):
+        if zone_id:
+            assert env.zoneId == zone_id, "Found environment has wrong zone id"
+
     def get_or_create_environment(self, id=None, name=None, zone=None, default=False):
         """ Get environment by id or name.
         If not found: create with given or generated parameters
@@ -332,6 +344,7 @@ class Organization(Entity):
         elif name:
             try:
                 env = self.get_environment(name=name)
+                self._assert_env_and_zone(env, zone)
             except exceptions.NotFoundError:
                 env = self.create_environment(name=name, zone=zone, default=default)
             return env
@@ -346,50 +359,33 @@ class Organization(Entity):
         If no environment found, create with given parameters.
         """
 
-        modify = False
         found = False
 
         # Try to find environment by name or id
         if name and id:
             found = self.get_environment(id=id)
-            if not found.name == name:
-                modify = True
         elif id:
             found = self.get_environment(id=id)
             name = found.name
         elif name:
             try:
                 found = self.get_environment(name=name)
-                id = found.applicationId
             except exceptions.NotFoundError:
                 pass
 
         # If found - compare parameters
         if found:
+            self._assert_env_and_zone(found, zone)
             if default and not found.isDefault:
-                # We cannot set it to non default
-                found.set_default()
-
-            # TODO: add abilities to change zone and name.
-            """
-            if name and not name == found.name:
-                found.rename(name)
-            if zone and not zone == found.zone:
-                modify = True
-            """
+                found.set_as_default()
+            # TODO: add abilities to change name.
         if not found:
             created = self.create_environment(name=name, zone=zone, default=default)
         return found or created
 
 
     def get_default_environment(self):
-        def_envs = [x for x in self.environments if x.isDefault == True]
-        if len(def_envs)>1:
-            log.warning('Found more than one default environment. Picking last.')
-            return def_envs[-1]
-        elif len(def_envs)==1:
-            return def_envs[0]
-        raise exceptions.NotFoundError('Unable to get default environment')
+        return self.environments.default
 
     def set_default_environment(self, environment):
         return environment.set_as_default()
