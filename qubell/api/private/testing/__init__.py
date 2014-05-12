@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 __author__ = "Anton Panasenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
@@ -27,13 +26,14 @@ import re
 
 from functools import wraps
 
-from qubell.api.private.manifest import Manifest
+from qubell.api.globals import *
 from qubell.api.private.service import system_application_types, COBALT_SECURE_STORE_TYPE, WORKFLOW_SERVICE_TYPE
 
 import logging
 import types
 
 logging.getLogger("requests.packages.urllib3.connectionpool").setLevel(logging.WARN)
+
 
 def format_as_api(data):
     """
@@ -130,9 +130,9 @@ def environment(envdata):
 
         methods = [method
                    for _, method in clazz.__dict__.items()
-                   if isinstance(method, types.FunctionType) and method.func_name.startswith("test") ]
+                   if isinstance(method, types.FunctionType) and method.func_name.startswith("test")]
         for env in params:
-            if env['name'] != 'default':
+            if env['name'] != DEFAULT_ENV_NAME():
                 env['name'] += '_for_%s' % clazz.__name__   # Each test class should have it's own set of envs.
 
         for method in methods:
@@ -156,7 +156,7 @@ def instance(byApplication):
             elif "_testMethodName" in self.__dict__ and len(self._testMethodName.split(separator)) > 1:
                 env = self._testMethodName.split(separator)[1]
             else:
-                env = "default"
+                env = DEFAULT_ENV_NAME()
             return env
 
         @wraps(func)
@@ -186,17 +186,17 @@ class BaseTestCase(unittest.TestCase):
 
         addon = {"provider": {"name": cls.parameters['provider_name']},
                  "services":
-                    [{"name": "Default credentials service"},
-                     {"name": "Default workflow service"}
+                    [{"name": DEFAULT_CREDENTIAL_SERVICE()},
+                     {"name": DEFAULT_WORKFLOW_SERVICE()}
                     ]}
 
-        envs = cls.environments or [{"name": "default"},]
+        envs = cls.environments or [{"name": DEFAULT_ENV_NAME()},]
 
         for env in envs:
-            env.update(addon) # Add provider, keystore, workflow to every env.
+            env.update(addon)  # Add provider, keystore, workflow to every env.
 
-        servs = [{"type": COBALT_SECURE_STORE_TYPE, "name": 'Default credentials service'},
-                 {"type": WORKFLOW_SERVICE_TYPE, "name": 'Default workflow service'}]
+        servs = [{"type": COBALT_SECURE_STORE_TYPE, "name": DEFAULT_CREDENTIAL_SERVICE()},
+                 {"type": WORKFLOW_SERVICE_TYPE, "name": DEFAULT_WORKFLOW_SERVICE()}]
 
         return {
             "organization": {"name": organization},
@@ -238,7 +238,6 @@ class BaseTestCase(unittest.TestCase):
         """
         cls.sandbox = SandBox(cls.platform, cls.environment(organization))
         cls.organization = cls.sandbox.make()
-        cls.instances = cls.organization.instances
 
         def launch_in_env(app, env):
             environment = cls.organization.environments[env['name']]
@@ -280,6 +279,8 @@ class BaseTestCase(unittest.TestCase):
                 if app.get('launch', True) and not app.get('add_as_service', False):
                     cls.regular_instances.append(launch_in_env(app, env))
         check_instances(cls.regular_instances)
+        
+        cls.instances = cls.service_instances + cls.regular_instances
 
     @classmethod
     def clean(cls, timeout=10):

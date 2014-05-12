@@ -76,6 +76,9 @@ class Instance(Entity, ServiceMixin):
     @property
     def name(self): return self.json()['name']
 
+    @property
+    def userData(self): return self.json()['userData']
+
     def __parse(self, values):
         return {val['id']: val['value'] for val in values}
 
