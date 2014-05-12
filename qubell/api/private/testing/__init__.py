@@ -35,7 +35,6 @@ import types
 logging.getLogger("requests.packages.urllib3.connectionpool").setLevel(logging.WARN)
 
 
-
 def format_as_api(data):
     """
     Accepts {'default':{},}
