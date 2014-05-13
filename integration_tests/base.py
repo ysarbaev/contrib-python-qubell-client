@@ -33,18 +33,6 @@ from qubell.api.private.service import COBALT_SECURE_STORE_TYPE, WORKFLOW_SERVIC
 
 log.getLogger().setLevel(log.DEBUG)
 
-user = os.environ.get('QUBELL_USER')
-password = os.environ.get('QUBELL_PASSWORD')
-tenant = os.environ.get('QUBELL_TENANT')
-org = os.environ.get('QUBELL_ORGANIZATION', 'selfcheck_organization_name')
-prefix = os.environ.get('QUBELL_PREFIX')
-zone = os.environ.get('QUBELL_ZONE', '')
-new_env = os.environ.get('QUBELL_NEW')
-
-if not user: log.error('No username provided. Set QUBELL_USER env')
-if not password: log.error('No password provided. Set QUBELL_PASSWORD env')
-if not tenant: log.error('No tenant url provided. Set QUBELL_TENANT env')
-if not org: log.error('No organization name provided. Set QUBELL_ORGANIZATION env')
 
 def attr(*args, **kwargs):
     """A decorator which applies the nose and testtools attr decorator
@@ -57,24 +45,32 @@ def attr(*args, **kwargs):
     return decorator
 
 
+parameters = {
+    'organization': os.getenv('QUBELL_ORGANIZATION', "selfcheck_organization_name"),
+    'user': os.environ['QUBELL_USER'],
+    'pass': os.environ['QUBELL_PASSWORD'],
+    'tenant': os.environ['QUBELL_TENANT'],
+    'provider_name': os.getenv('PROVIDER_NAME', "selfcheck_provider_name"),
+    'provider_type': os.environ.get('PROVIDER_TYPE', 'aws-ec2'),
+    'provider_identity': os.environ.get('PROVIDER_IDENTITY', 'No PROVIDER_IDENTITY'),
+    'provider_credential': os.environ.get('PROVIDER_CREDENTIAL', 'PROVIDER_CREDENTIAL'),
+    'provider_region': os.environ.get('PROVIDER_REGION', 'us-east-1'),
+}
+zone = os.environ.get('QUBELL_ZONE')
 
 class BaseTestCase(testtools.TestCase):
+    parameters=parameters
     ## TODO: Main preparation should be here
     """ Here we prepare global env. (load config, etc)
     """
+    # Set default manifest for app creation
+    manifest = Manifest(file=os.path.join(os.path.dirname(__file__), './default.yml'), name='BaseTestManifest')
+    platform = QubellPlatform.connect(user=parameters['user'], password=parameters['pass'], tenant=parameters['tenant'])
 
     @classmethod
     def setUpClass(cls):
-        cls.prefix = prefix or rand()
-
-    # Initialize platform and check access
-        cls.platform = QubellPlatform.connect(tenant, user, password)
-
-    # Set default manifest for app creation
-        cls.manifest = Manifest(file=os.path.join(os.path.dirname(__file__), 'default.yml'), name='BaseTestManifest')
-
     # Initialize organization
-        cls.organization = cls.platform.organization(name=org)
+        cls.organization = cls.platform.organization(name=parameters['organization'])
 
         if zone:
             z = [x for x in cls.organization.list_zones() if x['name'] == zone]
