@@ -238,14 +238,19 @@ class BaseTestCase(unittest.TestCase):
         """
         cls.sandbox = SandBox(cls.platform, cls.environment(organization))
         cls.organization = cls.sandbox.make()
+        cls.regular_instances = []
+        cls.service_instances = []
+
 
         def launch_in_env(app, env):
             environment = cls.organization.environments[env['name']]
             application = cls.organization.applications[app['name']]
             parameters = app.get('parameters', {})
+            settings = app.get('settings', {})
             instance = cls.organization.create_instance(application=application,
                                                         environment=environment,
-                                                        parameters=parameters)
+                                                        parameters=parameters,
+                                                        **settings)
             if app.get('add_as_service', False):
                 environment.add_service(instance)
             cls.sandbox.sandbox["instances"].append({
@@ -265,7 +270,6 @@ class BaseTestCase(unittest.TestCase):
                     assert False, "Instance %s is not ready after %s minutes and stop on timeout" % (instance.instanceId, timeout)
 
         # launch service instances first
-        cls.service_instances = []
         for app in cls.sandbox['applications']:
             for env in cls.sandbox['environments']:
                 if app.get('launch', True) and app.get('add_as_service', False):
@@ -273,7 +277,6 @@ class BaseTestCase(unittest.TestCase):
         check_instances(cls.service_instances)
 
         # then launch non-service instances
-        cls.regular_instances = []
         for app in cls.sandbox['applications']:
             for env in cls.sandbox['environments']:
                 if app.get('launch', True) and not app.get('add_as_service', False):

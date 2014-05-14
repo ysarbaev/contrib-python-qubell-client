@@ -48,10 +48,10 @@ class ZonesClassTest(BaseTestCase):
         zn = self.zone
 
         self.assertTrue(zn in org.zones)
-        self.assertEqual(org.zones['Qubell/us-east'], zn)
-        self.assertEqual(org.zones['Qubell/us-east'].id, zn.id)
-        self.assertEqual(org.zones['Qubell/us-east'].name, zn.name)
-        self.assertEqual(org.zones['Qubell/us-east'].id, zn.id)
+        self.assertEqual(org.zones[zn.name], zn)
+        self.assertEqual(org.zones[zn.name].id, zn.id)
+        self.assertEqual(org.zones[zn.name].name, zn.name)
+        self.assertEqual(org.zones[zn.name].id, zn.id)
 
         for x in org.zones:
             self.assertTrue(x.name)

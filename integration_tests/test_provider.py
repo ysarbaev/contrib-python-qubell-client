@@ -4,16 +4,16 @@ from integration_tests.base import BaseTestCase
 class ProviderClassTest(BaseTestCase):
     cloud_account = lambda self, identity: {"name": "dummy_default", "provider": "aws-ec2", "usedEnvironments": [],
                                             "ec2SecurityGroup": "default", "providerCopy": "aws-ec2",
-                                            "jcloudsIdentity": identity, "jcloudsCredential": "secret",
+                                            "jcloudsIdentity": identity, "jcloudsCredential": "secret"+identity,
                                             "jcloudsRegions": "us-east-1"}
-
+    identity = lambda self, provider: [p['value'] for p in provider.json()['params'] if p['param']['param']['name'] == 'jcloudsIdentity'][0]
     def test_provider_crud(self):
         # create
-        provider = self.organization.create_provider(name='crud', parameters=self.cloud_account('abc'))
-        identity = lambda: [p['value'] for p in provider.json()['params'] if p['param']['param']['name'] == 'jcloudsIdentity'][0]
+        provider = self.organization.create_provider(name='provider-test-crud', parameters=self.cloud_account('abc'))
+
         assert provider in self.organization.providers
-        assert provider.name == 'crud'
-        assert identity() == 'abc'
+        assert provider.name == 'provider-test-crud'
+        assert self.identity(provider) == 'abc'
 
         #read
         assert self.organization.get_provider(id=provider.id) == provider
@@ -24,14 +24,14 @@ class ProviderClassTest(BaseTestCase):
         provider.update('crud_updated', self.cloud_account('abc_updated'))
 
         assert provider.name == 'crud_updated'
-        assert identity() == 'abc_updated'
+        assert self.identity(provider) == 'abc_updated'
 
         provider.update(parameters=self.cloud_account('abc_updated_twice'))
         assert provider.name == 'dummy_default'
-        assert identity() == 'abc_updated_twice'
+        assert self.identity(provider) == 'abc_updated_twice'
 
         assert self.organization.provider(name='dummy_default', parameters=self.cloud_account('abc_set')) == provider
-        assert identity() == 'abc_set'
+        assert self.identity(provider) == 'abc_set'
 
         #delete
         id = provider.id
