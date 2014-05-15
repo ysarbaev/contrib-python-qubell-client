@@ -444,7 +444,7 @@ class Organization(Entity):
         backends = self.get_default_environment().json()['backends']
         zones = [bk for bk in backends if bk['isDefault'] == True]
         if len(zones):
-            zoneId = zones[0]['id']
+            zoneId = zones[-1]['id']
             return self.get_zone(id=zoneId)
         raise exceptions.NotFoundError('Unable to get default zone')
 

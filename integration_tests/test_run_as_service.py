@@ -10,15 +10,9 @@ def manifest(name):
 class RunAsServiceTest(BaseTestCase):
     service_name = "service"
     client_name = "client"
-    platform = QubellPlatform.connect(base.tenant, base.user, base.password)
-    parameters = {
-        "organization": base.org,
-        'provider_name': os.getenv('PROVIDER_NAME', 'test-provider'),
-        'provider_type': os.getenv('PROVIDER_TYPE', 'aws-ec2'),
-        'provider_identity': os.getenv('PROVIDER_IDENTITY', 'fake'),
-        'provider_credential': os.getenv('PROVIDER_CREDENTIAL', 'fake'),
-        'provider_region': os.getenv('PROVIDER_REGION', 'us-east-1')
-    }
+    parameters = base.parameters
+    platform = QubellPlatform.connect(parameters['tenant'], parameters['user'], parameters['pass'])
+
     apps = [
         {"name": client_name, "file": manifest("client.yml")},
         {"name": service_name, "file": manifest("service.yml"), "add_as_service": True}
@@ -26,7 +20,7 @@ class RunAsServiceTest(BaseTestCase):
 
     @classmethod
     def environment(cls, organization):
-        base_env = super(RunAsServiceTest, cls).environment(base.org)
+        base_env = super(RunAsServiceTest, cls).environment(cls.parameters['organization'])
         base_env['applications'] = cls.apps
         return base_env
 
