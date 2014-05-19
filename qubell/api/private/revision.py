@@ -28,12 +28,13 @@ class Revision(Entity):
     """
 
     def __init__(self, application, id):
-        self.revisionId = self.id = id
+        self.id = id
         self.application = application
         self.organizationId = self.application.organizationId
         self.applicationId = self.application.applicationId
         my = self.json()
         self.name = my['name']
+        self.revisionId = my['revisionId']
 
     def __getattr__(self, key):
         resp = self.json()
@@ -42,10 +43,10 @@ class Revision(Entity):
         raise exceptions.NotFoundError('Cannot get revision property %s' % key)
 
     def json(self):
-        return router.get_revision(org_id=self.organizationId, app_id=self.applicationId, rev_id=self.revisionId).json()
+        return router.get_revision(org_id=self.organizationId, app_id=self.applicationId, rev_id=self.id).json()
 
     def delete(self):
-        router.delete_revision(org_id=self.organizationId, app_id=self.applicationId, rev_id=self.revisionId)
+        router.delete_revision(org_id=self.organizationId, app_id=self.applicationId, rev_id=self.id)
         return True
 
 class RevisionList(EntityList):

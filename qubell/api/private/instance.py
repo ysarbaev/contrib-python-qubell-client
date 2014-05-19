@@ -159,7 +159,7 @@ class Instance(Entity, ServiceMixin):
         if destroyInterval:
             conf['destroyInterval'] = destroyInterval
         if revision:
-            conf['revisionId'] = revision.revisionId
+            conf['revisionId'] = revision.id
         conf['submodules'] = submodules or {}
         log.info("Creating instance: %s" % name)
         log.debug("Instance configuration: %s" % conf)
@@ -198,7 +198,7 @@ class Instance(Entity, ServiceMixin):
         payload['parameters'] = self.parameters
 
         if revision:
-            payload['revisionId'] = revision.revisionId
+            payload['revisionId'] = revision.id
 
         if submodules:
             payload['submodules'] = submodules
