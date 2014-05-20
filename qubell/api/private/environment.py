@@ -78,9 +78,10 @@ class Environment(Entity):
         resp = router.post_organization_environment(org_id=organization.organizationId, data=json.dumps(data)).json()
         return Environment(organization, id=resp['id'])
 
-    def restore(self, config):
+    def restore(self, config, clean=False, timeout=10):
         config = copy.deepcopy(config)
-        self.clean()
+        if clean:
+            self.clean()
         for marker in config.pop('markers', []):
             self.add_marker(marker)
         for policy in config.pop('policies', []):
