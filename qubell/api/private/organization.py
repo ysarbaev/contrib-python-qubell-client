@@ -38,6 +38,7 @@ from qubell.api.private.zone import ZoneList
 from qubell.api.private.provider import ProviderList
 from qubell.api.provider.router import ROUTER as router
 from qubell.api.private.common import QubellEntityList, Entity
+from qubell.api.globals import *
 
 
 class Organization(Entity):
@@ -86,6 +87,11 @@ class Organization(Entity):
 
     def json(self):
         return router.get_organization(org_id=self.organizationId).json()
+
+    def ready(self):
+        env = self.environments[DEFAULT_ENV_NAME()]
+        assert env.services[DEFAULT_WORKFLOW_SERVICE()].ready()
+        assert env.services[DEFAULT_CREDENTIAL_SERVICE()].ready()
 
     def restore(self, config, clean=False, timeout=10):
         config = copy.deepcopy(config)

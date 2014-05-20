@@ -73,7 +73,9 @@ class QubellPlatform(object):
         return OrganizationList(list_json_method=self.list_organizations_json)
 
     def create_organization(self, name):
-        return Organization.new(name)
+        org = Organization.new(name)
+        org.ready()
+        return org
 
     def get_organization(self, id=None, name=None):
         log.info("Picking organization: %s" % (id or name))
@@ -98,8 +100,7 @@ class QubellPlatform(object):
             restored_org = self.get_or_create_organization(id=org.get('id'), name=org.get('name'))
             restored_org.restore(org, clean, timeout)
 
-    @deprecated
-    def get_context(self):
+    @property
+    def info(self):
         return self.auth
-
 
