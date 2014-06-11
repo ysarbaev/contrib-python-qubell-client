@@ -89,7 +89,7 @@ class Environment(Entity):
         for property in config.pop('properties', []):
             self.add_property(**property)
         if config.get('cloudAccount', None) or config.get('provider', None):
-            provider = config.pop('cloudAccount') or config.pop('provider')
+            provider = config.get('cloudAccount') or config.get('provider')
             prov = self.organization.get_provider(id=provider.pop('id', None), name=provider.pop('name'))
             self.add_provider(prov)
         for service in config.pop('services', []):
