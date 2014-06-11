@@ -99,6 +99,11 @@ class Organization(Entity):
             self.provider(id=prov.pop('id', None),
                                         name=prov.pop('name'),
                                         parameters=prov)
+        # Deprecated, but maybe still used
+        for prov in config.get('providers', []):
+            self.provider(id=prov.pop('id', None),
+                                        name=prov.pop('name'),
+                                        parameters=prov)
 
         for app in config.pop('applications'):
             manifest_param = {k: v for k, v in app.iteritems() if k in ["content", "url", "file"]}

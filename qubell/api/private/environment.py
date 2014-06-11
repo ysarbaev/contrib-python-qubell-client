@@ -88,8 +88,8 @@ class Environment(Entity):
             self.add_policy(policy)
         for property in config.pop('properties', []):
             self.add_property(**property)
-        if config.get('provider', None):
-            provider = config.pop('provider')
+        if config.get('cloudAccount', None) or config.get('provider', None):
+            provider = config.pop('cloudAccount') or config.pop('provider')
             prov = self.organization.get_provider(id=provider.pop('id', None), name=provider.pop('name'))
             self.add_provider(prov)
         for service in config.pop('services', []):
