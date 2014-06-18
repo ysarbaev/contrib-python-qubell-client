@@ -20,8 +20,9 @@ __version__ = "1.0.1"
 __email__ = "vkhomenko@qubell.com"
 
 
-from base import BaseTestCase
+from base import BaseTestCase, eventually
 from qubell.api.private.instance import Instance
+from testtools.testcase import MismatchError
 
 
 class InstanceClassTest(BaseTestCase):
@@ -145,6 +146,37 @@ class InstanceClassTest(BaseTestCase):
         self.assertTrue(new_instance.delete())
 
         self.assertTrue(base_inst.delete())
+
+    def test_activity_log(self):
+        ins = self.ins
+
+        all_logs = ins.activitylog
+        info_logs = ins.get_activitylog(severity='INFO')
+
+        # It's not constant
+        #self.assertEqual(len(all_logs), 14)
+        self.assertEqual(len(info_logs), 5)
+
+
+        for log in info_logs:
+            assert log['severity'] == 'INFO'
+
+        assert 'Running' in info_logs
+        self.assertRegexpMatches(all_logs[0], '.* started \'launch\' \(.*\)')
+        @eventually(AssertionError, MismatchError)
+        def assert_eventually():
+            # Last line could be one og this.
+            self.assertTrue((all_logs[-1] == 'Running') or (all_logs[-1] == "Finished workflow 'launch' with status 'Succeeded'"))
+        assert_eventually()
+
+        self.assertRegexpMatches(info_logs[0], '.* started \'launch\' \(.*\)')
+        assert 'Started workflow: launch' in info_logs
+        assert 'Dynamic links updated' in all_logs
+
+        interval = info_logs.get_interval("Started workflow: launch", "Finished workflow 'launch' with status 'Succeeded'")
+        # there could be 3 or 4 messages
+        self.assertTrue(len(interval) in [3, 4], interval)
+
 
     """
     def test_instance_launch_as_service(self):
