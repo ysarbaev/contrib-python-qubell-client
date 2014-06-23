@@ -42,7 +42,11 @@ class EntityList(object):
 
     def __init__(self):
         self._list = []
-        self._id_name_list()
+        try:
+            self._id_name_list()
+        except KeyError:
+            raise exceptions.ApiNotFoundError("Object not found")
+
 
     def __iter__(self):
         self._id_name_list()
@@ -104,12 +108,16 @@ class QubellEntityList(EntityList):
 
 
     def _id_name_list(self):
-        try:
-            self._list = [IdName(ent['id'], ent['name']) for ent in self.json()]
-        except KeyError:
-            # TODO: Public api hack.
-            # Public api returns components list with instanceId instead of id
-            self._list = [IdName(ent['instanceId'], ent['name']) for ent in self.json()]
+        self._list=[]
+        for ent in self.json():
+            if ent.get('id'): # Normal behavior
+                self._list.append(IdName(ent['id'], ent['name']))
+            elif ent.get('instanceId'): # public api in use
+                self._list.append(IdName(ent['instanceId'], ent['name']))
+            else:
+                pass
+                # We have NO id on element. That could be submodule info
+                # Investigate and fix this.
 
     # noinspection PyUnresolvedReferences
     def _get_item(self, id_name):

@@ -28,7 +28,7 @@ from qubell.api.private.platform import QubellPlatform
 from qubell.api.private.common import Auth
 
 from qubell.api.private.manifest import Manifest
-from qubell.api.tools import rand
+from qubell.api.tools import retry
 from qubell.api.private.service import COBALT_SECURE_STORE_TYPE, WORKFLOW_SERVICE_TYPE, SHARED_INSTANCE_CATALOG_TYPE
 
 log.getLogger().setLevel(log.DEBUG)
@@ -43,6 +43,15 @@ def attr(*args, **kwargs):
             return nose.plugins.attrib.attr(*args, **kwargs)(f)
         # TODO: Should do something if test is skipped
     return decorator
+
+def eventually(*exceptions):
+    """
+    Method decorator, that waits when something inside eventually happens
+    Note: 'sum([delay*backoff**i for i in range(tries)])' ~= 580 seconds ~= 10 minutes
+    :param exceptions: same as except parameter, if not specified, valid return indicated success
+    :return:
+    """
+    return retry(tries=50, delay=0.5, backoff=1.1, retry_exception=exceptions)
 
 
 parameters = {

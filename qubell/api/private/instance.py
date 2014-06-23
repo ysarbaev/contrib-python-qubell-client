@@ -17,6 +17,7 @@ from qubell import deprecated
 from qubell.api.private.environment import EnvironmentList
 from qubell.api.private.revision import Revision
 from qubell.api.private.service import ServiceMixin
+import re
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
@@ -97,7 +98,25 @@ class Instance(Entity, ServiceMixin):
     @property
     def error(self): return self.json()['errorMessage']
 
-    #aliases
+
+    @property
+    def activitylog(self):
+        return self.get_activitylog()
+
+    def get_activitylog(self, after=None, severity=None, start=None, end=None):
+        """
+        Returns activitylog object
+        severity - filter severity ('INFO', DEBUG')
+        start/end - time or log text
+
+        """
+        if after:
+            log = router.get_instance_activitylog(org_id=self.organizationId, instance_id=self.instanceId, timestamp=after).json()
+        log = router.get_instance_activitylog(org_id=self.organizationId, instance_id=self.instanceId).json()
+
+        return activityLog(log, severity=severity, start=start, end=end)
+
+#aliases
     returnValues = return_values
     errorMessage = error
 
@@ -159,7 +178,7 @@ class Instance(Entity, ServiceMixin):
         if destroyInterval:
             conf['destroyInterval'] = destroyInterval
         if revision:
-            conf['revisionId'] = revision.revisionId
+            conf['revisionId'] = revision.id
         conf['submodules'] = submodules or {}
         log.info("Creating instance: %s" % name)
         log.debug("Instance configuration: %s" % conf)
@@ -198,7 +217,7 @@ class Instance(Entity, ServiceMixin):
         payload['parameters'] = self.parameters
 
         if revision:
-            payload['revisionId'] = revision.revisionId
+            payload['revisionId'] = revision.id
 
         if submodules:
             payload['submodules'] = submodules
@@ -286,3 +305,78 @@ class Instance(Entity, ServiceMixin):
 
 class InstanceList(QubellEntityList):
     base_clz = Instance
+
+class activityLog(object):
+    log=[]
+    def __init__(self, log, severity=None, start=None, end=None):
+        self.log = log
+        self.sort()
+        self.severity = severity
+        if severity:
+            self.log = [x for x in self.log if x['severity'] in severity]
+            self.severity=severity
+
+        if start:
+            self.log = [x for x in self.log if x['time']>=start]
+        if end:
+            self.log = [x for x in self.log if x['time']<=end]
+
+    def __len__(self):
+        return len(self.log)
+
+    def __iter__(self):
+        for i in self.log:
+            yield i
+
+    def __str__(self):
+        text = 'Severity: %s' % self.severity or 'ALL'
+        for x in self.log:
+            text += '\n{0}: {1}'.format(x['time'], x['description'].replace('\n', '\n\t\t'))
+        return text
+
+    def __contains__(self, item):
+        return len(self.find(item))
+
+    def __getitem__(self, item):
+        """
+        Guess what item to return: time, index or description
+        log[0] will return first entry
+        log[1402654329064] will return description of event with tis time
+        log['Status is Running'] will return time of event, if found.
+        """
+
+        if isinstance(item, int):
+            if item>1000000000000:
+                return [x['description'] for x in self.log if x['time']==item][0]
+            return self.log[item]['description']
+        elif isinstance(item, str):
+            return self.find(item)[0]
+        return False
+
+    def find(self, item):
+        """ Find regexp in activitylog
+        """
+        found = [x['time'] for x in self.log if re.search(item, x['description'])]
+
+        if len(found):
+            return found
+        raise exceptions.ApiNotFoundError('Cannot find activity log entry: %s' % item)
+
+
+    def get_interval(self, start_text=None, end_text=None):
+        if start_text:
+            begin = self.find(start_text)
+            interval = activityLog(self.log, self.severity, start=begin[0])
+        else:
+            interval = self
+
+        if end_text:
+            end = interval.find(end_text)
+            interval = activityLog(self.log, self.severity, end=end[0])
+
+        if len(interval):
+            return interval
+        raise exceptions.NotFoundError('Activitylog interval not found: [%s , %s]' % (start_text, end_text))
+
+    def sort(self):
+        self.log = sorted(self.log, key=lambda x: x['time'], reverse=False)

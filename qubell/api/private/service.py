@@ -60,7 +60,7 @@ class ServiceMixin(object):
         except:
             old = params[SHARED_INSTANCES_PARAMETER_NAME]
 
-        old[revision.revisionId.split('-')[0]] = instance.instanceId
+        old[revision.id] = instance.instanceId
         params[SHARED_INSTANCES_PARAMETER_NAME] = yaml.safe_dump(old, default_flow_style=False)
         self.reconfigure(parameters=params)
 
