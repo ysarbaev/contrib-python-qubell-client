@@ -85,6 +85,9 @@ class Organization(Entity):
     @property
     def name(self): return self.json()['name']
 
+    @property
+    def current_user(self): return router.get_organization_info(org_id=self.organizationId).json()
+
     def json(self):
         return router.get_organization(org_id=self.organizationId).json()
 
