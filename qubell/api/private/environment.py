@@ -75,8 +75,11 @@ class Environment(Entity):
                 'name': name,
                 'backend': zone_id,
                 'organizationId': organization.organizationId}
+        log.debug(data)
         resp = router.post_organization_environment(org_id=organization.organizationId, data=json.dumps(data)).json()
-        return Environment(organization, id=resp['id'])
+        env = Environment(organization, id=resp['id'])
+        log.info("Environment created: %s (%s)" % (name,env.environmentId))
+        return env
 
     def restore(self, config, clean=False, timeout=10):
         config = copy.deepcopy(config)
@@ -125,6 +128,7 @@ class Environment(Entity):
             data = self.json()
             data['serviceIds'].append(service.instanceId)
             data['services'].append(service.json())
+            log.info("Adding service %s (%s) to environment %s (%s)" % (service.name, service.id, self.name, self.id))
             resp = self._put_environment(data=json.dumps(data))
 
         if service.is_secure_vault:
@@ -144,7 +148,7 @@ class Environment(Entity):
         data = self.json()
         data['serviceIds'].remove(service.instanceId)
         data['services']=[s for s in data['services'] if s['id'] != service.id]
-
+        log.info("Removing service %s (%s) from environment %s (%s)" % (service.name, service.id, self.name, self.id))
         resp = self._put_environment(data=json.dumps(data))
         return resp.json()
 
@@ -153,6 +157,7 @@ class Environment(Entity):
         data = self.json()
         data['markers'].append({'name': marker})
 
+        log.info("Adding marker %s to environment %s (%s)" % (marker, self.name, self.id))
         resp = self._put_environment(data=json.dumps(data))
         self.markers.append(marker)
         return resp.json()
@@ -161,6 +166,7 @@ class Environment(Entity):
         data = self.json()
         data['markers'].remove({'name': marker})
 
+        log.info("Removing marker %s from environment %s (%s)" % (marker, self.name, self.id))
         resp = self._put_environment(data=json.dumps(data))
         self.markers.remove(marker)
         return resp.json()
@@ -170,6 +176,7 @@ class Environment(Entity):
         data = self.json()
         data['properties'].append({'name': name, 'type': type, 'value': value})
 
+        log.info("Adding property %s to environment %s (%s)" % (name, self.name, self.id))
         resp = self._put_environment(data=json.dumps(data))
         self.properties.append({'name': name, 'type': type, 'value': value})
         return resp.json()
@@ -182,6 +189,7 @@ class Environment(Entity):
             log.error('Unable to remove property %s. Not found.' % name)
         data['properties'].remove(property[0])
 
+        log.info("Removing property %s from environment %s (%s)" % (name, self.name, self.id))
         return self._put_environment(data=json.dumps(data)).json()
 
     def clean(self):
@@ -189,6 +197,7 @@ class Environment(Entity):
         data['serviceIds'] = []
         data['services'] = []
 
+        log.info("Cleaning environment %s (%s)" % (self.name, self.id))
         return self._put_environment(data=json.dumps(data)).json()
 
     def add_policy(self, new):
@@ -196,6 +205,7 @@ class Environment(Entity):
         data = self.json()
         data['policies'].append(new)
 
+        log.info("Adding policy %s.%s to environment %s (%s)" % (new.get('action'), new.get('parameter'), self.name, self.id))
         resp = self._put_environment(data=json.dumps(data))
         self.policies.append(new)
         return resp.json()
@@ -208,6 +218,7 @@ class Environment(Entity):
         data = self.json()
         data.update({'providerId': provider.providerId})
 
+        log.info("Setting provider %s (%s) for environment %s (%s)" % (provider.name, provider.providerId, self.name, self.id))
         resp = self._put_environment(data=json.dumps(data))
         self.providers.append(provider)
         return resp.json()

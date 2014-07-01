@@ -9,7 +9,7 @@ import sys
 from qubell.api.private.exceptions import ApiError, api_http_code_errors
 
 
-log.getLogger("requests.packages.urllib3.connectionpool").setLevel(log.WARN)
+log.getLogger("requests.packages.urllib3.connectionpool").setLevel(log.ERROR)
 
 _routes_stat = {}
 
@@ -30,7 +30,7 @@ def route(route_str):  # decorator param
             "max": max(elapsed, last_stat["max"]),
             "avg": (last_count * last_stat["avg"] + elapsed) / (last_count + 1)
         }
-        log.debug('Route Time: {0} took {1} ms'.format(route_str, elapsed))
+        #log.debug('Route Time: {0} took {1} ms'.format(route_str, elapsed))
 
 
     def wrapper(f):  # decorated function
