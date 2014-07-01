@@ -78,7 +78,7 @@ class QubellPlatform(object):
         return org
 
     def get_organization(self, id=None, name=None):
-        log.info("Picking organization: %s" % (id or name))
+        log.info("Picking organization: %s (%s)" % (name, id))
         return self.organizations[id or name]
 
 

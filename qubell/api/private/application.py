@@ -76,17 +76,18 @@ class Application(Entity):
                                                     data={'manifestSource': 'upload', 'name': name})
         app = Application(organization, resp.json()['id'])
         app.manifest = manifest
+        log.info("Application %s created (%s)" % (name, app.applicationId))
         return app
 
     def delete(self):
-        log.info("Removing application: %s" % self.name)
+        log.info("Removing application: %s (%s)" % (self.name, self.applicationId))
         router.delete_application(org_id=self.organizationId, app_id=self.applicationId)
         return True
 
     def update(self, **kwargs):
         if kwargs.get('manifest'):
             self.upload(kwargs.pop('manifest'))
-        log.info("Updating application: %s" % self.name)
+        log.info("Updating application: %s (%s)" % (self.name, self.applicationId))
 
         data = json.dumps(kwargs)
         resp = router.put_application(org_id=self.organizationId, app_id=self.applicationId, data=data)
@@ -96,7 +97,7 @@ class Application(Entity):
         for ins in self.instances:
             st = ins.status
             if st not in ['Destroyed', 'Destroying', 'Launching', 'Executing']: # Tests could fail and we can get any state here
-                log.info("Destroying instance %s" % ins.name)
+                log.info("Cleaning application %s (%s)" % (self.name, self.applicationId))
                 ins.delete()
                 assert ins.destroyed(timeout=timeout)
                 self.instances.remove(ins)
@@ -159,7 +160,7 @@ class Application(Entity):
         return router.post_application_refresh(org_id=self.organizationId, app_id=self.applicationId).json()
 
     def upload(self, manifest):
-        log.info("Uploading manifest")
+        log.info("Uploading manifest: %s to application: %s (%s)" % (manifest.source, self.name, self.applicationId))
         self.manifest = manifest
         if router.public_api_in_use:
             return router.post_application_manifest(org_id=self.organizationId, app_id=self.applicationId,

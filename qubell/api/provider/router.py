@@ -73,6 +73,10 @@ class PrivatePath(Router):
     @route("POST /organizations/{org_id}/environments{ctype}")
     def post_organization_environment(self, org_id, data, cookies, ctype=".json"): pass
 
+    @play_auth
+    @route("get /organizations/{org_id}/users/current{ctype}")
+    def get_organization_info(self, org_id, cookies, ctype=".json"): pass
+
     #Application
     @play_auth
     @route("GET /organizations/{org_id}/applications{ctype}")
