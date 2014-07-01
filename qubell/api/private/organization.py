@@ -52,7 +52,9 @@ class Organization(Entity):
         payload = json.dumps({'editable': 'true',
                               'name': name})
         resp = router.post_organization(data=payload)
-        return Organization(resp.json()['id'])
+        org = Organization(resp.json()['id'])
+        log.info("Organization created: %s (%s)" % (name, org.id))
+        return org
 
     @lazyproperty
     def environments(self):
@@ -84,6 +86,9 @@ class Organization(Entity):
 
     @property
     def name(self): return self.json()['name']
+
+    @property
+    def current_user(self): return router.get_organization_info(org_id=self.organizationId).json()
 
     def json(self):
         return router.get_organization(org_id=self.organizationId).json()
@@ -162,7 +167,7 @@ class Organization(Entity):
     def get_application(self, id=None, name=None):
         """ Get application object by name or id.
         """
-        log.info("Picking application: %s" % (id or name))
+        log.info("Picking application: %s (%s)" % (name, id))
         return self.applications[id or name]
 
     def list_applications_json(self):
@@ -240,7 +245,7 @@ class Organization(Entity):
         """ Get instance object by name or id.
         If application set, search within the application.
         """
-        log.info("Picking instance: %s" % (id or name))
+        log.info("Picking instance: %s (%s)" % (name, id))
         if id:  # submodule instances are invisible for lists
             return Instance(id=id, organization=self)
         return self.instances[id or name]
@@ -338,7 +343,7 @@ class Organization(Entity):
     def get_environment(self, id=None, name=None):
         """ Get environment object by name or id.
         """
-        log.info("Picking environment: %s" % (id or name))
+        log.info("Picking environment: %s (%s)" % (name, id))
         return self.environments[id or name]
 
     def delete_environment(self, id):
@@ -408,6 +413,7 @@ class Organization(Entity):
 ### PROVIDER
     def create_provider(self, name, parameters):
         log.info("Creating provider: %s" % name)
+        log.debug(parameters)
         parameters['name'] = name
         resp = router.post_organization_provider(org_id=self.organizationId, data=json.dumps(parameters))
         return self.get_provider(resp.json()['id'])
@@ -416,7 +422,7 @@ class Organization(Entity):
         return router.get_providers(org_id=self.organizationId).json()
 
     def get_provider(self, id=None, name=None):
-        log.info("Picking provider: %s" % (id or name))
+        log.info("Picking provider: %s (%s)" % (name, id))
         return self.providers[id or name]
 
     def delete_provider(self, id):
@@ -451,7 +457,7 @@ class Organization(Entity):
     def get_zone(self, id=None, name=None):
         """ Get zone object by name or id.
         """
-        log.info("Picking zone: %s" % (id or name))
+        log.info("Picking zone: %s (%s)" % (name, id))
         return self.zones[id or name]
 
     def get_default_zone(self):

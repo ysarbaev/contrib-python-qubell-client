@@ -60,7 +60,7 @@ def retry(tries=5, delay=3, backoff=2, retry_exception=None):
                     return False
                 if mtries is 0 and catching_mode:
                     return f(*args, **kwargs)  # extra try, to avoid except-raise syntax
-                log.debug("...{0} sleeping for {1} s in retry".format(f.__name__, mdelay))
+                log.debug("  waiting for signals update, sleeping for {0}sec".format(mdelay))
                 time.sleep(mdelay)
                 mdelay *= backoff
             raise Exception("unreachable code")
@@ -68,10 +68,10 @@ def retry(tries=5, delay=3, backoff=2, retry_exception=None):
     return deco_retry
 
 def waitForStatus(instance, final='Running', accepted=None, timeout=(20, 10, 1)):
-    if not accepted: accepted = ['Requested']
+    started = time.time()
+    info = '%s (%s)' % (instance.name, instance.id)
 
-    log.debug('Waiting status: %s' % final)
-    import time
+    if not accepted: accepted = ['Requested']
 
     @retry(3, 1, 2)  # max = 1 + 2 + 4 = 7 seconds + routes time
     def projection_update_monitor():
@@ -86,27 +86,56 @@ def waitForStatus(instance, final='Running', accepted=None, timeout=(20, 10, 1))
     def instance_status_waiter():
         cur_status = instance.status
         if cur_status in final:
-            log.info('Got status: %s, continue' % cur_status)
+            log.debug('Instance %s got expected status: %s, continue' % (info, cur_status))
             return True
         elif cur_status in accepted:
-            log.info('Current status: %s, waiting...' % cur_status)
+            log.debug('Instance %s status: %s, waiting...' % (info, cur_status))
             return False
         else:
-            log.error('Got unexpected instance status: %s' % cur_status)
+            log.error('Instance %s got unexpected status: %s, exiting' % (info, cur_status))
             return True  # Let retry exit
 
     instance_status_waiter()
     # We here, means we reached timeout or got status we are waiting for.
     # Check it again to be sure
-
     cur_status = instance.status
-    log.info('Final status: %s' % cur_status)
+    log.info('Instance %s final status: %s, expected status: %s, elapsed time: %s sec.' % (info, cur_status, final, int(time.time()-started)))
     instance._last_workflow_started_time = time.gmtime(time.time())
     if cur_status in final:
         return True
-    else:
-        log.error("Didn't get '{0}' stopped in '{1}' with error '''{2}'''".format(final, cur_status, instance.error))
+    elif cur_status in ['Error']:
+        log.error("\n\n\nInstance didn't get '{0}' status, current status :'{1}'. \n\n"
+                  "Instance: {2} ({3})\n"
+                  "Application: {4} ({5})\n"
+                  "Organization: {6} ({7})\n"
+                  "Timeout: {8} sec\n"
+                  "---------------- Error Text ---------------------\n"
+                  "{9}"
+                  "\n-------------- Error Text End -----------------\n"
+                  "    - export QUBELL_DEBUG env if you wish to leave instances running".format(
+            final, cur_status,
+            instance.name, instance.id,
+            instance.application.name, instance.application.id,
+            instance.organization.name, instance.organization.id,
+            timeout[0]*timeout[1]*timeout[2],
+            instance.error))
+
+        log.debug(instance.get_activitylog(severity=['ERROR', 'INFO']))
         return False
+    else:
+        log.error("\n\n\nInstance didn't get '{0}' status, current status :'{1}'. \n\n"
+                  "Instance: {2} ({3})\n"
+                  "Application: {4} ({5})\n"
+                  "Organization: {6} ({7})\n"
+                  "Timeout: {8} sec\n\n"
+                  "     - export QUBELL_DEBUG env if you wish to leave instances running".format(
+            final, cur_status,
+            instance.name, instance.id,
+            instance.application.name, instance.application.id,
+            instance.organization.name, instance.organization.id,
+            timeout[0]*timeout[1]*timeout[2]))
+        log.debug(instance.get_activitylog(severity=['ERROR', 'INFO']))
+
 
 def dump(node):
     """ Dump initialized object structure to yaml

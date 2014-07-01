@@ -77,3 +77,7 @@ class OrganizationClassTest(BaseTestCase):
         self.assertTrue(new_org.delete())
         """
 
+    def test_current_user_info(self):
+        org=self.organization
+        self.assertTrue(org.current_user['name'])
+        self.assertEqual(org.current_user['roles'], ["Administrator","Guest"])

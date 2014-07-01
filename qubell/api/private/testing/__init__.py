@@ -23,6 +23,7 @@ import unittest
 import yaml
 import logging as log
 import re
+import os
 
 from functools import wraps
 
@@ -32,7 +33,7 @@ from qubell.api.private.service import system_application_types, COBALT_SECURE_S
 import logging
 import types
 
-logging.getLogger("requests.packages.urllib3.connectionpool").setLevel(logging.WARN)
+logging.getLogger("requests.packages.urllib3.connectionpool").setLevel(logging.ERROR)
 
 
 def format_as_api(data):
@@ -229,13 +230,17 @@ class BaseTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        if os.getenv("QUBELL_DEBUG", None):
+            log.info("QUBELL_DEBUG is ON\n DO NOT clean sandbox")
+        else:
+            cls.clean()
         super(BaseTestCase, cls).tearDownClass()
-        cls.clean()
 
     @classmethod
     def prepare(cls, organization, timeout=30):
         """ Create sandboxed test environment
         """
+        log.info("\n\n\n---------------  Preparing sandbox...  ---------------")
         cls.sandbox = SandBox(cls.platform, cls.environment(organization))
         cls.organization = cls.sandbox.make()
         cls.regular_instances = []
@@ -265,7 +270,8 @@ class BaseTestCase(unittest.TestCase):
                     error = instance.error.strip()
 
                     # TODO: if instance fails to start during tests, add proper unittest log
-                    cls.clean()
+                    if not os.getenv("QUBELL_DEBUG", None):
+                        cls.clean()
                     assert not error, "Instance %s didn't launch properly and has error '%s'" % (instance.instanceId, error)
                     assert False, "Instance %s is not ready after %s minutes and stop on timeout" % (instance.instanceId, timeout)
 
@@ -273,6 +279,7 @@ class BaseTestCase(unittest.TestCase):
         for app in cls.sandbox['applications']:
             for env in cls.sandbox['environments']:
                 if app.get('launch', True) and app.get('add_as_service', False):
+                    log.info("Sandbox: starting service in app: %s, env: %s" % (app['name'], env['name']))
                     cls.service_instances.append(launch_in_env(app, env))
         check_instances(cls.service_instances)
 
@@ -280,13 +287,17 @@ class BaseTestCase(unittest.TestCase):
         for app in cls.sandbox['applications']:
             for env in cls.sandbox['environments']:
                 if app.get('launch', True) and not app.get('add_as_service', False):
+                    log.info("Sandbox: starting instance in app: %s, env: %s" % (app['name'], env['name']))
                     cls.regular_instances.append(launch_in_env(app, env))
         check_instances(cls.regular_instances)
         
         cls.instances = cls.service_instances + cls.regular_instances
+        log.info("\n---------------  Sandbox prepared  ---------------\n\n")
+
 
     @classmethod
     def clean(cls, timeout=10):
+        log.info("\n---------------  Cleaning sandbox  ---------------")
         def destroy_instances(instances):
             for instance in instances:
                 instance.destroy()
@@ -294,10 +305,9 @@ class BaseTestCase(unittest.TestCase):
                     log.error(
                         "Instance was not destroyed properly {0}: {1}", instance.id, instance.name)
 
-        log.info("Cleaning sandbox...")
         destroy_instances(cls.regular_instances)
         destroy_instances(cls.service_instances)
-        log.info("Sandbox cleaned")
+        log.info("\n---------------  Sandbox cleaned  ---------------\n")
 
     # noinspection PyPep8Naming
     def findByApplicationName(self, name):
@@ -319,9 +329,7 @@ class SandBox(object):
         return SandBox(platform, yaml.safe_load(yaml_file))
 
     def make(self):
-        log.info("Preparing sandbox...")
         self.organization.restore(self.sandbox)
-        log.info("Sandbox prepared")
         return self.organization
 
     def clean(self):

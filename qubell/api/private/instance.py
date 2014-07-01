@@ -166,13 +166,13 @@ class Instance(Entity, ServiceMixin):
     @staticmethod
     def new(application, revision=None, environment=None, name=None, parameters=None, submodules=None, destroyInterval=None):
 
+        if not environment:
+            environment = application.organization.defaultEnvironment
         if not parameters: parameters = {}
         conf = {}
         conf['parameters'] = parameters
-        if environment:  # if environment set, it overrides parameter
-            conf['environmentId'] = environment.environmentId
-        elif not 'environmentId' in parameters.keys():  # if not set and not in params, use default
-            conf['environmentId'] = application.organization.defaultEnvironment.environmentId
+        conf['environmentId'] = environment.environmentId
+
         if name:
             conf['instanceName'] = name
         if destroyInterval:
@@ -180,13 +180,18 @@ class Instance(Entity, ServiceMixin):
         if revision:
             conf['revisionId'] = revision.id
         conf['submodules'] = submodules or {}
-        log.info("Creating instance: %s" % name)
+        log.info("Starting instance: %s\n    Application: %s (%s)\n    Environment: %s (%s)\n    Submodules: %s\n    destroyInterval: %s" %
+                 (name,
+                  application.name, application.applicationId,
+                  environment.name, environment.environmentId,
+                  submodules, destroyInterval))
         log.debug("Instance configuration: %s" % conf)
         data = json.dumps(conf)
         before_creation = time.gmtime(time.time())
         resp = router.post_organization_instance(org_id=application.organizationId, app_id=application.applicationId, data=data)
         instance = Instance(organization=application.organization, id=resp.json()['id'])
         instance._last_workflow_started_time = before_creation
+        log.debug("Instance %s (%s) started." % (instance.name, instance.id))
         return instance
 
     def ready(self, timeout=3):  # Shortcut for convinience. Timeout = 3 min (ask timeout*6 times every 10 sec)
@@ -199,7 +204,7 @@ class Instance(Entity, ServiceMixin):
 
     def run_workflow(self, name, parameters=None):
         if not parameters: parameters = {}
-        log.info("Running workflow %s" % name)
+        log.info("Running workflow %s on instance %s (%s)" % (name, self.name, self.id))
         self._last_workflow_started_time = time.gmtime(time.time())
         router.post_instance_workflow(org_id=self.organizationId, instance_id=self.instanceId, wf_name=name, data=json.dumps(parameters))
         return True
@@ -240,7 +245,7 @@ class Instance(Entity, ServiceMixin):
         return True
 
     def destroy(self):
-        log.info("Destroying instance %s" % self.name)
+        log.info("Destroying instance %s (%s)" % (self.name, self.id))
         return self.run_workflow("destroy")
 
     @property
