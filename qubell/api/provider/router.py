@@ -148,6 +148,14 @@ class PrivatePath(Router):
     @route("DELETE /organizations/{org_id}/instances/{instance_id}{ctype}?force=1")
     def delete_organizaton_instance_force(self, org_id, instance_id, cookies, data="{}", ctype=".json"): pass
 
+    @play_auth
+    @route("POST /organizations/{org_id}/instances/{instance_id}/workflows/{wf_name}/schedule{ctype}")
+    def post_instance_workflow_schedule(self, org_id, instance_id, wf_name, data, cookies, ctype=".json"): pass
+
+    @play_auth
+    @route("POST /organizations/{org_id}/instances/{instance_id}/storedWorkflows/{workflow_id}/reschedule{ctype}")
+    def post_instance_reschedule(self, org_id, instance_id, workflow_id, data, cookies, ctype=".json"): pass
+
     #Environment
     @play_auth
     @route("GET /organizations/{org_id}/environments{ctype}")

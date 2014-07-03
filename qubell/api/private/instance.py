@@ -137,7 +137,9 @@ class Instance(Entity, ServiceMixin):
             return self.ready()
         else:
             log.debug('Getting instance attribute: %s' % key)
-            return self.json()[key]
+            atr = self.json()[key]
+            log.debug(atr)
+            return atr
 
     def _cache_free(self):
         """Frees cache"""
@@ -205,12 +207,27 @@ class Instance(Entity, ServiceMixin):
     def run_workflow(self, name, parameters=None):
         if not parameters: parameters = {}
         log.info("Running workflow %s on instance %s (%s)" % (name, self.name, self.id))
+        log.debug("Parameters: %s" % parameters)
         self._last_workflow_started_time = time.gmtime(time.time())
         router.post_instance_workflow(org_id=self.organizationId, instance_id=self.instanceId, wf_name=name, data=json.dumps(parameters))
         return True
 
     #alias
     run_command = run_workflow
+
+    def schedule_workflow(self, name, timestamp, parameters=None):
+        if not parameters: parameters = {}
+        log.info("Scheduling workflow %s on instance %s (%s), timestamp: %s" % (name, self.name, self.id, timestamp))
+        log.debug("Parameters: %s" % parameters)
+        payload = {'parameters': parameters, 'timestamp':timestamp}
+        router.post_instance_workflow_schedule(org_id=self.organizationId, instance_id=self.instanceId, wf_name=name, data=json.dumps(payload))
+        return True
+
+    def reschedule_workflow(self, workflow_id, timestamp):
+        log.info("ReScheduling workflow %s on instance %s (%s), timestamp: %s" % (workflow_id, self.name, self.id, timestamp))
+        payload = {'timestamp':timestamp}
+        router.post_instance_reschedule(org_id=self.organizationId, instance_id=self.instanceId, workflow_id=workflow_id, data=json.dumps(payload))
+        return True
 
     def get_manifest(self):
         return router.post_application_refresh(org_id=self.organizationId, app_id=self.applicationId).json()
