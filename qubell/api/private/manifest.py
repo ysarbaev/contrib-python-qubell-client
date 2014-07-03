@@ -47,7 +47,7 @@ class Manifest(object):
             self.source = self.file
 
 
-    def patch(self, path, value):
+    def patch(self, path, value=None):
         """ Set specified value to yaml path.
         Example:
         patch('application/components/child/configuration/__locator.application-id','777')
@@ -64,7 +64,16 @@ class Manifest(object):
             dictionary = pathGet(dictionary, "/".join(path[:-1]))
             dictionary[key] = value
 
+        def pathRm(dictionary, path):
+            path = path.split("/")
+            key = path[-1]
+            dictionary = pathGet(dictionary, "/".join(path[:-1]))
+            del dictionary[key]
+
         src = yaml.load(self.content)
-        pathSet(src, path, value)
+        if value:
+            pathSet(src, path, value)
+        else:
+            pathRm(src, path)
         self.content = yaml.safe_dump(src, default_flow_style=False)
         return True

@@ -32,7 +32,7 @@ def rand():
 def cpath(file):
     return os.path.join(os.path.dirname(__file__), file)
 
-def retry(tries=5, delay=3, backoff=2, retry_exception=None):
+def retry(tries=10, delay=1, backoff=2, retry_exception=None):
     """
     Retry "tries" times, with initial "delay", increasing delay "delay*backoff" each time.
     Without exception success means when function returns valid object.
@@ -46,6 +46,8 @@ def retry(tries=5, delay=3, backoff=2, retry_exception=None):
             mtries, mdelay = tries, delay
 
             while mtries > 0:
+                time.sleep(mdelay)
+                mdelay *= backoff
                 try:
                     rv = f(*args, **kwargs)
                     if not catching_mode and rv:
@@ -60,9 +62,7 @@ def retry(tries=5, delay=3, backoff=2, retry_exception=None):
                     return False
                 if mtries is 0 and catching_mode:
                     return f(*args, **kwargs)  # extra try, to avoid except-raise syntax
-                log.debug("  waiting for signals update, sleeping for {0}sec".format(mdelay))
-                time.sleep(mdelay)
-                mdelay *= backoff
+                log.debug("{0} try, sleeping for {1} sec".format(tries-mtries, mdelay))
             raise Exception("unreachable code")
         return f_retry
     return deco_retry
@@ -111,8 +111,7 @@ def waitForStatus(instance, final='Running', accepted=None, timeout=(20, 10, 1))
                   "Timeout: {8} sec\n"
                   "---------------- Error Text ---------------------\n"
                   "{9}"
-                  "\n-------------- Error Text End -----------------\n"
-                  "    - export QUBELL_DEBUG env if you wish to leave instances running".format(
+                  "\n-------------- Error Text End -----------------\n".format(
             final, cur_status,
             instance.name, instance.id,
             instance.application.name, instance.application.id,
@@ -120,15 +119,17 @@ def waitForStatus(instance, final='Running', accepted=None, timeout=(20, 10, 1))
             timeout[0]*timeout[1]*timeout[2],
             instance.error))
 
-        log.debug(instance.get_activitylog(severity=['ERROR', 'INFO']))
+        log.debug("\n------------------ ActivityLog -----------------\n"
+                  "%s"
+                  "\n------------------ End of ActivityLog -----------------\n"
+                  % instance.get_activitylog(severity=['ERROR', 'INFO']))
         return False
     else:
         log.error("\n\n\nInstance didn't get '{0}' status, current status :'{1}'. \n\n"
                   "Instance: {2} ({3})\n"
                   "Application: {4} ({5})\n"
                   "Organization: {6} ({7})\n"
-                  "Timeout: {8} sec\n\n"
-                  "     - export QUBELL_DEBUG env if you wish to leave instances running".format(
+                  "Timeout: {8} sec\n\n".format(
             final, cur_status,
             instance.name, instance.id,
             instance.application.name, instance.application.id,
