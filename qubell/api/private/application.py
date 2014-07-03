@@ -96,17 +96,15 @@ class Application(Entity):
     def clean(self, timeout=3):
         for ins in self.instances:
             st = ins.status
-            if st not in ['Destroyed', 'Destroying', 'Launching', 'Executing']: # Tests could fail and we can get any state here
+            if st not in ['Destroyed', 'Destroying']: # Tests could fail and we can get any state here
                 log.info("Cleaning application %s (%s)" % (self.name, self.applicationId))
-                ins.delete()
-                assert ins.destroyed(timeout=timeout)
+                ins.destroy()
                 self.instances.remove(ins)
 
         for rev in self.revisions:
             self.revisions.remove(rev)
             rev.delete()
-
-        @retry(5, 1 , 2 , AssertionError)
+        @retry(10, 1, 2 , AssertionError)
         def eventually_clean():
             for ins in self.instances:
                 assert ins.status == 'Destroyed'

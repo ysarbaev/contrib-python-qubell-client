@@ -230,7 +230,7 @@ class BaseTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        if os.getenv("QUBELL_DEBUG", None):
+        if os.getenv("QUBELL_DEBUG", None) and not('false' in os.getenv("QUBELL_DEBUG", None)):
             log.info("QUBELL_DEBUG is ON\n DO NOT clean sandbox")
         else:
             cls.clean()
@@ -270,7 +270,9 @@ class BaseTestCase(unittest.TestCase):
                     error = instance.error.strip()
 
                     # TODO: if instance fails to start during tests, add proper unittest log
-                    if not os.getenv("QUBELL_DEBUG", None):
+                    if os.getenv("QUBELL_DEBUG", None) and not('false' in os.getenv("QUBELL_DEBUG", None)):
+                        pass
+                    else:
                         cls.clean()
                     assert not error, "Instance %s didn't launch properly and has error '%s'" % (instance.instanceId, error)
                     assert False, "Instance %s is not ready after %s minutes and stop on timeout" % (instance.instanceId, timeout)
