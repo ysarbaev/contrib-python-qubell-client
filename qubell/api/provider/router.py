@@ -149,8 +149,12 @@ class PrivatePath(Router):
     def get_instance_activitylog_after(self, org_id, instance_id, timestamp, cookies, ctype=".json"): pass
 
     @play_auth
+    @route("POST /organizations/{org_id}/instances/{instance_id}/{action}{ctype}")
+    def post_instance_action(self, org_id, instance_id, action, cookies, data="{}", ctype=".json"): pass
+
+    @play_auth
     @route("DELETE /organizations/{org_id}/instances/{instance_id}{ctype}?force=1")
-    def delete_organizaton_instance_force(self, org_id, instance_id, cookies, data="{}", ctype=".json"): pass
+    def delete_instance_force(self, org_id, instance_id, cookies, data="{}", ctype=".json"): pass
 
     @play_auth
     @route("POST /organizations/{org_id}/instances/{instance_id}/workflows/{wf_name}/schedule{ctype}")
