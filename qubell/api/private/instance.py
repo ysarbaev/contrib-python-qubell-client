@@ -254,7 +254,14 @@ class Instance(Entity, ServiceMixin):
         return router.put_instance_configuration(org_id=self.organizationId, instance_id=self.instanceId, data=payload)
 
     def force_remove(self):
-        return router.delete_organizaton_instance_force(org_id=self.organizationId, instance_id=self.instanceId)
+        return router.delete_instance_force(org_id=self.organizationId, instance_id=self.instanceId)
+
+    def cancel_command(self):
+        return router.post_instance_action(org_id=self.organizationId, instance_id=self.instanceId, action="cancel")
+    def star(self):
+        return router.post_instance_action(org_id=self.organizationId, instance_id=self.instanceId, action="star")
+    def unstar(self):
+        return router.post_instance_action(org_id=self.organizationId, instance_id=self.instanceId, action="unstar")
 
     def delete(self):
         self.destroy()
