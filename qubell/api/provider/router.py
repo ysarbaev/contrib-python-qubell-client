@@ -108,6 +108,10 @@ class PrivatePath(Router):
     def post_revision(self, org_id, app_id, data, cookies, ctype=".json"): pass
 
     @play_auth
+    @route("POST /organizations/{org_id}/applications/{app_id}/revisions-fs{ctype}")
+    def post_revision_fs(self, org_id, app_id, data, cookies, ctype=".json"): pass
+
+    @play_auth
     @route("GET /organizations/{org_id}/applications/{app_id}/revisions/{rev_id}{ctype}")
     def get_revision(self, org_id, app_id, rev_id, cookies, ctype=".json"): pass
 
@@ -145,8 +149,20 @@ class PrivatePath(Router):
     def get_instance_activitylog_after(self, org_id, instance_id, timestamp, cookies, ctype=".json"): pass
 
     @play_auth
+    @route("POST /organizations/{org_id}/instances/{instance_id}/{action}{ctype}")
+    def post_instance_action(self, org_id, instance_id, action, cookies, data="{}", ctype=".json"): pass
+
+    @play_auth
     @route("DELETE /organizations/{org_id}/instances/{instance_id}{ctype}?force=1")
-    def delete_organizaton_instance_force(self, org_id, instance_id, cookies, data="{}", ctype=".json"): pass
+    def delete_instance_force(self, org_id, instance_id, cookies, data="{}", ctype=".json"): pass
+
+    @play_auth
+    @route("POST /organizations/{org_id}/instances/{instance_id}/workflows/{wf_name}/schedule{ctype}")
+    def post_instance_workflow_schedule(self, org_id, instance_id, wf_name, data, cookies, ctype=".json"): pass
+
+    @play_auth
+    @route("POST /organizations/{org_id}/instances/{instance_id}/storedWorkflows/{workflow_id}/reschedule{ctype}")
+    def post_instance_reschedule(self, org_id, instance_id, workflow_id, data, cookies, ctype=".json"): pass
 
     #Environment
     @play_auth
