@@ -155,21 +155,21 @@ class InstanceClassTest(BaseTestCase):
 
         # It's not constant
         #self.assertEqual(len(all_logs), 14)
-        self.assertEqual(len(info_logs), 5)
+        self.assertEqual(len(info_logs), 6)
 
 
         for log in info_logs:
             assert log['severity'] == 'INFO'
 
         assert 'Running' in info_logs
-        self.assertRegexpMatches(all_logs[0], 'command started: \'launch\' \(.*\) by .*')
+        self.assertRegexpMatches(all_logs[0], 'command started: launch \(.*\) by .*')
         @eventually(AssertionError, MismatchError)
         def assert_eventually():
             # Last line could be one og this.
-            self.assertTrue((all_logs[-1] == 'status updated: Running') or (all_logs[-1] == "command finished: 'launch'") or all_logs[-1] == "signals updated: This is default manifest")
+            self.assertTrue((all_logs[-1] == 'status updated: Running') or (all_logs[-1] == "command finished: launch") or all_logs[-1] == "signals updated: This is default manifest")
         assert_eventually()
 
-        self.assertRegexpMatches(info_logs[0], 'command started: \'launch\' \(.*\) by .*')
+        self.assertRegexpMatches(info_logs[0], 'command started: launch \(.*\) by .*')
         assert 'workflow started: launch' in info_logs
         assert 'signals updated: This is default manifest' in all_logs
         assert 'This is default manifest' in all_logs
