@@ -18,7 +18,7 @@ QUBELL = {
 }
 
 PROVIDER = {
-    'provider_name': os.getenv('PROVIDER_NAME', 'test-provider'),
+    'provider_name': os.getenv('PROVIDER_NAME', 'CloudAccountService'),
     'provider_type': os.getenv('PROVIDER_TYPE', 'aws-ec2'),
     'provider_identity': os.getenv('PROVIDER_IDENTITY', 'FAKE'),
     'provider_credential': os.getenv('PROVIDER_CREDENTIAL', 'FAKE'),
