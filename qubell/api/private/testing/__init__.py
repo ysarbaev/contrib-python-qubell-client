@@ -190,16 +190,22 @@ class BaseTestCase(unittest.TestCase):
                            'configuration.identity': cls.parameters['provider_identity'],
                            'configuration.credential': cls.parameters['provider_credential']}
 
+        # Old style components tests declared name as 'test-provider'. Now we cannot add this provider to env where another provider set.
+        if (cls.parameters['provider_name']=='test-provider') or (not(cls.parameters['provider_name'])):
+            prov = PROVIDER['provider_name']
+        else:
+            prov = cls.parameters['provider_name']=='test-provider'
+
         # Default add-on for every env
         addon = {"services":
                     [{"name": DEFAULT_CREDENTIAL_SERVICE()},
                      {"name": DEFAULT_WORKFLOW_SERVICE()},
-                     {"name": cls.parameters['provider_name']}
+                     {"name": prov}
                     ]}
 
         servs = [{"type": COBALT_SECURE_STORE_TYPE, "name": DEFAULT_CREDENTIAL_SERVICE()},
                  {"type": WORKFLOW_SERVICE_TYPE, "name": DEFAULT_WORKFLOW_SERVICE()},
-                 {"type": CLOUD_ACCOUNT_TYPE, "name": cls.parameters['provider_name'], "parameters": provider_config}]
+                 {"type": CLOUD_ACCOUNT_TYPE, "name": prov, "parameters": provider_config}]
 
         insts = []
 
