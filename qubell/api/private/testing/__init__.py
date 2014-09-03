@@ -32,6 +32,8 @@ from qubell.api.private.service import COBALT_SECURE_STORE_TYPE, WORKFLOW_SERVIC
 import logging
 import types
 
+import requests
+
 logging.getLogger("requests.packages.urllib3.connectionpool").setLevel(logging.ERROR)
 
 
@@ -281,6 +283,19 @@ class BaseTestCase(unittest.TestCase):
                         cls.clean()
                     assert not error, "Instance %s didn't launch properly and has error '%s'" % (instance.instanceId, error)
                     assert False, "Instance %s is not ready after %s minutes and stop on timeout" % (instance.instanceId, timeout)
+
+        # If 'meta' in sandbox, restore applications that comes in meta before.
+        # TODO: all this stuff needs refactoring.
+        applications = []
+        if cls.__dict__.get('meta'):
+            meta_raw = requests.get(url=cls.__dict__.get('meta'))
+            meta = yaml.safe_load(meta_raw.content)
+            #application = meta['kit']['name']
+            for app in meta['kit']['applications']:
+                applications.append({
+                    'name': app['name'],
+                    'url': app['manifest']})
+            cls.organization.restore({'applications':applications})
 
         # launch service instances first
         for app in cls.sandbox['applications']:
