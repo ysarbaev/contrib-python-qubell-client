@@ -196,7 +196,7 @@ class BaseTestCase(unittest.TestCase):
         if (cls.parameters['provider_name']=='test-provider') or (not(cls.parameters['provider_name'])):
             prov = PROVIDER['provider_name']
         else:
-            prov = cls.parameters['provider_name']=='test-provider'
+            prov = cls.parameters['provider_name']
 
         # Default add-on for every env
         addon = {"services":
