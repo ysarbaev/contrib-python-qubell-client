@@ -108,10 +108,6 @@ class Organization(Entity):
                                             manifest=manifest,
                                             name=app.pop('name'))
 
-        zone_id = None
-        if ZONE_NAME:
-            zone_id = self.zones[ZONE_NAME].id
-
         for serv in config.pop('services', []):
             app=serv.pop('application', None)
             if app:
@@ -126,6 +122,13 @@ class Organization(Entity):
             assert service.ready(timeout)
 
         for env in config.pop('environments', []):
+            env_zone = env.pop('zone', None)
+            if env_zone:
+                zone_id = self.zones[env_zone].id
+            elif ZONE_NAME:
+                zone_id = self.zones[ZONE_NAME].id
+            else:
+                zone_id = None
             restored_env = self.get_or_create_environment(id=env.pop('id', None),
                                                           name=env.pop('name', DEFAULT_ENV_NAME()),
                                                           zone=zone_id,
