@@ -34,7 +34,7 @@ from qubell.api.private import exceptions
 from qubell.api.private.common import QubellEntityList, Entity
 from qubell.api.provider.router import ROUTER as router
 
-DEAD_STATUS = ['Destroyed', 'Destroying']
+DEAD_STATUS = ['Destroyed']
 
 class Instance(Entity, ServiceMixin):
     """
