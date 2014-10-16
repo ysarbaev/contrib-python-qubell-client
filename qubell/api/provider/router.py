@@ -73,10 +73,6 @@ class PrivatePath(Router):
     @route("POST /organizations/{org_id}/environments{ctype}")
     def post_organization_environment(self, org_id, data, cookies, ctype=".json"): pass
 
-    @play_auth
-    @route("get /organizations/{org_id}/users/current{ctype}")
-    def get_organization_info(self, org_id, cookies, ctype=".json"): pass
-
     #Application
     @play_auth
     @route("GET /organizations/{org_id}/applications{ctype}")
@@ -198,6 +194,48 @@ class PrivatePath(Router):
     @play_auth
     @route("POST /organizations/{org_id}/services/{instance_id}/keys/generate{ctype}")
     def post_service_generate(self, org_id, instance_id, cookies, data="{}", ctype=".json"): pass
+
+    # Role
+    @play_auth
+    @route("POST /organizations/{org_id}/roles{ctype}")
+    def post_roles(self, org_id, cookies, data, ctype=".json"): pass
+
+    @play_auth
+    @route("GET /organizations/{org_id}/roles{ctype}")
+    def get_roles(self, org_id, cookies, ctype=".json"): pass
+
+    @play_auth
+    @route("GET /organizations/{org_id}/roles/{role_id}{ctype}")
+    def get_role(self, org_id, cookies, role_id, ctype=".json"): pass
+
+    @play_auth
+    @route("PUT /organizations/{org_id}/roles/{role_id}{ctype}")
+    def put_role(self, org_id, cookies, role_id, data="{}", ctype=".json"): pass
+
+    @play_auth
+    @route("DELETE /organizations/{org_id}/roles/{role_id}{ctype}")
+    def delete_role(self, org_id, cookies, role_id, data="{}", ctype=".json"): pass
+
+    # Users
+    @play_auth
+    @route("GET /organizations/{org_id}/users{ctype}")
+    def get_users(self, org_id, cookies, ctype=".json"): pass
+
+    @play_auth
+    @route("PUT /organizations/{org_id}/users/{user_id}{ctype}")
+    def put_user(self, org_id, cookies, user_id, data="{}", ctype=".json"): pass
+
+    @play_auth
+    @route("get /organizations/{org_id}/users/current{ctype}")
+    def get_organization_info(self, org_id, cookies, ctype=".json"): pass
+
+    @play_auth
+    @route("DELETE /organizations/{org_id}/users/{user_id}{ctype}")
+    def evict_user(self, org_id, cookies, user_id, data="{}", ctype=".json"): pass
+
+    @play_auth
+    @route("POST /organizations/invite{ctype}")
+    def invite_user(self, cookies, data="{}", ctype=".json"): pass
 
 class PublicPath(PrivatePath):
 # TODO: Public api hack.
