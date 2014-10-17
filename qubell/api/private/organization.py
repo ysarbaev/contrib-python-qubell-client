@@ -35,6 +35,8 @@ from qubell.api.private.instance import InstanceList, DEAD_STATUS, Instance
 from qubell.api.private.application import ApplicationList
 from qubell.api.private.environment import EnvironmentList
 from qubell.api.private.zone import ZoneList
+from qubell.api.private.role import RoleList
+from qubell.api.private.user import UserList
 from qubell.api.provider.router import ROUTER as router
 from qubell.api.private.common import QubellEntityList, Entity
 from qubell.api.globals import *
@@ -73,6 +75,14 @@ class Organization(Entity):
 
     @lazyproperty
     def zones(self): return ZoneList(self)
+
+    @lazyproperty
+    def roles(self):
+        return RoleList(list_json_method=self.list_roles_json, organization=self)
+
+    @lazyproperty
+    def users(self):
+        return UserList(list_json_method=self.list_users_json, organization=self)
 
     @property
     def defaultEnvironment(self): return self.get_default_environment()
@@ -420,16 +430,55 @@ class Organization(Entity):
             return self.get_zone(id=zoneId)
         raise exceptions.NotFoundError('Unable to get default zone')
 
+### PERMISSIONS
+
+    def create_role(self, name=None, permissions=""):
+        """ Creates role """
+        name = name or "autocreated-role"
+        from qubell.api.private.role import Role
+        return Role.new(organization=self, name=name, permissions=permissions)
+
+    def list_roles_json(self):
+        return router.get_roles(org_id=self.organizationId).json()
+
+    def get_role(self, id=None, name=None):
+        """ Get role object by name or id.
+        """
+        log.info("Picking role: %s (%s)" % (name, id))
+        return self.roles[id or name]
+
+    def delete_role(self, id):
+        role = self.get_role(id)
+        return role.delete()
+
+    def get_or_create_role(self, id=None, name=None, permissions=None):
+        try:
+            role = self.get_role(id, name)
+        except:
+            role = self.create_role(name, permissions)
+        return role
+
+
+### USERS
+
+    def list_users_json(self):
+        return router.get_users(org_id=self.organizationId).json()
+
+    def get_user(self, id=None, name=None, email=None):
+        """ Get user object by email or id.
+        """
+        log.info("Picking user: %s (%s) (%s)" % (name, email, id))
+        from qubell.api.private.user import User
+        if email:
+            user = User.get_user(organization=self, email=email)
+        else:
+            user = self.users[id or name]
+        return user
+
+    def evict_user(self, id):
+        user = self.get_user(id)
+        return user.evict()
+
 
 class OrganizationList(QubellEntityList):
     base_clz = Organization
-
-    """
-    def __init__(self, list_json_method):
-        self.json = list_json_method
-        EntityList.__init__(self)
-    def _id_name_list(self):
-        self._list = [IdName(ent['id'], ent['name']) for ent in self.json()]
-    def _get_item(self, id_name):
-        return Organization(id=id_name.id)
-    """
