@@ -143,7 +143,7 @@ class Application(Entity):
                         'returnValues': [],
                         'applicationId': self.applicationId,
                         'applicationName': self.name,
-                        'version': version,
+                        'manifestVersion': version,
                         'instanceId': instance.instanceId})
             resp = router.post_revision(org_id=self.organizationId, app_id=self.applicationId, data=payload)
             return self.get_revision(id=resp.json()['id'])
@@ -153,7 +153,7 @@ class Application(Entity):
                             'parameters': parameters,
                             'submodules': [],
                             'applicationId': self.applicationId,
-                            'version': version,})
+                            'manifestVersion': version,})
             resp = router.post_revision_fs(org_id=self.organizationId, app_id=self.applicationId, data=payload)
             return self.get_revision(id=resp.json()['id'])
 
