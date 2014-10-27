@@ -200,7 +200,15 @@ class Instance(Entity, ServiceMixin):
         return waitForStatus(instance=self, final='Running', accepted=['Launching', 'Requested', 'Executing', 'Unknown'], timeout=[timeout*20, 3, 1])
         # TODO: Unknown status  should be removed
 
-        #TODO: not available
+    def running(self, timeout=3):
+        if self.status == 'Running':
+            log.debug("Instance {} is Running right now".format(self.id))
+            return True
+        mrut = self.most_recent_update_time
+        if mrut:
+            self._last_workflow_started_time = time.gmtime(time.mktime(mrut) - 1)  # skips projection check
+        return self.ready(timeout)
+
     def destroyed(self, timeout=3):  # Shortcut for convinience. Temeout = 3 min (ask timeout*6 times every 10 sec)
         return waitForStatus(instance=self, final='Destroyed', accepted=['Destroying', 'Running'], timeout=[timeout*20, 3, 1])
 
@@ -308,9 +316,12 @@ class Instance(Entity, ServiceMixin):
         """
         parse_time = lambda t: time.gmtime(t/1000)
         j = self.json()
-        cw_started_at = j.get('startedAt')
-        if cw_started_at: return parse_time(cw_started_at)
         try:
+            if j['currentWorkflow']:
+                cw_started_at = j['currentWorkflow']['startedAt']
+                if cw_started_at:
+                    return parse_time(cw_started_at)
+
             max_wf_started_at = max([i['startedAt'] for i in j['workflowHistory']])
             return parse_time(max_wf_started_at)
         except ValueError:
@@ -319,7 +330,7 @@ class Instance(Entity, ServiceMixin):
     def _is_projection_updated_instance(self):
         """
         This method tries to guess if instance was update since last time.
-        If return True, definitely Yes, if False, this means more unknonw
+        If return True, definitely Yes, if False, this means more unknown
         :return: bool
         """
         last = self._last_workflow_started_time

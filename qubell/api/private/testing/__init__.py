@@ -273,7 +273,7 @@ class BaseTestCase(unittest.TestCase):
 
         def check_instances(instances):
             for instance in instances:
-                if not instance.ready(timeout=timeout):
+                if not instance.running(timeout=timeout):
                     error = instance.error.strip()
 
                     # TODO: if instance fails to start during tests, add proper unittest log

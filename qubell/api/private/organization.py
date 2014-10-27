@@ -101,7 +101,7 @@ class Organization(Entity):
 
     def ready(self):
         env = self.environments[DEFAULT_ENV_NAME()]
-        if env.services[DEFAULT_WORKFLOW_SERVICE()].ready() and env.services[DEFAULT_CREDENTIAL_SERVICE()].ready():
+        if env.services[DEFAULT_WORKFLOW_SERVICE()].running() and env.services[DEFAULT_CREDENTIAL_SERVICE()].running():
             return True
         return False
 
@@ -129,7 +129,7 @@ class Organization(Entity):
                                        type=type,
                                        application=app,
                                        parameters=serv.pop('parameters', None))
-            assert service.ready(timeout)
+            assert service.running(timeout)
 
         for env in config.pop('environments', []):
             env_zone = env.pop('zone', None)
@@ -152,7 +152,7 @@ class Organization(Entity):
                                                    name=instance.pop('name', None),
                                                    environment=self.get_or_create_environment(name=instance.pop('environment', 'default')),
                                                    **instance)
-            assert launched.ready(timeout)
+            assert launched.running(timeout)
 
 ### APPLICATION
     def create_application(self, name=None, manifest=None):
