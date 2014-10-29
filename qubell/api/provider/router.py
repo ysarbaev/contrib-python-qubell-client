@@ -100,11 +100,11 @@ class PrivatePath(Router):
 
     #Revision
     @play_auth
-    @route("POST /organizations/{org_id}/applications/{app_id}/revisions{ctype}")
+    @route("POST /organizations/{org_id}/applications/{app_id}/createRevision{ctype}")
     def post_revision(self, org_id, app_id, data, cookies, ctype=".json"): pass
 
     @play_auth
-    @route("POST /organizations/{org_id}/applications/{app_id}/revisions-fs{ctype}")
+    @route("POST /organizations/{org_id}/applications/{app_id}/createRevision{ctype}")
     def post_revision_fs(self, org_id, app_id, data, cookies, ctype=".json"): pass
 
     @play_auth
