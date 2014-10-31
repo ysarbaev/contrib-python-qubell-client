@@ -418,10 +418,7 @@ class activityLog(object):
         else:
             found = [x['time'] for x in self.log if re.search(description, x['description'])]
 
-        if len(found):
-            return found
-        raise exceptions.ApiNotFoundError('Cannot find activity log entry: %s: %s' % (event_type, description))
-
+        return found if len(found) else None
 
     def get_interval(self, start_text=None, end_text=None):
         if start_text:
