@@ -379,7 +379,7 @@ class activityLog(object):
         return text
 
     def __contains__(self, item):
-        return len(self.find(item))
+        return True if self.find(item) else False
 
     def __getitem__(self, item):
         """
