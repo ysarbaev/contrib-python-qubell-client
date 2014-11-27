@@ -2,7 +2,7 @@
 import logging as log
 
 from qubell.api.private.platform import QubellPlatform
-from qubell.api.private.testing import BaseTestCase as SandBoxTestCase, environment, instance, values, workflow
+from qubell.api.private.testing import BaseTestCase as SandBoxTestCase, applications, environment, environments, instance, values, workflow
 from qubell.api.globals import QUBELL as qubell_config, PROVIDER as cloud_config
 from qubell.api.tools import retry
 import nose.plugins.attrib
@@ -22,7 +22,7 @@ class BaseComponentTestCase(SandBoxTestCase):
     @classmethod
     def environment(cls, organization):
         base_env = super(BaseComponentTestCase, cls).environment(organization)
-        base_env['applications'] = cls.apps
+        base_env['applications'] = cls.apps+cls.applications
         return base_env
 
     @classmethod

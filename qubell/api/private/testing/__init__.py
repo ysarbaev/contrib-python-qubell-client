@@ -61,7 +61,6 @@ def values(names):
     def wrapper(func):
         @wraps(func)
         def wrapped_func(*args, **kwargs):
-            instance = None
             if len(args)>1:
                 instance=args[1]
             else:
@@ -146,7 +145,37 @@ def environment(envdata):
 
         return clazz
     return wraps_class
+environments = environment
 
+def applications(appsdata):
+    """
+    Class decorator that allows to crete applications and start instances there.
+    If used with environment decorator, instances would be started for every env.
+    :param appdata: list
+    """
+    def wraps_class(clazz):
+        if "applications" in clazz.__dict__:
+            log.warn("Class {0} applications attribute is overridden".format(clazz.__name__))
+        for appdata in appsdata:
+            if appdata.get('add_as_service'):
+                test_name='test00_launch_%s' % appdata['name']
+            else:
+                test_name='test01_launch_%s' % appdata['name']
+
+            clazz.applications.append(appdata)
+            if appdata.get('launch', True):
+                parameters = appdata.get('parameters', {})
+                settings = appdata.get('settings', {})
+                _add_launch_test(clazz, test_name=test_name, app_name=appdata['name'], parameters=parameters, settings=settings)
+                log.info("Test '{0}' added as instance launch test for {1}".format(test_name, clazz.__name__))
+        return clazz
+    return wraps_class
+
+def _add_launch_test(cls, test_name, app_name, parameters, settings):
+    def test_method(self):
+        self._launch_instance(app_name, parameters, settings)
+    setattr(cls, test_name, test_method)
+    test_method.__name__ = test_name
 
 # noinspection PyPep8Naming
 def instance(byApplication):
@@ -167,12 +196,13 @@ def instance(byApplication):
             env = get_environment_name(self, func)
 
             def find_by_application_name(app):
-                for inst in self.instances:
+                for inst in self.regular_instances+self.service_instances:
                     if inst.application.name == app and inst.environment.name == env:
                         return inst
                 return None
-
-            func(*args + (find_by_application_name(byApplication),), **kwargs)
+            ins = find_by_application_name(byApplication)
+            print ins.running()
+            func(*args + (ins,), **kwargs)
         return wrapped_func
     return wrapper
 
@@ -182,6 +212,10 @@ class BaseTestCase(unittest.TestCase):
     parameters = None
     sandbox = None
     environments = None
+    applications = []
+    service_instances = []
+    regular_instances = []
+    instances = []
 
     @classmethod
     def environment(cls, organization):
@@ -220,7 +254,8 @@ class BaseTestCase(unittest.TestCase):
             "organization": {"name": organization},
             "services": servs,
             "instances": insts,
-            "environments": envs}
+            "environments": envs,
+            "applications": cls.applications}
 
     @classmethod
     def timeout(cls):
@@ -229,7 +264,6 @@ class BaseTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         super(BaseTestCase, cls).setUpClass()
-
         if cls.parameters['organization']:
             cls.prepare(cls.parameters['organization'], cls.timeout())
         else:
@@ -243,6 +277,32 @@ class BaseTestCase(unittest.TestCase):
             cls.clean()
         super(BaseTestCase, cls).tearDownClass()
 
+
+    def _launch_instance(self, app_name, parameters, settings, timeout=30):
+        def get_environment_name():
+            separator = "_on_environment_"
+            if len(self._testMethodName.split(separator)) > 1:
+                env = self._testMethodName.split(separator)[1]
+            else:
+                env = DEFAULT_ENV_NAME()
+            return env
+        application = self.organization.applications[app_name]
+        environment = self.organization.environments[get_environment_name()]
+
+        instance = self.organization.create_instance(application=application,
+                                                    environment=environment,
+                                                    parameters=parameters,
+                                                    **settings)
+        assert instance.ready(timeout=timeout)
+        # Hack to start services
+        if 'test00_launch_' in self._testMethodName:
+            environment.add_service(instance)
+            self.service_instances.append(instance)
+        else:
+            self.regular_instances.append(instance)
+        self.instances = self.service_instances+self.regular_instances
+
+
     @classmethod
     def prepare(cls, organization, timeout=30):
         """ Create sandboxed test environment
@@ -250,71 +310,19 @@ class BaseTestCase(unittest.TestCase):
         log.info("\n\n\n---------------  Preparing sandbox...  ---------------")
         cls.sandbox = SandBox(cls.platform, cls.environment(organization))
         cls.organization = cls.sandbox.make()
-        cls.regular_instances = []
-        cls.service_instances = []
-
-
-        def launch_in_env(app, env):
-            environment = cls.organization.environments[env['name']]
-            application = cls.organization.applications[app['name']]
-            parameters = app.get('parameters', {})
-            settings = app.get('settings', {})
-            instance = cls.organization.create_instance(application=application,
-                                                        environment=environment,
-                                                        parameters=parameters,
-                                                        **settings)
-            if app.get('add_as_service', False):
-                environment.add_service(instance)
-            cls.sandbox.sandbox["instances"].append({
-                "id": instance.instanceId,
-                "name": instance.name,
-            })
-            return instance
-
-        def check_instances(instances):
-            for instance in instances:
-                if not instance.running(timeout=timeout):
-                    error = instance.error.strip()
-
-                    # TODO: if instance fails to start during tests, add proper unittest log
-                    if os.getenv("QUBELL_DEBUG", None) and not('false' in os.getenv("QUBELL_DEBUG", None)):
-                        pass
-                    else:
-                        cls.clean()
-                    assert not error, "Instance %s didn't launch properly and has error '%s'" % (instance.instanceId, error)
-                    assert False, "Instance %s is not ready after %s minutes and stop on timeout" % (instance.instanceId, timeout)
 
         # If 'meta' in sandbox, restore applications that comes in meta before.
         # TODO: all this stuff needs refactoring.
-        applications = []
+        apps = []
         if cls.__dict__.get('meta'):
             meta_raw = requests.get(url=cls.__dict__.get('meta'))
             meta = yaml.safe_load(meta_raw.content)
-            #application = meta['kit']['name']
             for app in meta['kit']['applications']:
-                applications.append({
+                apps.append({
                     'name': app['name'],
                     'url': app['manifest']})
-            cls.organization.restore({'applications':applications})
-
-        # launch service instances first
-        for app in cls.sandbox['applications']:
-            for env in cls.sandbox['environments']:
-                if app.get('launch', True) and app.get('add_as_service', False):
-                    log.info("Sandbox: starting service in app: %s, env: %s" % (app['name'], env['name']))
-                    cls.service_instances.append(launch_in_env(app, env))
-        check_instances(cls.service_instances)
-
-        # then launch non-service instances
-        for app in cls.sandbox['applications']:
-            for env in cls.sandbox['environments']:
-                if app.get('launch', True) and not app.get('add_as_service', False):
-                    log.info("Sandbox: starting instance in app: %s, env: %s" % (app['name'], env['name']))
-                    cls.regular_instances.append(launch_in_env(app, env))
-        check_instances(cls.regular_instances)
-        
-        cls.instances = cls.service_instances + cls.regular_instances
-        log.info("\n---------------  Sandbox prepared  ---------------\n\n")
+            cls.organization.restore({'applications':apps})
+        log.info("---------------  Sandbox prepeared  ---------------\n\n\n")
 
 
     @classmethod
