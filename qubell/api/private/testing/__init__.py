@@ -28,11 +28,13 @@ from functools import wraps
 
 from qubell.api.globals import *
 from qubell.api.private.service import COBALT_SECURE_STORE_TYPE, WORKFLOW_SERVICE_TYPE, CLOUD_ACCOUNT_TYPE
+from qubell.api.private.exceptions import NotFoundError
 
 import logging
 import types
 
 import requests
+from nose.plugins.skip import SkipTest
 
 logging.getLogger("requests.packages.urllib3.connectionpool").setLevel(logging.ERROR)
 
@@ -158,16 +160,19 @@ def applications(appsdata):
             log.warn("Class {0} applications attribute is overridden".format(clazz.__name__))
         for appdata in appsdata:
             if appdata.get('add_as_service'):
-                test_name='test00_launch_%s' % appdata['name']
+                start_name='test00_launch_%s' % appdata['name']
+                destroy_name='testzz_destroy_%s' % appdata['name']
             else:
-                test_name='test01_launch_%s' % appdata['name']
+                start_name='test01_launch_%s' % appdata['name']
+                destroy_name='testzy_destroy_%s' % appdata['name']
 
             clazz.applications.append(appdata)
             if appdata.get('launch', True):
                 parameters = appdata.get('parameters', {})
                 settings = appdata.get('settings', {})
-                _add_launch_test(clazz, test_name=test_name, app_name=appdata['name'], parameters=parameters, settings=settings)
-                log.info("Test '{0}' added as instance launch test for {1}".format(test_name, clazz.__name__))
+                _add_launch_test(clazz, test_name=start_name, app_name=appdata['name'], parameters=parameters, settings=settings)
+                _add_destroy_test(clazz, test_name=destroy_name, app_name=appdata['name'])
+                log.info("Test '{0}' added as instance launch test for {1}".format(start_name, clazz.__name__))
         return clazz
     return wraps_class
 
@@ -177,31 +182,21 @@ def _add_launch_test(cls, test_name, app_name, parameters, settings):
     setattr(cls, test_name, test_method)
     test_method.__name__ = test_name
 
+def _add_destroy_test(cls, test_name, app_name):
+    def test_method(self):
+        self._destroy_instance(app_name)
+    setattr(cls, test_name, test_method)
+    test_method.__name__ = test_name
+
 # noinspection PyPep8Naming
 def instance(byApplication):
     def wrapper(func):
-        def get_environment_name(self, f):
-            separator = "_on_environment_"
-            if len(f.__name__.split(separator)) > 1:
-                env = f.__name__.split(separator)[1]
-            elif "_testMethodName" in self.__dict__ and len(self._testMethodName.split(separator)) > 1:
-                env = self._testMethodName.split(separator)[1]
-            else:
-                env = DEFAULT_ENV_NAME()
-            return env
-
         @wraps(func)
         def wrapped_func(*args, **kwargs):
             self = args[0]
-            env = get_environment_name(self, func)
-
-            def find_by_application_name(app):
-                for inst in self.regular_instances+self.service_instances:
-                    if inst.application.name == app and inst.environment.name == env:
-                        return inst
-                return None
-            ins = find_by_application_name(byApplication)
-            print ins.running()
+            ins = self.find_by_application_name(byApplication)
+            if not ins.running():
+                raise SkipTest("Instance %s not in Running state" % ins.name)
             func(*args + (ins,), **kwargs)
         return wrapped_func
     return wrapper
@@ -271,30 +266,20 @@ class BaseTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        if os.getenv("QUBELL_DEBUG", None) and not('false' in os.getenv("QUBELL_DEBUG", None)):
-            log.info("QUBELL_DEBUG is ON\n DO NOT clean sandbox")
-        else:
-            cls.clean()
         super(BaseTestCase, cls).tearDownClass()
 
 
     def _launch_instance(self, app_name, parameters, settings, timeout=30):
-        def get_environment_name():
-            separator = "_on_environment_"
-            if len(self._testMethodName.split(separator)) > 1:
-                env = self._testMethodName.split(separator)[1]
-            else:
-                env = DEFAULT_ENV_NAME()
-            return env
         application = self.organization.applications[app_name]
-        environment = self.organization.environments[get_environment_name()]
+        environment = self.organization.environments[self.get_environment_name()]
 
         instance = self.organization.create_instance(application=application,
                                                     environment=environment,
                                                     parameters=parameters,
                                                     **settings)
-        assert instance.ready(timeout=timeout)
-        # Hack to start services
+        self.assertTrue(instance.ready(timeout=timeout), "App {0} failed to start instance in env {1}. Status: {2}. Timeout: {3}".format(app_name, self.get_environment_name(), instance.status, timeout))
+
+        # Hack to recognize service
         if 'test00_launch_' in self._testMethodName:
             environment.add_service(instance)
             self.service_instances.append(instance)
@@ -302,6 +287,19 @@ class BaseTestCase(unittest.TestCase):
             self.regular_instances.append(instance)
         self.instances = self.service_instances+self.regular_instances
 
+    def _destroy_instance(self, app_name, timeout=30):
+        instance = self.find_by_application_name(app_name)
+
+        if os.getenv("QUBELL_DEBUG", None) and not('false' in os.getenv("QUBELL_DEBUG", None)):
+            log.info("QUBELL_DEBUG is ON\n DO NOT clean sandbox")
+        else:
+            instance.destroy()
+            assert instance.destroyed(timeout=timeout)
+        if 'testzz_destroy_' in self._testMethodName:
+            self.service_instances.remove(instance)
+        else:
+            self.regular_instances.remove(instance)
+        self.instances = self.service_instances+self.regular_instances
 
     @classmethod
     def prepare(cls, organization, timeout=30):
@@ -324,27 +322,19 @@ class BaseTestCase(unittest.TestCase):
             cls.organization.restore({'applications':apps})
         log.info("---------------  Sandbox prepeared  ---------------\n\n\n")
 
+    def get_environment_name(self):
+        separator = "_on_environment_"
+        if len(self._testMethodName.split(separator)) > 1:
+            env = self._testMethodName.split(separator)[1]
+        else:
+            env = DEFAULT_ENV_NAME()
+        return env
 
-    @classmethod
-    def clean(cls, timeout=10):
-        log.info("\n---------------  Cleaning sandbox  ---------------")
-        def destroy_instances(instances):
-            for instance in instances:
-                instance.destroy()
-                if not instance.destroyed(timeout):
-                    log.error(
-                        "Instance was not destroyed properly {0}: {1}", instance.id, instance.name)
-
-        destroy_instances(cls.regular_instances)
-        destroy_instances(cls.service_instances)
-        log.info("\n---------------  Sandbox cleaned  ---------------\n")
-
-    # noinspection PyPep8Naming
-    def findByApplicationName(self, name):
-        for instance in self.instances:
-            if instance.application.name == name:
-                return instance
-
+    def find_by_application_name(self, name):
+        for inst in self.regular_instances+self.service_instances:
+            if inst.application.name == name and inst.environment.name == self.get_environment_name():
+                return inst
+        raise NotFoundError
 
 class SandBox(object):
     def __init__(self, platform, sandbox):

@@ -38,11 +38,11 @@ content = open((os.path.realpath(os.path.join(os.path.dirname(__file__), 'manife
     }
 })
 @applications([{
-        "name": 'EnvsAppTestCase-App',
+        "name": 'EnvsAppTestCaseApp',
         "file": os.path.realpath(os.path.join(os.path.dirname(__file__), 'manifest.yml'))
 }])
 class EnvsAppTestCase(BaseComponentTestCase):
-    @instance(byApplication='EnvsAppTestCase-App')
+    @instance(byApplication='EnvsAppTestCaseApp')
     @values({"app-output": "out"})
     def test_out(self, instance, out):
         assert instance.running()
@@ -64,19 +64,19 @@ class EnvsAppTestCase(BaseComponentTestCase):
     }
 })
 @applications([
-    {"name": 'EnvsServiceAppTestCase-App',
+    {"name": 'EnvsServiceAppTestCaseApp',
      "content": content,
      "add_as_service": True},
-    {"name":'EnvsServiceAppTestCase-App-nolaunch',
+    {"name":'EnvsServiceAppTestCaseAppNolaunch',
      "file": os.path.realpath(os.path.join(os.path.dirname(__file__), 'manifest.yml')),
      "launch": False}])
 class EnvsServiceAppTestCase(BaseComponentTestCase):
-    @instance(byApplication='EnvsServiceAppTestCase-App')
+    @instance(byApplication='EnvsServiceAppTestCaseApp')
     @values({"app-output": "out"})
     def test_out(self, instance, out):
         assert instance.running()
         assert out == "This is default manifest"
         assert instance in self.organization.services
 
-        self.assertRaises(exceptions.NotFoundError, self.organization.get_instance, name='EnvsServiceAppTestCase-App-nolaunch')
+        self.assertRaises(exceptions.NotFoundError, self.organization.get_instance, name='EnvsServiceAppTestCaseAppNolaunch')
 
