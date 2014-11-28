@@ -39,6 +39,9 @@ from nose.plugins.skip import SkipTest
 logging.getLogger("requests.packages.urllib3.connectionpool").setLevel(logging.ERROR)
 
 
+def norm(name):
+    return str(re.sub("[^a-zA-Z0-9_]", "", name))
+
 def format_as_api(data):
     """
     Accepts {'default':{},}
@@ -47,7 +50,7 @@ def format_as_api(data):
     result = []
     if isinstance(data, dict):
         for name, value in data.items():
-            key = str(re.sub("[^a-zA-Z0-9_]", "", name))
+            key = norm(name)
             value.update({'name': name})
             result.append(value)
         return result
@@ -126,6 +129,9 @@ def environment(envdata):
                                   closure=func.func_closure)
 
     def wraps_class(clazz):
+        # Old style (cls.apps) application support hack
+        if getattr(clazz, 'apps'):
+            applications(clazz.apps)(clazz)
         if "environments" in clazz.__dict__:
             log.warn("Class {0} environment attribute is overridden".format(clazz.__name__))
         params = format_as_api(envdata)
@@ -159,6 +165,7 @@ def applications(appsdata):
         if "applications" in clazz.__dict__:
             log.warn("Class {0} applications attribute is overridden".format(clazz.__name__))
         for appdata in appsdata:
+            appdata['name'] = norm(appdata['name'])
             if appdata.get('add_as_service'):
                 start_name='test00_launch_%s' % appdata['name']
                 destroy_name='testzz_destroy_%s' % appdata['name']
@@ -175,6 +182,7 @@ def applications(appsdata):
                 log.info("Test '{0}' added as instance launch test for {1}".format(start_name, clazz.__name__))
         return clazz
     return wraps_class
+application = applications
 
 def _add_launch_test(cls, test_name, app_name, parameters, settings):
     def test_method(self):
@@ -194,7 +202,8 @@ def instance(byApplication):
         @wraps(func)
         def wrapped_func(*args, **kwargs):
             self = args[0]
-            ins = self.find_by_application_name(byApplication)
+
+            ins = self.find_by_application_name(norm(byApplication))
             if not ins.running():
                 raise SkipTest("Instance %s not in Running state" % ins.name)
             func(*args + (ins,), **kwargs)

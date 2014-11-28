@@ -22,7 +22,7 @@ class BaseComponentTestCase(SandBoxTestCase):
     @classmethod
     def environment(cls, organization):
         base_env = super(BaseComponentTestCase, cls).environment(organization)
-        base_env['applications'] = cls.apps+cls.applications
+        base_env['applications'] = cls.apps or cls.applications
         return base_env
 
     @classmethod

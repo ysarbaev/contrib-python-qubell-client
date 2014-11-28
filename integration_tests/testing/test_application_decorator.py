@@ -38,11 +38,11 @@ content = open((os.path.realpath(os.path.join(os.path.dirname(__file__), 'manife
     }
 })
 @applications([{
-        "name": 'EnvsAppTestCaseApp',
+        "name": 'EnvsAppTest-Case App',
         "file": os.path.realpath(os.path.join(os.path.dirname(__file__), 'manifest.yml'))
 }])
 class EnvsAppTestCase(BaseComponentTestCase):
-    @instance(byApplication='EnvsAppTestCaseApp')
+    @instance(byApplication='EnvsAppTest-Case App')
     @values({"app-output": "out"})
     def test_out(self, instance, out):
         assert instance.running()
