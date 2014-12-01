@@ -7,6 +7,10 @@ from qubell.api.globals import QUBELL as qubell_config, PROVIDER as cloud_config
 from qubell.api.tools import retry
 import nose.plugins.attrib
 import testtools
+import qubell.api.private.testing as testing
+
+# Define what users import by *
+__all__ = ['BaseComponentTestCase', 'applications', 'environment', 'environments', 'instance', 'values', 'workflow']
 
 platform = QubellPlatform.connect(
                 tenant=qubell_config['tenant'],
