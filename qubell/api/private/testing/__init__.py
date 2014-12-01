@@ -120,6 +120,7 @@ def _parameterize(case, params):
         # based on: https://code.google.com/p/parameterized-testcase/
         case_mod = sys.modules[case.__module__]
         for env_name, param_set in params.items():
+            env_name=norm(env_name)
             if env_name=='default':
                 new_cls=case
             else:
@@ -135,6 +136,10 @@ def parameterize(case, params):
 
 def environment(params):
     def wraps_class(clazz):
+        # Old style (cls.apps) application support hack
+        if getattr(clazz, 'apps'):
+            applications(clazz.apps)(clazz)
+        clazz.environments = format_as_api(params)
         parameterize(clazz, params)
         return clazz
     return wraps_class
