@@ -114,25 +114,29 @@ def workflow(name, parameters=None, timeout=10):
         return wrapped_func
     return wrapper
 
-def _parameterize(case, params):
+def _parameterize(source_case, cases, tests):
         '''This generates the classes (in the sense that it's a generator.)
         '''
-        # based on: https://code.google.com/p/parameterized-testcase/
-        case_mod = sys.modules[case.__module__]
-        for env_name, param_set in params.items():
+        updated_case = source_case
+        for test_name, test_method in tests.items():
+            setattr(source_case, test_name, test_method)
+
+        case_mod = sys.modules[source_case.__module__]
+        for env_name, param_set in cases.items():
             env_name=norm(env_name)
             if env_name=='default':
-                new_cls=case
+                pass # Do not update test case
             else:
-                attrs = dict(case.__dict__)
+                attrs = dict(source_case.__dict__)
                 attrs.update({'className': env_name})
-                new_cls = type('{0}_{1}'.format(case.__name__, env_name), (case,), attrs)
-                setattr(case_mod, new_cls.__name__, new_cls)
-            new_cls.current_environment=env_name
-            yield new_cls
+                updated_case = type('{0}_{1}'.format(source_case.__name__, env_name), (source_case,), attrs)
+                setattr(case_mod, updated_case.__name__, updated_case)
+                updated_case.current_environment = env_name
+            yield updated_case
 
-def parameterize(case, params):
-    return list(_parameterize(case=case, params=params))
+
+def parameterize(source_case, cases={}, tests={}):
+    return list(_parameterize(source_case, cases, tests))
 
 def environment(params):
     def wraps_class(clazz):
@@ -140,7 +144,9 @@ def environment(params):
         if getattr(clazz, 'apps'):
             applications(clazz.apps)(clazz)
         clazz.environments = format_as_api(params)
-        parameterize(clazz, params)
+
+        # Add test cases
+        parameterize(source_case=clazz, cases=params)
         return clazz
     return wraps_class
 environments = environment
@@ -151,43 +157,49 @@ def applications(appsdata):
     If used with environment decorator, instances would be started for every env.
     :param appdata: list
     """
-    # TODO: Combine with parameterize
     def wraps_class(clazz):
         if "applications" in clazz.__dict__:
             log.warn("Class {0} applications attribute is overridden".format(clazz.__name__))
+
+
         for appdata in appsdata:
             appdata['name'] = norm(appdata['name'])
-            if appdata.get('add_as_service'):
-                start_name='test00_launch_%s' % appdata['name']
-                destroy_name='testzz_destroy_%s' % appdata['name']
-            else:
-                start_name='test01_launch_%s' % appdata['name']
-                destroy_name='testzy_destroy_%s' % appdata['name']
+            clazz.applications.append(appdata) # This needed to pass to environment
 
-            clazz.applications.append(appdata)
+
             if appdata.get('launch', True):
+                app_name = appdata['name']
+                if appdata.get('add_as_service'):
+                    start_name='test00_launch_%s' % app_name
+                    destroy_name='testzz_destroy_%s' % app_name
+                else:
+                    start_name='test01_launch_%s' % app_name
+                    destroy_name='testzy_destroy_%s' % app_name
                 parameters = appdata.get('parameters', {})
                 settings = appdata.get('settings', {})
-                _add_launch_test(clazz, test_name=start_name, app_name=appdata['name'], parameters=parameters, settings=settings)
-                _add_destroy_test(clazz, test_name=destroy_name, app_name=appdata['name'])
+
+                # Prepare tests dict
+                tests={}
+                def launch_method(self):
+                    self._launch_instance(app_name=app_name,  parameters=parameters, settings=settings)
+
+                def destroy_method(self):
+                    self._destroy_instance(app_name=app_name)
+
+                tests[start_name] = launch_method
+                tests[start_name].__name__ = start_name
+                tests[start_name].__doc__ = 'Launch %s' % app_name # TODO: Pass env here somehow
+                tests[destroy_name] = destroy_method
+                tests[destroy_name].__name__ = destroy_name
+                tests[destroy_name].__doc__ = 'Destroy %s' % app_name
+
+                # Update class with new methods
+                parameterize(clazz, tests=tests)
                 log.info("Test '{0}' added as instance launch test for {1}".format(start_name, clazz.__name__))
+                log.info("Test '{0}' added as instance destroy test for {1}".format(destroy_name, clazz.__name__))
         return clazz
     return wraps_class
 application = applications
-
-def _add_launch_test(cls, test_name, app_name, parameters, settings):
-    def test_method(self):
-        self._launch_instance(app_name, parameters, settings)
-    setattr(cls, test_name, test_method)
-    test_method.__name__ = test_name
-    #test_method.__doc__ = "Autogenerated %s" % test_name
-
-def _add_destroy_test(cls, test_name, app_name):
-    def test_method(self):
-        self._destroy_instance(app_name)
-    setattr(cls, test_name, test_method)
-    test_method.__name__ = test_name
-    #test_method.__doc__ = "Autogenerated %s" % test_name
 
 # noinspection PyPep8Naming
 def instance(byApplication):
@@ -300,7 +312,6 @@ class BaseTestCase(unittest.TestCase):
             self.service_instances.remove(instance)
         else:
             self.regular_instances.remove(instance)
-        self.instances = self.service_instances+self.regular_instances
 
     @classmethod
     def prepare(cls, organization, timeout=30):
