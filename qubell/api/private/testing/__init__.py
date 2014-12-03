@@ -141,7 +141,7 @@ def parameterize(source_case, cases={}, tests={}):
 def environment(params):
     def wraps_class(clazz):
         # Old style (cls.apps) application support hack
-        if getattr(clazz, 'apps'):
+        if 'apps' in clazz.__dict__:
             applications(clazz.apps)(clazz)
         clazz.environments = format_as_api(params)
 

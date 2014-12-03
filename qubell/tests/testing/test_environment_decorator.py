@@ -5,6 +5,7 @@ __author__ = 'dmakhno'
 
 class DummyTests(object):
     applications = []
+    current_environment='default'
     def test_nothing(self): pass
     def test_fail(self): assert False
     def helper(self): pass
@@ -36,6 +37,8 @@ class EnvironmentDecoratorTests(unittest.TestCase):
             assert case in globals()
             for test in new_tests:
                 assert test in globals()[case].__dict__
-
+        assert globals()['DummyTests_a'].current_environment == 'a'
+        assert globals()['DummyTests_b'].current_environment == 'b'
+        assert globals()['DummyTests'].current_environment == 'default'
 
 
