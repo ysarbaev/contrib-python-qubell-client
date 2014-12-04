@@ -41,6 +41,8 @@ content = open((os.path.realpath(os.path.join(os.path.dirname(__file__), 'manife
     {"name": 'EnvsServiceAppTestCaseApp',
      "content": content,
      "add_as_service": True},
+    {"name": 'Envs AppTestCase-App',
+     "content": content,},
     {"name":'EnvsServiceAppTestCaseAppNolaunch',
      "file": os.path.realpath(os.path.join(os.path.dirname(__file__), 'manifest.yml')),
      "launch": False}])
@@ -53,3 +55,11 @@ class EnvsServiceAppTestCase(BaseComponentTestCase):
         assert instance in self.organization.services
 
         self.assertRaises(exceptions.NotFoundError, self.organization.get_instance, name='EnvsServiceAppTestCaseAppNolaunch')
+
+    @instance(byApplication='Envs AppTestCase-App')
+    @values({"app-output": "out"})
+    def test_out(self, instance, out):
+        assert instance.running()
+        assert out == "This is default manifest"
+
+

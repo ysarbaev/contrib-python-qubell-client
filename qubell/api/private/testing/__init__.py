@@ -122,14 +122,15 @@ def _parameterize(source_case, cases, tests):
             setattr(source_case, test_name, test_method)
 
         case_mod = sys.modules[source_case.__module__]
-        case_name = source_case.__name__
+        case_name = norm(source_case.__name__)
         for env_name, param_set in cases.items():
             if env_name=='default':
-                source_case.__name__=case_name+".default"
+                pass
+                #source_case.__name__ = case_name+"_default"
             else:
                 attrs = dict(source_case.__dict__)
                 attrs.update({'className': env_name})
-                updated_case = type('{0}.{1}'.format(case_name, env_name), (source_case,), attrs)
+                updated_case = type('{0}_{1}'.format(case_name, env_name), (source_case,), attrs)
                 setattr(case_mod, updated_case.__name__, updated_case)
                 updated_case.current_environment = env_name
             yield updated_case
@@ -160,42 +161,7 @@ def applications(appsdata):
     def wraps_class(clazz):
         if "applications" in clazz.__dict__:
             log.warn("Class {0} applications attribute is overridden".format(clazz.__name__))
-
-        for appdata in appsdata:
-            appdata['name'] = norm(appdata['name'])
-            clazz.applications.append(appdata) # This needed to pass to environment
-
-
-            if appdata.get('launch', True):
-                app_name = appdata['name']
-                if appdata.get('add_as_service'):
-                    start_name='test00_launch_%s' % app_name
-                    destroy_name='testzz_destroy_%s' % app_name
-                else:
-                    start_name='test01_launch_%s' % app_name
-                    destroy_name='testzy_destroy_%s' % app_name
-                parameters = appdata.get('parameters', {})
-                settings = appdata.get('settings', {})
-
-                # Prepare tests dict
-                tests={}
-                def launch_method(self):
-                    self._launch_instance(app_name=app_name,  parameters=parameters, settings=settings)
-
-                def destroy_method(self):
-                    self._destroy_instance(app_name=app_name)
-
-                tests[start_name] = launch_method
-                tests[start_name].__name__ = start_name
-                tests[start_name].__doc__ = 'Launch %s' % app_name # TODO: Pass env here somehow
-                tests[destroy_name] = destroy_method
-                tests[destroy_name].__name__ = destroy_name
-                tests[destroy_name].__doc__ = 'Destroy %s' % app_name
-
-                # Update class with new methods
-                parameterize(clazz, tests=tests)
-                log.info("Test '{0}' added as instance launch test for {1}".format(start_name, clazz.__name__))
-                log.info("Test '{0}' added as instance destroy test for {1}".format(destroy_name, clazz.__name__))
+        clazz.applications = appsdata # This needed to pass to environment
         return clazz
     return wraps_class
 application = applications
@@ -207,7 +173,7 @@ def instance(byApplication):
         def wrapped_func(*args, **kwargs):
             self = args[0]
 
-            ins = self.find_by_application_name(norm(byApplication))
+            ins = self.find_by_application_name(byApplication)
             if not ins.running():
                 raise SkipTest("Instance %s not in Running state" % ins.name)
             func(*args + (ins,), **kwargs)
@@ -221,10 +187,9 @@ class BaseTestCase(unittest.TestCase):
     sandbox = None
     environments = None
     applications = []
-    service_instances = []
-    regular_instances = []
     instances = []
     current_environment = 'default'
+    setup_error=None
 
     @classmethod
     def environment(cls, organization):
@@ -273,69 +238,101 @@ class BaseTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         super(BaseTestCase, cls).setUpClass()
-        if cls.parameters['organization']:
-            cls.prepare(cls.parameters['organization'], cls.timeout())
-        else:
-            cls.prepare(cls.__name__, cls.timeout())
+
+        log.info("\n\n\n---------------  Preparing sandbox...  ---------------")
+        try:
+
+            cls.service_instances = []
+            cls.regular_instances = []
+            cls.sandbox = SandBox(cls.platform, cls.environment(cls.parameters['organization'] or cls.__name__))
+            cls.organization = cls.sandbox.make()
+
+            ### Start ###
+            # If 'meta' in sandbox, restore applications that comes in meta before.
+            if cls.__dict__.get('meta'):
+                cls.upload_metadata_applications(cls.__dict__.get('meta'))
+
+            services_to_start = [x for x in cls.applications if x.get('add_as_service', False)]
+            instances_to_start = [x for x in cls.applications if x.get('launch', True) and not x.get('add_as_service', False)]
+
+            for appdata in services_to_start:
+                cls.launch_instance(appdata)
+            for appdata in instances_to_start:
+                cls.launch_instance(appdata)
+
+            cls.check_instances(cls.service_instances)
+            cls.check_instances(cls.regular_instances)
+
+        except BaseException as e:
+            cls.setup_error = e
+        log.info("\n---------------  Sandbox prepared  ---------------\n\n")
 
     @classmethod
     def tearDownClass(cls):
+        log.info("\n---------------  Cleaning sandbox  ---------------")
+
+        cls.destroy_instances(cls.regular_instances)
+        cls.destroy_instances(cls.service_instances)
+        cls.regular_instances = []
+        cls.service_instances = []
+
+        log.info("\n---------------  Sandbox cleaned  ---------------\n")
         super(BaseTestCase, cls).tearDownClass()
 
-    def _launch_instance(self, app_name, parameters, settings, timeout=30):
-        application = self.organization.applications[app_name]
-        environment = self.organization.environments[self.current_environment]
-        instance = self.organization.create_instance(application=application,
+    def setUp(self):
+        if self.setup_error:
+            raise self.setup_error
+
+    @classmethod
+    def upload_metadata_applications(cls, metadata):
+        meta = yaml.safe_load(requests.get(url=metadata).content)
+        applications = []
+        for app in meta['kit']['applications']:
+            applications.append({
+                'name': app['name'],
+                'url': app['manifest']})
+        cls.organization.restore({'applications': applications})
+
+    @classmethod
+    def launch_instance(cls, appdata):
+        application = cls.organization.applications[appdata['name']]
+        environment = cls.organization.environments[cls.current_environment]
+        instance = cls.organization.create_instance(application=application,
                                                     environment=environment,
-                                                    parameters=parameters,
-                                                    **settings)
-        self.assertTrue(instance.ready(timeout=timeout), "App {0} failed to start instance in env {1}. Status: {2}. Timeout: {3}".format(app_name, self.current_environment, instance.status, timeout))
-
-        # Hack to recognize service
-        if 'test00_launch_' in self._testMethodName:
+                                                    parameters=appdata.get('parameters', {}),
+                                                    **appdata.get('settings',{}))
+        if appdata.get('add_as_service', False):
             environment.add_service(instance)
-            self.service_instances.append(instance)
+            cls.service_instances.append(instance)
         else:
-            self.regular_instances.append(instance)
-        self.instances = self.service_instances+self.regular_instances
+            cls.regular_instances.append(instance)
 
-    def _destroy_instance(self, app_name, timeout=30):
-        instance = self.find_by_application_name(app_name)
+    @classmethod
+    def check_instances(cls, instances):
+        for instance in instances:
+            if not instance.running(timeout=cls.timeout()):
+                error = instance.error.strip()
 
+                # TODO: if instance fails to start during tests, add proper unittest log
+                if os.getenv("QUBELL_DEBUG", None) and not('false' in os.getenv("QUBELL_DEBUG", None)):
+                    pass
+
+                assert not error, "Instance %s didn't launch properly and has error '%s'" % (instance.instanceId, error)
+                assert False, "Instance %s is not ready after %s minutes and stop on timeout" % (instance.instanceId, cls.timeout())
+
+    @classmethod
+    def destroy_instances(cls, instances):
         if os.getenv("QUBELL_DEBUG", None) and not('false' in os.getenv("QUBELL_DEBUG", None)):
             log.info("QUBELL_DEBUG is ON\n DO NOT clean sandbox")
         else:
-            instance.destroy()
-            assert instance.destroyed(timeout=timeout)
-        if 'testzz_destroy_' in self._testMethodName:
-            self.service_instances.remove(instance)
-        else:
-            self.regular_instances.remove(instance)
-
-    @classmethod
-    def prepare(cls, organization, timeout=30):
-        """ Create sandboxed test environment
-        """
-        log.info("\n\n\n---------------  Preparing sandbox...  ---------------")
-        cls.sandbox = SandBox(cls.platform, cls.environment(organization))
-        cls.organization = cls.sandbox.make()
-
-        # If 'meta' in sandbox, restore applications that comes in meta before.
-        # TODO: all this stuff needs refactoring.
-        apps = []
-        if cls.__dict__.get('meta'):
-            meta_raw = requests.get(url=cls.__dict__.get('meta'))
-            meta = yaml.safe_load(meta_raw.content)
-            for app in meta['kit']['applications']:
-                apps.append({
-                    'name': app['name'],
-                    'url': app['manifest']})
-            cls.organization.restore({'applications':apps})
-        log.info("---------------  Sandbox prepeared  ---------------\n\n\n")
+            for instance in instances:
+                instance.destroy()
+                if not instance.destroyed(cls.timeout()):
+                    log.error("Instance was not destroyed properly {0}: {1}", instance.id, instance.name)
 
     def find_by_application_name(self, name):
         for inst in self.regular_instances+self.service_instances:
-            if inst.application.name == name and inst.environment.name == self.current_environment:
+            if inst.application.name == name:
                 return inst
         raise NotFoundError
 
