@@ -122,14 +122,14 @@ def _parameterize(source_case, cases, tests):
             setattr(source_case, test_name, test_method)
 
         case_mod = sys.modules[source_case.__module__]
+        case_name = source_case.__name__
         for env_name, param_set in cases.items():
-            env_name=norm(env_name)
             if env_name=='default':
-                pass # Do not update test case
+                source_case.__name__=case_name+".default"
             else:
                 attrs = dict(source_case.__dict__)
                 attrs.update({'className': env_name})
-                updated_case = type('{0}_{1}'.format(source_case.__name__, env_name), (source_case,), attrs)
+                updated_case = type('{0}.{1}'.format(case_name, env_name), (source_case,), attrs)
                 setattr(case_mod, updated_case.__name__, updated_case)
                 updated_case.current_environment = env_name
             yield updated_case
@@ -160,7 +160,6 @@ def applications(appsdata):
     def wraps_class(clazz):
         if "applications" in clazz.__dict__:
             log.warn("Class {0} applications attribute is overridden".format(clazz.__name__))
-
 
         for appdata in appsdata:
             appdata['name'] = norm(appdata['name'])
