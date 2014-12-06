@@ -144,10 +144,17 @@ def environment(params):
         # Old style (cls.apps) application support hack
         if 'apps' in clazz.__dict__:
             applications(clazz.apps)(clazz)
+
+        # If QUBELL_ZONE set we should change env names to corresponding. So, new would be created in zone or cached by existing by name
+        zone = os.getenv('QUBELL_ZONE')
+        parameterize(source_case=clazz, cases=params)
+        if zone:
+
+            for key, value in params.items():
+                name = '{0} at {1}'.format(key, zone)
+                params[name] = params.pop(key)
         clazz.environments = format_as_api(params)
 
-        # Add test cases
-        parameterize(source_case=clazz, cases=params)
         return clazz
     return wraps_class
 environments = environment
@@ -188,7 +195,8 @@ class BaseTestCase(unittest.TestCase):
     environments = None
     applications = []
     instances = []
-    current_environment = 'default'
+    current_environment = DEFAULT_ENV_NAME()
+
     setup_error=None
 
     @classmethod
@@ -241,7 +249,6 @@ class BaseTestCase(unittest.TestCase):
 
         log.info("\n\n\n---------------  Preparing sandbox...  ---------------")
         try:
-
             cls.service_instances = []
             cls.regular_instances = []
             cls.sandbox = SandBox(cls.platform, cls.environment(cls.parameters['organization'] or cls.__name__))
