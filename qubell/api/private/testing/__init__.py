@@ -168,7 +168,7 @@ def applications(appsdata):
     def wraps_class(clazz):
         if "applications" in clazz.__dict__:
             log.warn("Class {0} applications attribute is overridden".format(clazz.__name__))
-        clazz.applications = appsdata # This needed to pass to environment
+        clazz.applications.append(appsdata) # This needed to pass to environment
         return clazz
     return wraps_class
 application = applications
@@ -259,8 +259,8 @@ class BaseTestCase(unittest.TestCase):
             if cls.__dict__.get('meta'):
                 cls.upload_metadata_applications(cls.__dict__.get('meta'))
 
-            services_to_start = [x for x in cls.applications if x.get('add_as_service', False)]
-            instances_to_start = [x for x in cls.applications if x.get('launch', True) and not x.get('add_as_service', False)]
+            services_to_start = [x for x in cls.sandbox['applications'] if x.get('add_as_service', False)]
+            instances_to_start = [x for x in cls.sandbox['applications'] if x.get('launch', True) and not x.get('add_as_service', False)]
 
             for appdata in services_to_start:
                 cls.launch_instance(appdata)
