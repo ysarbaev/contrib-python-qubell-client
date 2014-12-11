@@ -113,26 +113,31 @@ def workflow(name, parameters=None, timeout=10):
             func(*args, **kwargs)
         return wrapped_func
     return wrapper
-
 def _parameterize(source_case, cases, tests):
         '''This generates the classes (in the sense that it's a generator.)
         '''
-        updated_case = source_case
+        def clean_class(source):
+            import types
+            test_methods = [method.__name__ for _, method in source.__dict__.items()
+                                if isinstance(method, types.FunctionType) and method.func_name.startswith("test")]
+            setattr(source_case, '__name__', 'Source')
+            setattr(source_case, 'className', 'Source')
+            for test in test_methods:
+                delattr(source_case, test)
+
+
         for test_name, test_method in tests.items():
             setattr(source_case, test_name, test_method)
 
         case_mod = sys.modules[source_case.__module__]
         case_name = norm(source_case.__name__)
+        attrs = dict(source_case.__dict__)
+        clean_class(source_case)
         for env_name, param_set in cases.items():
-            if env_name=='default':
-                pass
-                #source_case.__name__ = case_name+"_default"
-            else:
-                attrs = dict(source_case.__dict__)
-                attrs.update({'className': env_name})
-                updated_case = type('{0}_{1}'.format(case_name, env_name), (source_case,), attrs)
-                setattr(case_mod, updated_case.__name__, updated_case)
-                updated_case.current_environment = env_name
+            updated_case = type('{0}_{1}'.format(case_name, env_name), (source_case,), attrs)
+            setattr(updated_case, 'className', env_name)
+            setattr(case_mod, updated_case.__name__, updated_case)
+            updated_case.current_environment = env_name
             yield updated_case
 
 
@@ -141,10 +146,6 @@ def parameterize(source_case, cases={}, tests={}):
 
 def environment(params):
     def wraps_class(clazz):
-        # Old style (cls.apps) application support hack
-        if 'apps' in clazz.__dict__:
-            applications(clazz.apps)(clazz)
-
         # If QUBELL_ZONE set we should change env names to corresponding. So, new would be created in zone or cached by existing by name
         zone = os.getenv('QUBELL_ZONE')
         parameterize(source_case=clazz, cases=params)
@@ -168,7 +169,7 @@ def applications(appsdata):
     def wraps_class(clazz):
         if "applications" in clazz.__dict__:
             log.warn("Class {0} applications attribute is overridden".format(clazz.__name__))
-        clazz.applications.append(appsdata) # This needed to pass to environment
+        clazz.applications=clazz.applications+appsdata # This needed to pass to environment
         return clazz
     return wraps_class
 application = applications
@@ -264,10 +265,10 @@ class BaseTestCase(unittest.TestCase):
 
             for appdata in services_to_start:
                 cls.launch_instance(appdata)
+            cls.check_instances(cls.service_instances)
+
             for appdata in instances_to_start:
                 cls.launch_instance(appdata)
-
-            cls.check_instances(cls.service_instances)
             cls.check_instances(cls.regular_instances)
 
         except BaseException as e:
