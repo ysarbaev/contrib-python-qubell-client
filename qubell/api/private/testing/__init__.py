@@ -138,6 +138,7 @@ def _parameterize(source_case, cases, tests):
             setattr(updated_case, 'className', env_name)
             setattr(case_mod, updated_case.__name__, updated_case)
             updated_case.current_environment = env_name
+            updated_case.source_name = case_name
             yield updated_case
 
 
@@ -252,7 +253,8 @@ class BaseTestCase(unittest.TestCase):
         try:
             cls.service_instances = []
             cls.regular_instances = []
-            cls.sandbox = SandBox(cls.platform, cls.environment(cls.parameters['organization'] or cls.__name__))
+            org = cls.parameters.get('organization') or getattr(cls, 'source_name', False) or cls.__name__
+            cls.sandbox = SandBox(cls.platform, cls.environment(org))
             cls.organization = cls.sandbox.make()
 
             ### Start ###
