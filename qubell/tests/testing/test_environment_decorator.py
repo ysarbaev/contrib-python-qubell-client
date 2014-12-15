@@ -18,27 +18,23 @@ class DummyTests(object):
 class EnvironmentDecoratorTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.old_tests = ["test_nothing", "test_fail"]
-        cls.clazz = environment({"a":{"A":"AA"}, "b":{"B":"BB"}, "default":{"C":"CC"}})(DummyTests)
+        cls.clazz = environment({"a":{"A":"AA"}, "b - b":{"B":"BB"}, "default":{"C":"CC"}})(DummyTests)
 
 
     def test_patch_multiplication_test_test_methods(self):
-        new_classes = ['DummyTests_a', 'DummyTests_b', 'DummyTests']
+        new_classes = ['DummyTests_a', 'DummyTests_b_b', 'DummyTests_default']
         new_tests = ['test_factory',
                      'test_fail',
                      'test_manager',
                      'test_nothing',]
 
-
-        for name in new_tests:
-            assert name in self.clazz.__dict__
-
         for case in new_classes:
             assert case in globals()
             for test in new_tests:
                 assert test in globals()[case].__dict__
+
         assert globals()['DummyTests_a'].current_environment == 'a'
-        assert globals()['DummyTests_b'].current_environment == 'b'
+        assert globals()['DummyTests_b_b'].current_environment == 'b_b'
         assert globals()['DummyTests'].current_environment == 'default'
 
 

@@ -125,21 +125,27 @@ def _parameterize(source_case, cases, tests):
             for test in test_methods:
                 delattr(source_case, test)
 
-
+        # Add tests to class if we got tests param
         for test_name, test_method in tests.items():
             setattr(source_case, test_name, test_method)
 
-        case_mod = sys.modules[source_case.__module__]
-        case_name = norm(source_case.__name__)
-        attrs = dict(source_case.__dict__)
-        clean_class(source_case)
-        for env_name, param_set in cases.items():
-            updated_case = type('{0}_{1}'.format(case_name, env_name), (source_case,), attrs)
-            setattr(updated_case, 'className', env_name)
-            setattr(case_mod, updated_case.__name__, updated_case)
-            updated_case.current_environment = env_name
-            updated_case.source_name = case_name
-            yield updated_case
+        # Multiply classes per environment
+        if len(cases):
+            case_mod = sys.modules[source_case.__module__]
+            case_name = norm(source_case.__name__)
+            attrs = dict(source_case.__dict__)
+            clean_class(source_case)
+
+            for env in cases.keys():
+                env_name = norm(env)
+                updated_case = type('{0}_{1}'.format(case_name, env_name), (source_case,), attrs)
+                setattr(updated_case, 'className', env_name)
+                setattr(case_mod, updated_case.__name__, updated_case)
+                updated_case.current_environment = env_name
+                updated_case.source_name = case_name
+                yield updated_case
+        else:
+            yield source_case
 
 
 def parameterize(source_case, cases={}, tests={}):
@@ -266,11 +272,11 @@ class BaseTestCase(unittest.TestCase):
             instances_to_start = [x for x in cls.sandbox['applications'] if x.get('launch', True) and not x.get('add_as_service', False)]
 
             for appdata in services_to_start:
-                cls.launch_instance(appdata)
+                cls.service_instances.append(cls.launch_instance(appdata))
             cls.check_instances(cls.service_instances)
 
             for appdata in instances_to_start:
-                cls.launch_instance(appdata)
+                cls.regular_instances.append(cls.launch_instance(appdata))
             cls.check_instances(cls.regular_instances)
 
         except BaseException as e:
@@ -311,11 +317,7 @@ class BaseTestCase(unittest.TestCase):
                                                     environment=environment,
                                                     parameters=appdata.get('parameters', {}),
                                                     **appdata.get('settings',{}))
-        if appdata.get('add_as_service', False):
-            environment.add_service(instance)
-            cls.service_instances.append(instance)
-        else:
-            cls.regular_instances.append(instance)
+        return instance
 
     @classmethod
     def check_instances(cls, instances):
