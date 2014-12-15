@@ -301,13 +301,17 @@ class BaseTestCase(unittest.TestCase):
 
     @classmethod
     def upload_metadata_applications(cls, metadata):
-        meta = yaml.safe_load(requests.get(url=metadata).content)
+        # Treat meta as file or link?
+        if 'http' in metadata:
+            meta = yaml.safe_load(requests.get(url=metadata).content)
+        else:
+            meta = yaml.safe_load(open(metadata, 'r').read())
         applications = []
         for app in meta['kit']['applications']:
             applications.append({
                 'name': app['name'],
                 'url': app['manifest']})
-        cls.organization.restore({'applications': applications})
+        return cls.organization.restore({'applications': applications})
 
     @classmethod
     def launch_instance(cls, appdata):
