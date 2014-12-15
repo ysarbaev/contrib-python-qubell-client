@@ -206,6 +206,7 @@ class BaseTestCase(unittest.TestCase):
     current_environment = DEFAULT_ENV_NAME()
 
     setup_error=None
+    setup_error_trace=None
 
     @classmethod
     def environment(cls, organization):
@@ -281,6 +282,10 @@ class BaseTestCase(unittest.TestCase):
 
         except BaseException as e:
             cls.setup_error = e
+            import traceback
+            cls.setup_error_trace = traceback.format_exc()
+            log.error(cls.setup_error)
+            log.error(cls.setup_error_trace)
         log.info("\n---------------  Sandbox prepared  ---------------\n\n")
 
     @classmethod
