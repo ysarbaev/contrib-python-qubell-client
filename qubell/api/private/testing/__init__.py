@@ -273,7 +273,9 @@ class BaseTestCase(unittest.TestCase):
             instances_to_start = [x for x in cls.sandbox['applications'] if x.get('launch', True) and not x.get('add_as_service', False)]
 
             for appdata in services_to_start:
-                cls.service_instances.append(cls.launch_instance(appdata))
+                ins = cls.launch_instance(appdata)
+                cls.service_instances.append(ins)
+                cls.organization.environments[cls.current_environment].add_service(ins)
             cls.check_instances(cls.service_instances)
 
             for appdata in instances_to_start:
