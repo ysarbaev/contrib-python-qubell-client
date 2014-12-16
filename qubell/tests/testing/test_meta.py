@@ -2,7 +2,7 @@
 from unittest import TestCase
 from qubell.api.testing import BaseComponentTestCase
 
-
+import os
 
 
 class TestMeta(TestCase):
@@ -19,5 +19,5 @@ class TestMeta(TestCase):
         assert 'Database' in meta['applications'][0]['name']
 
     def test_meta_file(self):
-        meta = self.cls.upload_metadata_applications("./meta.yml")
+        meta = self.cls.upload_metadata_applications(os.path.join(os.path.dirname(__file__), "./meta.yml"))
         assert 'Database' in meta['applications'][0]['name']
