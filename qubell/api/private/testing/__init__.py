@@ -206,6 +206,7 @@ class BaseTestCase(unittest.TestCase):
     current_environment = DEFAULT_ENV_NAME()
 
     setup_error=None
+    setup_error_trace=None
 
     @classmethod
     def environment(cls, organization):
@@ -272,7 +273,9 @@ class BaseTestCase(unittest.TestCase):
             instances_to_start = [x for x in cls.sandbox['applications'] if x.get('launch', True) and not x.get('add_as_service', False)]
 
             for appdata in services_to_start:
-                cls.service_instances.append(cls.launch_instance(appdata))
+                ins = cls.launch_instance(appdata)
+                cls.service_instances.append(ins)
+                cls.organization.environments[cls.current_environment].add_service(ins)
             cls.check_instances(cls.service_instances)
 
             for appdata in instances_to_start:
@@ -281,6 +284,10 @@ class BaseTestCase(unittest.TestCase):
 
         except BaseException as e:
             cls.setup_error = e
+            import traceback
+            cls.setup_error_trace = traceback.format_exc()
+            log.error(cls.setup_error)
+            log.error(cls.setup_error_trace)
         log.info("\n---------------  Sandbox prepared  ---------------\n\n")
 
     @classmethod
@@ -301,13 +308,17 @@ class BaseTestCase(unittest.TestCase):
 
     @classmethod
     def upload_metadata_applications(cls, metadata):
-        meta = yaml.safe_load(requests.get(url=metadata).content)
+        # Treat meta as file or link?
+        if 'http' in metadata:
+            meta = yaml.safe_load(requests.get(url=metadata).content)
+        else:
+            meta = yaml.safe_load(open(metadata, 'r').read())
         applications = []
         for app in meta['kit']['applications']:
             applications.append({
                 'name': app['name'],
                 'url': app['manifest']})
-        cls.organization.restore({'applications': applications})
+        return cls.organization.restore({'applications': applications})
 
     @classmethod
     def launch_instance(cls, appdata):
