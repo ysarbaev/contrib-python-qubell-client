@@ -14,7 +14,7 @@ try:
 except:
     pass
 # Define what users import by *
-__all__ = ['BaseComponentTestCase', 'applications', 'environment', 'environments', 'instance', 'values', 'workflow']
+__all__ = ['BaseComponentTestCase', 'applications', 'environment', 'environments', 'instance', 'values', 'workflow', 'eventually', 'attr']
 
 platform = QubellPlatform.connect(
                 tenant=qubell_config['tenant'],
