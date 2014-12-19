@@ -129,6 +129,10 @@ class PrivatePath(Router):
     def post_instance_workflow(self, org_id, instance_id, wf_name, cookies, data="{}", ctype=".json"): pass
 
     @play_auth
+    @route("POST /organizations/{org_id}/instances/{instance_id}/components/{component_path}/workflows/{wf_name}{ctype}")
+    def post_instance_component_workflow(self, org_id, instance_id, component_path, wf_name, cookies, data="{}", ctype=".json"): pass
+
+    @play_auth
     @route("PUT /organizations/{org_id}/instances/{instance_id}/configuration{ctype}")
     def put_instance_configuration(self, org_id, instance_id, data, cookies, ctype=".json"): pass
 

@@ -212,12 +212,15 @@ class Instance(Entity, ServiceMixin):
     def destroyed(self, timeout=3):  # Shortcut for convinience. Temeout = 3 min (ask timeout*6 times every 10 sec)
         return waitForStatus(instance=self, final='Destroyed', accepted=['Destroying', 'Running', 'Executing'], timeout=[timeout*20, 3, 1])
 
-    def run_workflow(self, name, parameters=None):
+    def run_workflow(self, name, component_path=None, parameters=None):
         if not parameters: parameters = {}
         log.info("Running workflow %s on instance %s (%s)" % (name, self.name, self.id))
         log.debug("Parameters: %s" % parameters)
         self._last_workflow_started_time = time.gmtime(time.time())
-        router.post_instance_workflow(org_id=self.organizationId, instance_id=self.instanceId, wf_name=name, data=json.dumps(parameters))
+        if component_path:
+            router.post_instance_component_workflow(org_id=self.organizationId, instance_id=self.instanceId, component_path=component_path, wf_name=name, data=json.dumps(parameters))
+        else:
+            router.post_instance_workflow(org_id=self.organizationId, instance_id=self.instanceId, wf_name=name, data=json.dumps(parameters))
         return True
 
     #alias
