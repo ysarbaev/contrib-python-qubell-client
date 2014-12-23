@@ -197,11 +197,11 @@ class Instance(Entity, ServiceMixin):
         return instance
 
     def ready(self, timeout=3):  # Shortcut for convinience. Timeout = 3 min (ask timeout*6 times every 10 sec)
-        return waitForStatus(instance=self, final='Active', accepted=['Launching', 'Requested', 'Executing', 'Unknown'], timeout=[timeout*20, 3, 1])
+        return waitForStatus(instance=self, final=['Active', 'Running'], accepted=['Launching', 'Requested', 'Executing', 'Unknown'], timeout=[timeout*20, 3, 1])
         # TODO: Unknown status  should be removed
 
     def running(self, timeout=3):
-        if self.status == 'Active':
+        if self.status in ['Active', 'Running']:
             log.debug("Instance {} is Active right now".format(self.id))
             return True
         mrut = self.most_recent_update_time
@@ -210,7 +210,7 @@ class Instance(Entity, ServiceMixin):
         return self.ready(timeout)
 
     def destroyed(self, timeout=3):  # Shortcut for convinience. Temeout = 3 min (ask timeout*6 times every 10 sec)
-        return waitForStatus(instance=self, final='Destroyed', accepted=['Destroying', 'Active', 'Executing'], timeout=[timeout*20, 3, 1])
+        return waitForStatus(instance=self, final='Destroyed', accepted=['Destroying', 'Active', 'Running', 'Executing'], timeout=[timeout*20, 3, 1])
 
     def run_workflow(self, name, component_path=None, parameters=None):
         if not parameters: parameters = {}
