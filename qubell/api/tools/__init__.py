@@ -67,7 +67,7 @@ def retry(tries=10, delay=1, backoff=2, retry_exception=None):
         return f_retry
     return deco_retry
 
-def waitForStatus(instance, final='Running', accepted=None, timeout=(20, 10, 1)):
+def waitForStatus(instance, final='Active', accepted=None, timeout=(20, 10, 1)):
     started = time.time()
     info = '%s (%s)' % (instance.name, instance.id)
 

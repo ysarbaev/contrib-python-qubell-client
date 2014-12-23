@@ -48,7 +48,7 @@ class SandboxClassTest(BaseComponentTestCase):
 
     @instance(byApplication=name)
     def test_instance(self, instance):
-        assert 'Running' == instance.status
+        assert 'Active' == instance.status
         app = self.organization.applications[self.name]
         assert instance in app.instances
 
