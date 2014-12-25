@@ -203,6 +203,14 @@ class PrivatePath(Router):
     @route("POST /organizations/{org_id}/services/{instance_id}/keys/generate{ctype}")
     def post_service_generate(self, org_id, instance_id, cookies, data="{}", ctype=".json"): pass
 
+    @play_auth
+    @route("GET /organizations/{org_id}/services/{instance_id}/keys{ctype}")
+    def get_service_keys(self, org_id, instance_id, cookies, ctype=".json"): pass
+
+    @play_auth
+    @route("GET /organizations/{org_id}/services/{instance_id}/keys/{key_id}/id_rsa.pub")
+    def get_service_public_key(self, org_id, instance_id, key_id, cookies, ctype=".json"): pass
+
     # Role
     @play_auth
     @route("POST /organizations/{org_id}/roles{ctype}")

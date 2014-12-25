@@ -240,7 +240,10 @@ class Instance(Entity, ServiceMixin):
         router.post_instance_workflow_schedule(org_id=self.organizationId, instance_id=self.instanceId, wf_name=name, data=json.dumps(payload))
         return True
 
-    def reschedule_workflow(self, workflow_id, timestamp):
+    def reschedule_workflow(self, workflow_name=None, workflow_id=None, timestamp=None):
+        if workflow_name:
+            workflow_id = [x['id'] for x in self.scheduledWorkflows if x['name']==workflow_name][0]
+
         log.info("ReScheduling workflow %s on instance %s (%s), timestamp: %s" % (workflow_id, self.name, self.id, timestamp))
         payload = {'timestamp':timestamp}
         router.post_instance_reschedule(org_id=self.organizationId, instance_id=self.instanceId, workflow_id=workflow_id, data=json.dumps(payload))
