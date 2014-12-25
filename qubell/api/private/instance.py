@@ -398,6 +398,8 @@ class activityLog(object):
             return '{0}: {1}'.format(self.log[item]['eventTypeText'], self.log[item]['description'])
         elif isinstance(item, str):
             return self.find(item)[0]
+        elif isinstance(item, slice):
+            return activityLog(self.log[item], severity=self.severity)
         return False
 
     def find(self, item, description='', event_type=''):
