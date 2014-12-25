@@ -170,6 +170,12 @@ class Instance(Entity, ServiceMixin):
 
         if not environment:
             environment = application.organization.defaultEnvironment
+
+        if not environment.isOnline:
+            # If environment offline for any reason, let it come up. Otherwise raise error
+            time.sleep(10)
+            assert environment.isOnline
+
         if not parameters: parameters = {}
         conf = {}
         conf['parameters'] = parameters
