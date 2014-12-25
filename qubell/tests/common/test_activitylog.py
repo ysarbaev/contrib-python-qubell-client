@@ -85,3 +85,33 @@ class test_activityLog(unittest.TestCase):
 
         logs = activityLog(self.actlog, severity='INFO').get_interval(end_text="workflow finished: destroy with status 'Succeeded'")
         self.assertEqual(len(logs), 13)
+
+    def test_slice_take_first(self):
+        logs = activityLog(self.actlog)[:3]  # take 3 first entries only
+        self.assertEqual(len(logs), 3)
+        self.assertEqual(logs[0], "command started: 'launch' (53e253dae4b0098a7cc0ac62) by LAUNCHER Tester")
+        self.assertEqual(logs[1], "status updated: Executing")
+        self.assertEqual(logs[2], "workflow started: launch")
+
+    def test_slice_take_last(self):
+        logs = activityLog(self.actlog)[-3:]  # take 3 last entries only
+        self.assertEqual(len(logs), 3)
+        self.assertEqual(logs[0], "step finished: destroy")
+        self.assertEqual(logs[1], "workflow finished: destroy with status 'Succeeded'")
+        self.assertEqual(logs[2], "status updated: Destroyed")
+
+    def test_slice_drop_first(self):
+        logs = activityLog(self.actlog)[17:]  # drop 17 first entries
+        self.assertEqual(len(logs), 4)
+        self.assertEqual(logs[0], "step started: destroy")
+        self.assertEqual(logs[1], "step finished: destroy")
+        self.assertEqual(logs[2], "workflow finished: destroy with status 'Succeeded'")
+        self.assertEqual(logs[3], "status updated: Destroyed")
+
+    def test_slice_drop_last(self):
+        logs = activityLog(self.actlog)[:-17]  # drop 17 last entries
+        self.assertEqual(len(logs), 4)
+        self.assertEqual(logs[0], "command started: 'launch' (53e253dae4b0098a7cc0ac62) by LAUNCHER Tester")
+        self.assertEqual(logs[1], "status updated: Executing")
+        self.assertEqual(logs[2], "workflow started: launch")
+        self.assertEqual(logs[3], "dynamic links updated: in: This is default manifest\nout: This is default manifest")
