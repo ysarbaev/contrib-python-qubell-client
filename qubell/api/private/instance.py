@@ -173,7 +173,7 @@ class Instance(Entity, ServiceMixin):
 
         if not environment.isOnline:
             # If environment offline for any reason, let it come up. Otherwise raise error
-            @retry(tries=10, delay=1, backoff=1.5, retry_exception=exceptions.AssertError)
+            @retry(tries=10, delay=1, backoff=1.5, retry_exception=AssertionError)
             def eventually_online():
                assert environment.isOnline, "Environment {name} didn't get Online status".format(name=environment.name)
             eventually_online()
