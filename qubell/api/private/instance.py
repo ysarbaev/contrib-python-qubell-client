@@ -27,7 +27,7 @@ __email__ = "vkhomenko@qubell.com"
 import logging as log
 import simplejson as json
 import time
-from qubell.api.tools import lazyproperty
+from qubell.api.tools import lazyproperty, retry
 
 from qubell.api.tools import waitForStatus as waitForStatus
 from qubell.api.private import exceptions
@@ -173,8 +173,10 @@ class Instance(Entity, ServiceMixin):
 
         if not environment.isOnline:
             # If environment offline for any reason, let it come up. Otherwise raise error
-            time.sleep(10)
-            assert environment.isOnline
+            @retry(tries=10, delay=1, backoff=1.5, retry_exception=exceptions.AssertError)
+            def eventually_online():
+               assert environment.isOnline, "Environment {name} didn't get Online status".format(name=environment.name)
+            eventually_online()
 
         if not parameters: parameters = {}
         conf = {}
