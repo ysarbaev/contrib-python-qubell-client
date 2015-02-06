@@ -16,6 +16,9 @@ except:
 # Define what users import by *
 __all__ = ['BaseComponentTestCase', 'applications', 'environment', 'environments', 'instance', 'values', 'workflow', 'eventually', 'attr']
 
+# todo: refactor, to avoid authentication on import
+# todo: add guard if env-vars are absent
+
 platform = QubellPlatform.connect(
                 tenant=qubell_config['tenant'],
                 user=qubell_config['user'],

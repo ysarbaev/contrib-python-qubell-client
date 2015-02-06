@@ -250,7 +250,7 @@ class PrivatePath(Router):
     def evict_user(self, org_id, cookies, user_id, data="{}", ctype=".json"): pass
 
     @play_auth
-    @route("POST /organizations/invite{ctype}")
+    @route("POST /invite{ctype}")
     def invite_user(self, cookies, data="{}", ctype=".json"): pass
 
 class PublicPath(PrivatePath):

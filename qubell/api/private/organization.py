@@ -18,7 +18,9 @@ from qubell.api.globals import DEFAULT_ENV_NAME, ZONE_NAME
 from qubell.api.private.common import EntityList, IdName
 from qubell.api.private.service import system_application_types, system_application_parameters, COBALT_SECURE_STORE_TYPE, WORKFLOW_SERVICE_TYPE, \
     SHARED_INSTANCE_CATALOG_TYPE, STATIC_RESOURCE_POOL_TYPE
+from qubell.api.private.service import system_application_types
 from qubell.api.tools import lazyproperty
+from qubell.api.provider.router import ROUTER as router
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
@@ -481,6 +483,27 @@ class Organization(Entity):
     def evict_user(self, id):
         user = self.get_user(id)
         return user.evict()
+
+    def invite(self, email, roles=None):
+        """
+        Send invitation to email with a list of roles
+        :param email:
+        :param roles: None or "ALL" or list of role_names
+        :return:
+        """
+        if roles is None:
+            role_ids = list(self.roles['Guest'].roleId)
+        elif roles == "ALL":
+            role_ids = list([i.id for i in self.roles])
+        else:
+            if "Guest" not in roles:
+                roles.append('Guest')
+            role_ids = list([i.id for i in self.roles if i.name in roles])
+
+        router.invite_user(data=json.dumps({
+            "organizationId": self.organizationId,
+            "email": email,
+            "roles": role_ids}))
 
 
 class OrganizationList(QubellEntityList):
