@@ -299,9 +299,9 @@ class Instance(Entity, ServiceMixin):
         return EnvironmentList(lambda: self.json()["environments"], organization=self.organization)
 
     def add_as_service(self, environments=None, environment_ids=None):
-        if not environments or environment_ids:
-            # Use default if not set
-            environments = [self.environment,]
+        if not (environments or environment_ids):
+            # Add as service in executed as environment
+            environment_ids = [self.environmentId, ]
         if environments:
             data = [env.environmentId for env in environments]
         else:

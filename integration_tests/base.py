@@ -94,13 +94,9 @@ class BaseTestCase(testtools.TestCase):
         else:
             cls.environment = cls.organization.get_environment(name='default')
         cls.environment.clean()
-        cls.shared_service = cls.organization.get_or_create_service(name='BaseTestSharedService', type=SHARED_INSTANCE_CATALOG_TYPE, parameters={'configuration.shared-instances':{}})
-        cls.wf_service = cls.organization.get_or_create_service(name='Default workflow service', type=WORKFLOW_SERVICE_TYPE)
-        cls.key_service = cls.organization.get_or_create_service(name='Default credentials service', type=COBALT_SECURE_STORE_TYPE)
-
-        cls.environment.add_service(cls.wf_service)
-        cls.environment.add_service(cls.key_service)
-        cls.environment.add_service(cls.shared_service)
+        cls.shared_service = cls.organization.service(name='BaseTestSharedService', type=SHARED_INSTANCE_CATALOG_TYPE, environment=cls.environment, parameters={'configuration.shared-instances':{}})
+        cls.wf_service = cls.organization.service(name='Default workflow service', type=WORKFLOW_SERVICE_TYPE, environment=cls.environment)
+        cls.key_service = cls.organization.service(name='Default credentials service', type=COBALT_SECURE_STORE_TYPE, environment=cls.environment)
 
     @classmethod
     def tearDownClass(cls):

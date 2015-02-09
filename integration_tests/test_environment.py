@@ -119,10 +119,10 @@ class EnvironmentClassTest(BaseTestCase):
         service.ready()
         assert service.id in env.services
         assert service.instanceId in env.services
-        self.org.get_or_create_service(service.name)
+        self.org.service(service.name)
         assert len(env.services) == 2
-        self.org.get_or_create_service(service.id)
-        self.org.get_or_create_service(service.instanceId)
+        self.org.service(service.id)
+        self.org.service(service.instanceId)
         assert len(env.services) == 2
         service.destroy()
         assert service.destroyed()

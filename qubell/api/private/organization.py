@@ -126,7 +126,7 @@ class Organization(Entity):
                 app = self.get_application(name=app)
 
             type = serv.pop('type', None)
-            service = self.get_or_create_service(id=serv.pop('id', None),
+            service = self.service(id=serv.pop('id', None),
                                        name=serv.pop('name'),
                                        type=type,
                                        application=app,
@@ -314,23 +314,26 @@ class Organization(Entity):
         instance.environment.add_service(instance)
         return instance
 
-    get_service = get_instance
-
     def list_services_json(self):
         return router.get_services(org_id=self.organizationId).json()
 
-    def get_or_create_service(self, id=None, application=None, revision=None, environment=None, name=None, parameters=None,
-                              type=None, destroyInterval=None):
-        """ Get by name or create service with given parameters"""
-        try:
-            serv = self.get_instance(id=id, name=name)
-            if environment:
-                environment.add_service(serv)
-            return serv
-        except exceptions.NotFoundError:
-            return self.create_service(application, revision, environment, name, parameters, type)
+    def service(self, id=None, application=None, revision=None, environment=None, name=None, parameters=None,
+                              type=None, destroyInterval=None, as_service_in=None):
+        def smart_service():
+            try:
+                return self.get_instance(id=id, name=name)
+            except exceptions.NotFoundError:
+                return self.create_service(application, revision, environment, name, parameters, type)
+        smart_service().add_as_service(environments=as_service_in)
 
-    service = get_or_create_service
+    @deprecated("Use service method")
+    def get_or_create_service(self, id=None, application=None, revision=None, environment=None, name=None,
+                              parameters=None, type=None, destroyInterval=None):
+        return self.service(id, application, revision, environment, name, parameters, type, destroyInterval)
+
+    @deprecated("Use get_instance method")
+    def get_service(self, id=None, name=None):
+        return self.get_instance(id, name)
 
     def remove_service(self, service):
         service.environment.remove_service(service)
