@@ -218,7 +218,7 @@ class Instance(Entity, ServiceMixin):
         return self.ready(timeout)
 
     def destroyed(self, timeout=3):  # Shortcut for convinience. Temeout = 3 min (ask timeout*6 times every 10 sec)
-        return waitForStatus(instance=self, final='Destroyed', accepted=['Destroying', 'Active', 'Running', 'Executing'], timeout=[timeout*20, 3, 1])
+        return waitForStatus(instance=self, final='Destroyed', accepted=['Destroying', 'Active', 'Running', 'Executing', 'Unknown'], timeout=[timeout*20, 3, 1])
 
     def run_workflow(self, name, component_path=None, parameters=None):
         if not parameters: parameters = {}
