@@ -92,7 +92,7 @@ class Environment(Entity):
             self.add_property(**property)
         for service in config.pop('services', []):
             type=service.pop('type', None)
-            serv = self.organization.get_service(id=service.pop('id', None), name=service.pop('name'))
+            serv = self.organization.get_instance(id=service.pop('id', None), name=service.pop('name'))
             if not serv in self.services:
                 self.add_service(serv)
         for service in self.services:

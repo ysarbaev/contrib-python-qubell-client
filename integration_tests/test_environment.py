@@ -110,7 +110,7 @@ class EnvironmentClassTest(BaseTestCase):
 
     def test_service_crud(self):
         env = self.env
-        wf = self.org.get_service(name="Default workflow service")
+        wf = self.org.get_instance(name="Default workflow service")
         env.add_service(wf)
         env.add_service(wf)  # operation idempotent
         assert len(env.services) == 1
