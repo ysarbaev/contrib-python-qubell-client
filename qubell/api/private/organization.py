@@ -324,7 +324,9 @@ class Organization(Entity):
                 return self.get_instance(id=id, name=name)
             except exceptions.NotFoundError:
                 return self.create_service(application, revision, environment, name, parameters, type)
-        smart_service().add_as_service(environments=as_service_in)
+        serv = smart_service()
+        serv.add_as_service(environments=as_service_in)
+        return serv
 
     @deprecated("Use service method")
     def get_or_create_service(self, id=None, application=None, revision=None, environment=None, name=None,
