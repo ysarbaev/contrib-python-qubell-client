@@ -259,10 +259,11 @@ class Organization(Entity):
             warnings.warn("organization.list_instances_json(app) is deprecated, use app.list_instances_json", DeprecationWarning, stacklevel=2)
             instances = application.list_instances_json()
         else:  # Return all instances in organization
-            try:
-                instances = router.get_instances(org_id=self.organizationId).json()['groups'][0]['records']
-            except TypeError: # TODO: This is compability fix for platform < 37.1
+            resp = router.get_instances(org_id=self.organizationId).json()
+            if type(resp) == list:  # TODO: This is compability fix for platform < 37.1
                 instances = router.get_instances(org_id=self.organizationId).json()
+            elif resp.has_key('groups'):
+                instances = resp['groups'][0]['records']
         return [ins for ins in instances if ins['status'] not in DEAD_STATUS]
 
     def get_or_create_instance(self, id=None, application=None, revision=None, environment=None, name=None, parameters=None, submodules=None,
