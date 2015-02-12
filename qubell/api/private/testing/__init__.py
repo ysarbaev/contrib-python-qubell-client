@@ -103,7 +103,7 @@ def workflow(name, parameters=None, timeout=10):
             self = args[0]
             instance = args[1]
 
-            assert instance.run_workflow(name, parameters)
+            assert instance.run_workflow(name=name, parameters=parameters)
             if not instance.ready(timeout):
                 self.fail(
                     "Instance %s isn't ready in appropriate time: %s with parameters %s and timeout %s" % (
