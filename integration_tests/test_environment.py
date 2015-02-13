@@ -119,7 +119,7 @@ class EnvironmentClassTest(BaseTestCase):
         service.ready()
         assert service.id in env.services
         assert service.instanceId in env.services
-        self.org.service(service.name)
+        self.org.service(name=service.name)
         assert len(env.services) == 2
         self.org.service(service.id)
         self.org.service(service.instanceId)
