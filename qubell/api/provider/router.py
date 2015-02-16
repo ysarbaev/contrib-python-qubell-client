@@ -118,7 +118,7 @@ class PrivatePath(Router):
     #Instance
     @play_auth
     @route("GET /organizations/{org_id}/dashboard{ctype}")
-    def get_instances(self, org_id, cookies, ctype=".json"): pass
+    def get_instances(self, org_id, cookies, params=None, ctype=".json"): pass
 
     @play_auth
     @route("GET /organizations/{org_id}/instances/{instance_id}{ctype}")

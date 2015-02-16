@@ -251,19 +251,23 @@ class Organization(Entity):
         log.info("Picking instance: %s (%s)" % (name, id))
         if id:  # submodule instances are invisible for lists
             return Instance(id=id, organization=self)
-        return self.instances[id or name]
+        return Instance.get(self, name)
 
     def list_instances_json(self, application=None):
         """ Get list of instances in json format converted to list"""
-        if application:  # todo: application should not be parameter here. Application should do its own list
-            warnings.warn("organization.list_instances_json(app) is deprecated, use app.list_instances_json", DeprecationWarning, stacklevel=2)
-            instances = application.list_instances_json()
-        else:  # Return all instances in organization
-            resp = router.get_instances(org_id=self.organizationId).json()
-            if type(resp) == list:  # TODO: This is compability fix for platform < 37.1
-                instances = router.get_instances(org_id=self.organizationId).json()
-            elif resp.has_key('groups'):
-                instances = resp['groups'][0]['records']
+        # todo: application should not be parameter here. Application should do its own list, just in sake of code reuse
+        q_filter = {"showDestroyed": "false",
+                  "sortBy": "byCreation", "descending": "true",
+                  "mode": "short",
+                  "from": "0", "to": "10000"}
+        if application:
+            q_filter["applicationFilterId"] = application.applicationId
+        resp_json = router.get_instances(org_id=self.organizationId, params=q_filter).json()
+        if type(resp_json) == dict:
+            instances = [instance for g in resp_json['groups'] for instance in g['records']]
+        else:  # TODO: This is compatibility fix for platform < 37.1
+            instances = resp_json
+
         return [ins for ins in instances if ins['status'] not in DEAD_STATUS]
 
     def get_or_create_instance(self, id=None, application=None, revision=None, environment=None, name=None, parameters=None, submodules=None,

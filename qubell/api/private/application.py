@@ -114,8 +114,7 @@ class Application(Entity):
         return router.get_application(org_id=self.organizationId, app_id=self.applicationId).json()
 
     def list_instances_json(self):
-        instances = self.json()['instances']
-        return [ins for ins in instances if ins['status'] not in DEAD_STATUS]
+        return self.organization.list_instances_json(application=self)
 
     def __getattr__(self, key):
         resp = self.json()
@@ -179,7 +178,7 @@ class Application(Entity):
     def get_instance(self, id=None, name=None):
         if id:  # submodule instances are invisible for lists
             return Instance(id=id, organization=self.organization)
-        return self.instances[id or name]
+        return Instance.get(self.organization, name, application=self)
 
 
 class ApplicationList(QubellEntityList):

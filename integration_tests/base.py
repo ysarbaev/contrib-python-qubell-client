@@ -79,7 +79,9 @@ class BaseTestCase(testtools.TestCase):
     @classmethod
     def setUpClass(cls):
     # Initialize organization
-        cls.organization = cls.platform.organization(name=parameters['organization'])
+        if os.getenv("QUBELL_IT_LOCAL"):
+            cls.parameters['organization'] = cls.__name__
+        cls.organization = cls.platform.organization(name=cls.parameters['organization'])
 
         if zone:
             z = [x for x in cls.organization.list_zones() if x['name'] == zone]

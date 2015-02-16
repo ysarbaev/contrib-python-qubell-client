@@ -204,6 +204,28 @@ class Instance(Entity, ServiceMixin):
         log.debug("Instance %s (%s) started." % (instance.name, instance.id))
         return instance
 
+    @staticmethod
+    def get(organization, name, application=None, environment=None):
+        q_filter = {"query": name, "showDestroyed": "false",
+                  "sortBy": "byCreation", "descending": "true",
+                  "mode": "short"}
+        if application:
+            q_filter["applicationFilterId"] = application.applicationId
+        if environment:
+            q_filter["environmentFilterId"] = environment.environmentId
+        resp_json = router.get_instances(org_id=organization.organizationId, params=q_filter).json()
+        if type(resp_json) == dict:
+            instances = [instance for g in resp_json['groups'] for instance in g['records'] if instance['name'] == name]
+            if len(instances) is 0:
+                raise exceptions.NotFoundError("Instance with '{0}' not found in organization {1}".format(name, organization.name))
+            return Instance(organization=organization, id=instances[0]['id'])
+        else:  # TODO: This is compatibility fix for platform < 37.1
+            instances = [instance for instance in resp_json if instance['name'] == name]
+            if len(instances) is 0:
+                raise exceptions.NotFoundError("Instance with '{0}' not found in organization {1}".format(name, organization.name))
+            return Instance(organization=organization, id=sorted(instances, key=lambda i: i["createdAt"])[-1]['id'])
+
+
     def ready(self, timeout=3):  # Shortcut for convinience. Timeout = 3 min (ask timeout*6 times every 10 sec)
         return waitForStatus(instance=self, final=['Active', 'Running'], accepted=['Launching', 'Requested', 'Executing', 'Unknown'], timeout=[timeout*20, 3, 1])
         # TODO: Unknown status  should be removed
