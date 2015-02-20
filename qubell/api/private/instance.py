@@ -111,10 +111,11 @@ class Instance(Entity, ServiceMixin):
 
         """
         if after:
-            log = router.get_instance_activitylog(org_id=self.organizationId, instance_id=self.instanceId, timestamp=after).json()
-        log = router.get_instance_activitylog(org_id=self.organizationId, instance_id=self.instanceId).json()
+            log = router.get_instance_activitylog_after(org_id=self.organizationId, instance_id=self.instanceId, timestamp=after).json()
+        else:
+            log = router.get_instance_activitylog(org_id=self.organizationId, instance_id=self.instanceId).json()
 
-        return activityLog(log, severity=severity, start=start, end=end)
+        return ActivityLog(log, severity=severity, start=start, end=end)
 
 #aliases
     returnValues = return_values
@@ -381,7 +382,7 @@ class Instance(Entity, ServiceMixin):
 class InstanceList(QubellEntityList):
     base_clz = Instance
 
-class activityLog(object):
+class ActivityLog(object):
     TYPES=['status updated', 'signals updated', 'dynamic links updated', 'command started', 'command finished', 'workflow started', 'workflow finished', 'step started', 'step finished']
     log=[]
     def __init__(self, log, severity=None, start=None, end=None):
@@ -432,7 +433,7 @@ class activityLog(object):
         elif isinstance(item, str):
             return self.find(item)[0]
         elif isinstance(item, slice):
-            return activityLog(self.log[item], severity=self.severity)
+            return ActivityLog(self.log[item], severity=self.severity)
         return False
 
     def find(self, item, description='', event_type=''):
@@ -461,15 +462,16 @@ class activityLog(object):
     def get_interval(self, start_text=None, end_text=None):
         if start_text:
             begin = self.find(start_text)
-            interval = activityLog(self.log, self.severity, start=begin[0])
+            interval = ActivityLog(self.log, self.severity, start=begin[0])
         else:
             interval = self
 
         if end_text:
             end = interval.find(end_text)
-            interval = activityLog(interval, self.severity, end=end[0])
+            interval = ActivityLog(interval, self.severity, end=end[0])
 
         if len(interval):
             return interval
         raise exceptions.NotFoundError('Activitylog interval not found: [%s , %s]' % (start_text, end_text))
 
+activityLog = ActivityLog  # todo: remove this
