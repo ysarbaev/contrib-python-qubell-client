@@ -146,11 +146,7 @@ class PrivatePath(Router):
 
     @play_auth
     @route("GET /organizations/{org_id}/instances/{instance_id}/activitylog{ctype}")
-    def get_instance_activitylog(self, org_id, instance_id, cookies, ctype=".json"): pass
-
-    @play_auth
-    @route("GET /organizations/{org_id}/instances/{instance_id}/activitylog{ctype}?after={timestamp}")
-    def get_instance_activitylog_after(self, org_id, instance_id, timestamp, cookies, ctype=".json"): pass
+    def get_instance_activitylog(self, org_id, instance_id, cookies, params=None, ctype=".json"): pass
 
     @play_auth
     @route("POST /organizations/{org_id}/instances/{instance_id}/{action}{ctype}")
