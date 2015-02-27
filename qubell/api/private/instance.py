@@ -348,15 +348,17 @@ class Instance(Entity, ServiceMixin):
         return EnvironmentList(lambda: self.json()["environments"], organization=self.organization)
 
     def add_as_service(self, environments=None, environment_ids=None):
-        if not (environments or environment_ids):
-            # Add as service in executed as environment
-            environment_ids = [self.environmentId, ]
+        environment_ids = []
         if environments:
-            data = [env.environmentId for env in environments]
+            environment_ids = [env.environmentId for env in environments if self not in env.services]
+        elif environment_ids:
+            environment_ids.append(environment_ids)
         else:
-            assert isinstance(environment_ids, list)
-            data = environment_ids
-        router.post_instance_services(org_id=self.organizationId, instance_id=self.instanceId, data=json.dumps(data))
+            # Add as service in executed as environment
+            if self not in self.environment.services:
+                environment_ids.append(self.environmentId)
+        if len(environment_ids):
+            router.post_instance_services(org_id=self.organizationId, instance_id=self.instanceId, data=json.dumps(environment_ids))
 
     def remove_as_service(self, environments=None):
         if not environments:
