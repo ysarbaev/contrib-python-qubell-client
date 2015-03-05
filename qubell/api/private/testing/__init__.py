@@ -283,11 +283,13 @@ class BaseTestCase(unittest.TestCase):
             cls.check_instances(cls.regular_instances)
 
         except BaseException as e:
-            cls.setup_error = e
+            import sys
+            cls.setup_error = sys.exc_info()
+
             import traceback
             cls.setup_error_trace = traceback.format_exc()
-            log.error(cls.setup_error)
-            log.error(cls.setup_error_trace)
+            log.critical(e)
+            log.critical(cls.setup_error_trace)
         log.info("\n---------------  Sandbox prepared  ---------------\n\n")
 
     @classmethod
@@ -304,7 +306,7 @@ class BaseTestCase(unittest.TestCase):
 
     def setUp(self):
         if self.setup_error:
-            raise self.setup_error
+            raise self.setup_error[1], None, self.setup_error[2]
 
     @classmethod
     def upload_metadata_applications(cls, metadata):
