@@ -523,23 +523,43 @@ class Organization(Entity):
             "roles": role_ids}))
 
     def init(self):
+        """
+        Mimics wizard's environment preparation
+        """
         router.post_init(org_id=self.organizationId, data='{"initCloudAccount": true}')
 
-    # fixme: have no idea why it was in test case
-    def upload_metadata_applications(self, metadata):
-        meta = yaml.safe_load(requests.get(url=metadata).content)
+    def set_applications_from_meta(self, metadata):
+        """
+        Parses meta and update or create each application
+        :type metadata: str
+        :param metadata: path or url to meta.yml
+        """
+        if metadata.startswith('http'):
+            meta = yaml.safe_load(requests.get(url=metadata).content)
+        else:
+            # noinspection PyArgumentEqualDefault
+            meta = yaml.safe_load(open(metadata, 'r').read())
 
         applications = []
         for app in meta['kit']['applications']:
             applications.append({
                 'name': app['name'],
                 'url': app['manifest']})
-        return self.restore({'applications': applications})
+        self.restore({'applications': applications})
 
-    def upload_feature(self, metaurl):
-        manifests = [dict(name=app['name'], manifest=app['url']) for app in router.get_upload(params=dict(metadataUrl=metaurl)).json()['applications']]
-        category = self.categories['Application']
-
+    def upload_applications(self, metadata, category=None):
+        """
+        Mimics get starter-kit and wizard functionality to create components
+        Note: may create component duplicates, not idempotent
+        :type metadata: str
+        :type category: Category
+        :param metadata: url to meta.yml
+        :param category: category
+        """
+        upload_json = router.get_upload(params=dict(metadataUrl=metadata)).json()
+        manifests = [dict(name=app['name'], manifest=app['url']) for app in upload_json['applications']]
+        if not category:
+            category = self.categories['Application']
         data = {'categoryId': category.id, 'applications': manifests}
         router.post_application_kits(org_id=self.organizationId, data=json.dumps(data))
 
@@ -550,11 +570,13 @@ class Organization(Entity):
 class OrganizationList(QubellEntityList):
     base_clz = Organization
 
+
 class Category(Entity):
-    def __init__(self, organization, id, json):
+    # noinspection PyShadowingBuiltins
+    def __init__(self, organization, id, raw):
         self.categoryId = self.id = id
         self.organization = organization
-        self.__json = json  # non-interactive entity
+        self.__json = raw  # non-interactive entity
 
     @property
     def name(self):
@@ -567,6 +589,7 @@ class Category(Entity):
     def json(self):
         return self.__json
 
+
 class CategoryList(QubellEntityList):
     def _id_name_list(self):
         self._list = []
@@ -575,4 +598,4 @@ class CategoryList(QubellEntityList):
             self._list.append(IdNameJson(ent['id'], ent['name'], ent))
 
     def _get_item(self, id_name):
-        return Category(organization=self.organization, id=id_name.id, json=id_name.raw)
+        return Category(organization=self.organization, id=id_name.id, raw=id_name.raw)
