@@ -13,27 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import namedtuple
-import warnings
-import requests
-import yaml
-from qubell import deprecated
-from qubell.api.globals import DEFAULT_ENV_NAME, ZONE_NAME
-from qubell.api.private.common import EntityList, IdName
-from qubell.api.private.service import system_application_types, system_application_parameters, COBALT_SECURE_STORE_TYPE, WORKFLOW_SERVICE_TYPE, \
-    SHARED_INSTANCE_CATALOG_TYPE, STATIC_RESOURCE_POOL_TYPE
-from qubell.api.private.service import system_application_types
-from qubell.api.tools import lazyproperty
-from qubell.api.provider.router import ROUTER as router
-
-__author__ = "Vasyl Khomenko"
-__copyright__ = "Copyright 2013, Qubell.com"
-__license__ = "Apache"
-__email__ = "vkhomenko@qubell.com"
-
 import logging as log
-import simplejson as json
 import copy
 
+import requests
+import yaml
+import simplejson as json
+
+from qubell import deprecated
+from qubell.api.private.service import system_application_types
+from qubell.api.tools import lazyproperty
 from qubell.api.private.manifest import Manifest
 from qubell.api.private import exceptions
 from qubell.api.private.instance import InstanceList, DEAD_STATUS, Instance
@@ -46,6 +35,10 @@ from qubell.api.provider.router import ROUTER as router
 from qubell.api.private.common import QubellEntityList, Entity
 from qubell.api.globals import *
 
+__author__ = "Vasyl Khomenko"
+__copyright__ = "Copyright 2013, Qubell.com"
+__license__ = "Apache"
+__email__ = "vkhomenko@qubell.com"
 
 class Organization(Entity):
 
