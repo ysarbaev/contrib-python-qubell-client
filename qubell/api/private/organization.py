@@ -12,25 +12,17 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import warnings
-from qubell import deprecated
-from qubell.api.globals import DEFAULT_ENV_NAME, ZONE_NAME
-from qubell.api.private.common import EntityList, IdName
-from qubell.api.private.service import system_application_types, system_application_parameters, COBALT_SECURE_STORE_TYPE, WORKFLOW_SERVICE_TYPE, \
-    SHARED_INSTANCE_CATALOG_TYPE, STATIC_RESOURCE_POOL_TYPE
-from qubell.api.private.service import system_application_types
-from qubell.api.tools import lazyproperty
-from qubell.api.provider.router import ROUTER as router
-
-__author__ = "Vasyl Khomenko"
-__copyright__ = "Copyright 2013, Qubell.com"
-__license__ = "Apache"
-__email__ = "vkhomenko@qubell.com"
-
+from collections import namedtuple
 import logging as log
-import simplejson as json
 import copy
 
+import requests
+import yaml
+import simplejson as json
+
+from qubell import deprecated
+from qubell.api.private.service import system_application_types
+from qubell.api.tools import lazyproperty
 from qubell.api.private.manifest import Manifest
 from qubell.api.private import exceptions
 from qubell.api.private.instance import InstanceList, DEAD_STATUS, Instance
@@ -43,6 +35,10 @@ from qubell.api.provider.router import ROUTER as router
 from qubell.api.private.common import QubellEntityList, Entity
 from qubell.api.globals import *
 
+__author__ = "Vasyl Khomenko"
+__copyright__ = "Copyright 2013, Qubell.com"
+__license__ = "Apache"
+__email__ = "vkhomenko@qubell.com"
 
 class Organization(Entity):
 
@@ -85,6 +81,10 @@ class Organization(Entity):
     @lazyproperty
     def users(self):
         return UserList(list_json_method=self.list_users_json, organization=self)
+
+    @lazyproperty
+    def categories(self):
+        return CategoryList(list_json_method=self.list_category_json, organization=self)
 
     @property
     def defaultEnvironment(self): return self.get_default_environment()
@@ -515,6 +515,80 @@ class Organization(Entity):
             "email": email,
             "roles": role_ids}))
 
+    def init(self):
+        """
+        Mimics wizard's environment preparation
+        """
+        router.post_init(org_id=self.organizationId, data='{"initCloudAccount": true}')
+
+    def set_applications_from_meta(self, metadata):
+        """
+        Parses meta and update or create each application
+        :type metadata: str
+        :param metadata: path or url to meta.yml
+        """
+        if metadata.startswith('http'):
+            meta = yaml.safe_load(requests.get(url=metadata).content)
+        else:
+            # noinspection PyArgumentEqualDefault
+            meta = yaml.safe_load(open(metadata, 'r').read())
+
+        applications = []
+        for app in meta['kit']['applications']:
+            applications.append({
+                'name': app['name'],
+                'url': app['manifest']})
+        self.restore({'applications': applications})
+
+    def upload_applications(self, metadata, category=None):
+        """
+        Mimics get starter-kit and wizard functionality to create components
+        Note: may create component duplicates, not idempotent
+        :type metadata: str
+        :type category: Category
+        :param metadata: url to meta.yml
+        :param category: category
+        """
+        upload_json = router.get_upload(params=dict(metadataUrl=metadata)).json()
+        manifests = [dict(name=app['name'], manifest=app['url']) for app in upload_json['applications']]
+        if not category:
+            category = self.categories['Application']
+        data = {'categoryId': category.id, 'applications': manifests}
+        router.post_application_kits(org_id=self.organizationId, data=json.dumps(data))
+
+    def list_category_json(self):
+        return router.get_categories(org_id=self.organizationId).json()
+
 
 class OrganizationList(QubellEntityList):
     base_clz = Organization
+
+
+class Category(Entity):
+    # noinspection PyShadowingBuiltins
+    def __init__(self, organization, id, raw):
+        self.categoryId = self.id = id
+        self.organization = organization
+        self.__json = raw  # non-interactive entity
+
+    @property
+    def name(self):
+        return self.json()['name']
+
+    @property
+    def readOnly(self):
+        return self.json()['readOnly']
+
+    def json(self):
+        return self.__json
+
+
+class CategoryList(QubellEntityList):
+    def _id_name_list(self):
+        self._list = []
+        for ent in self.json():
+            IdNameJson = namedtuple('IdName', 'id,name,raw')
+            self._list.append(IdNameJson(ent['id'], ent['name'], ent))
+
+    def _get_item(self, id_name):
+        return Category(organization=self.organization, id=id_name.id, raw=id_name.raw)

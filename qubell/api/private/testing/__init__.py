@@ -308,17 +308,7 @@ class BaseTestCase(unittest.TestCase):
 
     @classmethod
     def upload_metadata_applications(cls, metadata):
-        # Treat meta as file or link?
-        if 'http' in metadata:
-            meta = yaml.safe_load(requests.get(url=metadata).content)
-        else:
-            meta = yaml.safe_load(open(metadata, 'r').read())
-        applications = []
-        for app in meta['kit']['applications']:
-            applications.append({
-                'name': app['name'],
-                'url': app['manifest']})
-        return cls.organization.restore({'applications': applications})
+        cls.organization.set_applications_from_meta(metadata)
 
     @classmethod
     def launch_instance(cls, appdata):

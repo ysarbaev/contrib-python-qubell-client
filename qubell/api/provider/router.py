@@ -253,6 +253,26 @@ class PrivatePath(Router):
     @route("POST /invite{ctype}")
     def invite_user(self, cookies, data="{}", ctype=".json"): pass
 
+    @route("POST /quickSignUp")
+    def post_quick_sign_up(self, data=None, files=None): pass
+
+    @play_auth
+    @route("POST /organizations/{org_id}/init.json")
+    def post_init(self, org_id, data, cookies): pass
+
+    @play_auth
+    @route("GET /applications/upload{ctype}")
+    def get_upload(self, params, cookies, ctype=".json"): pass
+
+    @play_auth
+    @route("GET /organizations/{org_id}/categories{ctype}")
+    def get_categories(self, org_id, cookies, ctype=".json"): pass
+
+    @play_auth
+    @route("POST /organizations/{org_id}/application-kits.json")
+    def post_application_kits(self, org_id, data, cookies): pass
+
+
 class PublicPath(PrivatePath):
 # TODO: Public api hack.
 # We replace private routes with public ones. Fixing response reaction in code.
