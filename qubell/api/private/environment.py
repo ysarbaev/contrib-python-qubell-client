@@ -14,33 +14,29 @@
 # limitations under the License.
 
 import time
+import logging as log
+import copy
+
+import simplejson as json
+
 from qubell.api.globals import ZONE_NAME, DEFAULT_ENV_NAME
 from qubell.api.tools import lazyproperty
+from qubell.api.private import exceptions, operations
+from qubell.api.private.common import QubellEntityList, Entity
+from qubell.api.provider.router import ROUTER as router
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
 __email__ = "vkhomenko@qubell.com"
 
-import logging as log
-import simplejson as json
-import copy
-
-from qubell.api.private import exceptions
-from qubell.api.private.common import QubellEntityList, Entity
-from qubell.api.provider.router import ROUTER as router
 
 class Environment(Entity):
-
+    # noinspection PyShadowingBuiltins
     def __init__(self, organization, id):
         self.organization = organization
         self.organizationId = self.organization.organizationId
         self.environmentId = self.id = id
-
-        #todo: make as properties
-        self.policies = []
-        self.markers = []
-        self.properties = []
 
     @lazyproperty
     def zoneId(self):
@@ -49,6 +45,7 @@ class Environment(Entity):
     @lazyproperty
     def services(self):
         from qubell.api.private.instance import InstanceList
+
         return InstanceList(list_json_method=self.list_services_json, organization=self)
 
     @property
@@ -61,7 +58,7 @@ class Environment(Entity):
 
     def __getattr__(self, key):
         resp = self.json()
-        if not resp.has_key(key):
+        if key not in resp:
             raise exceptions.NotFoundError('Cannot get property %s' % key)
         return resp[key] or False
 
@@ -70,31 +67,28 @@ class Environment(Entity):
         log.info("Creating environment: %s" % name)
         if not zone_id:
             zone_id = organization.zone.zoneId
-        data = {'isDefault': default,
-                'name': name,
-                'backend': zone_id,
-                'organizationId': organization.organizationId}
+        data = {'isDefault': default, 'name': name, 'backend': zone_id, 'organizationId': organization.organizationId}
         log.debug(data)
         resp = router.post_organization_environment(org_id=organization.organizationId, data=json.dumps(data)).json()
         env = Environment(organization, id=resp['id'])
-        log.info("Environment created: %s (%s)" % (name,env.environmentId))
+        log.info("Environment created: %s (%s)" % (name, env.environmentId))
         return env
 
+    # noinspection PyUnusedLocal
     def restore(self, config, clean=False, timeout=10):
         config = copy.deepcopy(config)
-        if clean:
-            self.clean()
-        for marker in config.pop('markers', []):
-            self.add_marker(marker)
-        for policy in config.pop('policies', []):
-            self.add_policy(policy)
-        for property in config.pop('properties', []):
-            self.add_property(**property)
-        for service in config.pop('services', []):
-            type=service.pop('type', None)
-            serv = self.organization.get_instance(id=service.pop('id', None), name=service.pop('name'))
-            if not serv in self.services:
-                self.add_service(serv)
+        with self as env:
+            if clean:
+                env.clean()
+            for marker in config.pop('markers', []):
+                env.add_marker(marker)
+            for policy in config.pop('policies', []):
+                env.add_policy(policy)
+            for prop in config.pop('properties', []):
+                env.add_property(**prop)
+            for service in config.pop('services', []):
+                instance = self.organization.get_instance(id=service.pop('id', None), name=service.pop('name'))
+                env.add_service(instance)
         for service in self.services:
             service.running()
 
@@ -121,102 +115,140 @@ class Environment(Entity):
             return router.put_environment(org_id=self.organizationId, env_id=self.environmentId, data=data)
         except exceptions.ApiError:
             from random import randint
+
             time.sleep(randint(1, 10))
             return router.put_environment(org_id=self.organizationId, env_id=self.environmentId, data=data)
 
+    # Operations
+
     def add_service(self, service):
-        resp = None
-        if service not in self.services:
-            data = self.json()
-            data['serviceIds'].append(service.instanceId)
-            data['services'].append(service.json())
-            log.info("Adding service %s (%s) to environment %s (%s)" % (service.name, service.id, self.name, self.id))
-            resp = self._put_environment(data=json.dumps(data))
-
-        if service.is_secure_vault:
-            user_data = service.userData
-            if 'defaultKey' in user_data:
-                key = user_data['defaultKey']
-            else:
-                key = service.regenerate()['id']
-
-            self.add_policy(
-                {"action": "provisionVms",
-                 "parameter": "publicKeyId",
-                 "value": key})
-        return resp.json() if resp else None
+        with self as env:
+            env.add_service(service)
 
     def remove_service(self, service):
-        data = self.json()
-        data['serviceIds'].remove(service.instanceId)
-        data['services']=[s for s in data['services'] if s['id'] != service.id]
-        log.info("Removing service %s (%s) from environment %s (%s)" % (service.name, service.id, self.name, self.id))
-        resp = self._put_environment(data=json.dumps(data))
-        return resp.json()
+        with self as env:
+            env.remove_service(service)
 
     def add_marker(self, marker):
-        data = self.json()
-        data['markers'].append({'name': marker})
-
-        log.info("Adding marker %s to environment %s (%s)" % (marker, self.name, self.id))
-        resp = self._put_environment(data=json.dumps(data))
-        self.markers.append(marker)
-        return resp.json()
+        with self as env:
+            env.add_marker(marker)
 
     def remove_marker(self, marker):
-        data = self.json()
-        data['markers'].remove({'name': marker})
+        with self as env:
+            env.remove_marker(marker)
 
-        log.info("Removing marker %s from environment %s (%s)" % (marker, self.name, self.id))
-        resp = self._put_environment(data=json.dumps(data))
-        self.markers.remove(marker)
-        return resp.json()
-
+    # noinspection PyShadowingBuiltins
     def add_property(self, name, type, value):
-        data = self.json()
-        data['properties'].append({'name': name, 'type': type, 'value': value})
+        with self as env:
+            env.add_property(name, type, value)
 
-        log.info("Adding property %s to environment %s (%s)" % (name, self.name, self.id))
-        resp = self._put_environment(data=json.dumps(data))
-        self.properties.append({'name': name, 'type': type, 'value': value})
-        return resp.json()
     set_property = add_property
 
     def remove_property(self, name):
-        data = self.json()
-        property = [p for p in data['properties'] if p['name'] == name]
-        if len(property) < 1:
-            log.error('Unable to remove property %s. Not found.' % name)
-        data['properties'].remove(property[0])
-
-        log.info("Removing property %s from environment %s (%s)" % (name, self.name, self.id))
-        return self._put_environment(data=json.dumps(data)).json()
+        with self as env:
+            env.remove_property(name)
 
     def clean(self):
-        data = self.json()
-        data['serviceIds'] = []
-        data['services'] = []
-
-        log.info("Cleaning environment %s (%s)" % (self.name, self.id))
-        return self._put_environment(data=json.dumps(data)).json()
+        with self as env:
+            env.clean()
 
     def add_policy(self, new):
+        with self as env:
+            env.add_policy(new)
+
+    def remove_policy(self, policy_name):
+        with self as env:
+            env.remove_policy(policy_name)
+
+    def __bulk_update(self, env_operations):
+
+        def clean():
+            data['serviceIds'] = []
+            data['services'] = []
+            log.info("Cleaning environment %s (%s)" % (self.name, self.id))
+
+        # todo: allow add policy via action-parameter-value
+        def add_policy(new):
+            data['policies'].append(new)
+            log.info("Adding policy %s.%s to environment %s (%s)" % (
+                new.get('action'), new.get('parameter'), self.name, self.id))
+
+        # noinspection PyUnusedLocal
+        def remove_policy(policy_name):
+            raise NotImplementedError
+
+        def add_service(service):
+            if service.instanceId not in data['serviceIds']:
+                data['serviceIds'].append(service.instanceId)
+                data['services'].append(service.json())
+                log.info("Adding service %s (%s) to environment %s (%s)" %
+                         (service.name, service.id, self.name, self.id))
+
+            if service.is_secure_vault:
+                user_data = service.userData
+                if 'defaultKey' in user_data:
+                    key = user_data['defaultKey']
+                else:
+                    key = service.regenerate()['id']
+
+                add_policy({"action": "provisionVms", "parameter": "publicKeyId", "value": key})
+
+        def remove_service(service):
+            data['serviceIds'].remove(service.instanceId)
+            data['services'] = [s for s in data['services'] if s['id'] != service.id]
+            log.info("Removing service %s (%s) from environment %s (%s)" %
+                     (service.name, service.id, self.name, self.id))
+
+        # noinspection PyShadowingBuiltins
+        def add_property(name, type, value):
+            data['properties'].append({'name': name, 'type': type, 'value': value})
+            log.info("Adding property %s to environment %s (%s)" % (name, self.name, self.id))
+
+        def remove_property(name):
+            prop = [p for p in data['properties'] if p['name'] == name]
+            if len(prop) < 1:
+                log.error('Unable to remove property %s. Not found.' % name)
+            data['properties'].remove(prop[0])
+            log.info("Removing property %s from environment %s (%s)" % (name, self.name, self.id))
+
+        def add_marker(marker):
+            data['markers'].append({'name': marker})
+            log.info("Adding marker %s to environment %s (%s)" % (marker, self.name, self.id))
+
+        def remove_marker(marker):
+            data['markers'].remove({'name': marker})
+            log.info("Removing marker %s from environment %s (%s)" % (marker, self.name, self.id))
+
+        actions = dict(clean=clean, add_policy=add_policy, remove_policy=remove_policy, add_marker=add_marker,
+                       remove_marker=remove_marker, add_property=add_property, remove_property=remove_property,
+                       add_service=add_service, remove_service=remove_service)
+
         data = self.json()
-        data['policies'].append(new)
+        for operation in env_operations:
+            action, args, kwargs = operation
+            actions[action](*args, **kwargs)
+        return self._put_environment(data=json.dumps(data)).json()
 
-        log.info("Adding policy %s.%s to environment %s (%s)" % (new.get('action'), new.get('parameter'), self.name, self.id))
-        resp = self._put_environment(data=json.dumps(data))
-        self.policies.append(new)
-        return resp.json()
-
-    def remove_policy(self):
-        raise NotImplementedError
-
+    # noinspection PyMethodMayBeStatic
     def set_backend(self, zone):
         raise exceptions.ApiError("Change environment backend is not supported, since 24.x")
 
+    def __enter__(self):
+        """
+        :rtype: EnvironmentOperations
+        """
+        self.__bulk = EnvironmentOperations()
+        return self.__bulk
+
+    # noinspection PyShadowingBuiltins,PyUnusedLocal
+    def __exit__(self, type, value, traceback):
+        self.__bulk.invalidate()
+        self.__bulk_update(self.__bulk.operations)
+
+
 class EnvironmentList(QubellEntityList):
     base_clz = Environment
+
     @property
     def default(self):
         """
@@ -228,12 +260,42 @@ class EnvironmentList(QubellEntityList):
             zone_id = self.organization.zones[ZONE_NAME].id
             return self.organization.get_or_create_environment(name=DEFAULT_ENV_NAME(), zone=zone_id)
 
-        def_envs = [env_j["id"] for env_j in self.json() if env_j["isDefault"] == True]
+        def_envs = [env_j["id"] for env_j in self.json() if env_j["isDefault"]]
 
-        if len(def_envs)>1:
+        if len(def_envs) > 1:
             log.warning('Found more than one default environment. Picking last.')
             return self[def_envs[-1]]
         elif len(def_envs) == 1:
             return self[def_envs[0]]
         raise exceptions.NotFoundError('Unable to get default environment')
 
+
+@operations()
+class EnvironmentOperations(object):
+    def add_policy(self, policy):
+        pass
+
+    def remove_policy(self, policy_name):
+        pass
+
+    def add_marker(self, marker):
+        pass
+
+    def remove_marker(self, marker):
+        pass
+
+    # noinspection PyShadowingBuiltins
+    def add_property(self, name, type, value):
+        pass
+
+    def remove_property(self, name):
+        pass
+
+    def add_service(self, service):
+        pass
+
+    def remove_service(self, service):
+        pass
+
+    def clean(self):
+        pass
