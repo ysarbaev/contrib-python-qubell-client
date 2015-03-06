@@ -31,7 +31,7 @@ from qubell.api.private.environment import EnvironmentList
 from qubell.api.private.zone import ZoneList
 from qubell.api.private.role import RoleList
 from qubell.api.private.user import UserList
-from qubell.api.provider.router import ROUTER as router
+from qubell.api.provider.router import InstanceRouter
 from qubell.api.private.common import QubellEntityList, Entity
 from qubell.api.globals import *
 
@@ -40,66 +40,71 @@ __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
 __email__ = "vkhomenko@qubell.com"
 
-class Organization(Entity):
+
+class Organization(Entity, InstanceRouter):
 
     def __init__(self, id, auth=None):
         self.organizationId = self.id = id
 
     @staticmethod
-    def new(name):
+    def new(name, router):
         log.info("Creating organization: %s" % name)
         payload = json.dumps({'editable': 'true',
                               'name': name})
         resp = router.post_organization(data=payload)
-        org = Organization(resp.json()['id'])
+        org = Organization(resp.json()['id']).init_router(router)
         log.info("Organization created: %s (%s)" % (name, org.id))
         return org
 
     @lazyproperty
     def environments(self):
-        return EnvironmentList(list_json_method=self.list_environments_json, organization=self)
+        return EnvironmentList(list_json_method=self.list_environments_json, organization=self).init_router(self._router)
 
     @lazyproperty
     def instances(self):
-        return InstanceList(list_json_method=self.list_instances_json, organization=self)
+        return InstanceList(list_json_method=self.list_instances_json, organization=self).init_router(self._router)
 
     @lazyproperty
     def applications(self):
-        return ApplicationList(list_json_method=self.list_applications_json, organization=self)
+        return ApplicationList(list_json_method=self.list_applications_json, organization=self).init_router(self._router)
 
     @lazyproperty
     def services(self):
-        return InstanceList(list_json_method=self.list_services_json, organization=self)
+        return InstanceList(list_json_method=self.list_services_json, organization=self).init_router(self._router)
 
     @lazyproperty
-    def zones(self): return ZoneList(self)
+    def zones(self): return ZoneList(self).init_router(self._router)
 
     @lazyproperty
     def roles(self):
-        return RoleList(list_json_method=self.list_roles_json, organization=self)
+        return RoleList(list_json_method=self.list_roles_json, organization=self).init_router(self._router)
 
     @lazyproperty
     def users(self):
-        return UserList(list_json_method=self.list_users_json, organization=self)
+        return UserList(list_json_method=self.list_users_json, organization=self).init_router(self._router)
 
     @lazyproperty
     def categories(self):
-        return CategoryList(list_json_method=self.list_category_json, organization=self)
+        return CategoryList(list_json_method=self.list_category_json, organization=self).init_router(self._router)
 
     @property
-    def defaultEnvironment(self): return self.get_default_environment()
+    def defaultEnvironment(self):
+        return self.get_default_environment()
 
     @property
-    def zone(self): return self.get_default_zone()
+    def zone(self):
+        return self.get_default_zone()
 
     @property
-    def name(self): return self.json()['name']
+    def name(self):
+        return self.json()['name']
 
     @property
-    def current_user(self): return router.get_organization_info(org_id=self.organizationId).json()
+    def current_user(self):
+        return self._router.get_organization_info(org_id=self.organizationId).json()
 
     def json(self):
-        return router.get_organization(org_id=self.organizationId).json()
+        return self._router.get_organization(org_id=self.organizationId).json()
 
     def ready(self):
         env = self.environments[DEFAULT_ENV_NAME()]
@@ -168,7 +173,7 @@ class Organization(Entity):
         if not name:
             name = 'auto-generated-name'
         from qubell.api.private.application import Application
-        return Application.new(self, name, manifest)
+        return Application.new(self, name, manifest, self._router)
 
     def get_application(self, id=None, name=None):
         """ Get application object by name or id.
@@ -179,7 +184,7 @@ class Organization(Entity):
     def list_applications_json(self):
         """ Return raw json
         """
-        return router.get_applications(org_id=self.organizationId).json()
+        return self._router.get_applications(org_id=self.organizationId).json()
 
     def delete_application(self, id):
         app = self.get_application(id)
@@ -245,7 +250,8 @@ class Organization(Entity):
         """ Launches instance in application and returns Instance object.
         """
         from qubell.api.private.instance import Instance
-        return Instance.new(application, revision, environment, name, parameters, submodules, destroyInterval)
+        return Instance.new(self._router, application, revision, environment, name,
+                            parameters, submodules, destroyInterval)
 
     def get_instance(self, id=None, name=None):
         """ Get instance object by name or id.
@@ -253,8 +259,8 @@ class Organization(Entity):
         """
         log.info("Picking instance: %s (%s)" % (name, id))
         if id:  # submodule instances are invisible for lists
-            return Instance(id=id, organization=self)
-        return Instance.get(self, name)
+            return Instance(id=id, organization=self).init_router(self._router)
+        return Instance.get(self._router, self, name)
 
     def list_instances_json(self, application=None):
         """ Get list of instances in json format converted to list"""
@@ -265,7 +271,7 @@ class Organization(Entity):
                   "from": "0", "to": "10000"}
         if application:
             q_filter["applicationFilterId"] = application.applicationId
-        resp_json = router.get_instances(org_id=self.organizationId, params=q_filter).json()
+        resp_json = self._router.get_instances(org_id=self.organizationId, params=q_filter).json()
         if type(resp_json) == dict:
             instances = [instance for g in resp_json['groups'] for instance in g['records']]
         else:  # TODO: This is compatibility fix for platform < 37.1
@@ -323,7 +329,7 @@ class Organization(Entity):
         return instance
 
     def list_services_json(self):
-        return router.get_services(org_id=self.organizationId).json()
+        return self._router.get_services(org_id=self.organizationId).json()
 
     def service(self, id=None, application=None, revision=None, environment=None, name=None, parameters=None,
                               type=None, destroyInterval=None):
@@ -352,10 +358,10 @@ class Organization(Entity):
         """ Creates environment and returns Environment object.
         """
         from qubell.api.private.environment import Environment
-        return Environment.new(organization=self, name=name, zone_id=zone, default=default)
+        return Environment.new(organization=self, name=name, zone_id=zone, default=default, router=self._router)
 
     def list_environments_json(self):
-        return router.get_environments(org_id=self.organizationId).json()
+        return self._router.get_environments(org_id=self.organizationId).json()
 
     def get_environment(self, id=None, name=None):
         """ Get environment object by name or id.
@@ -430,7 +436,7 @@ class Organization(Entity):
 ### ZONES
 
     def list_zones_json(self):
-        return router.get_zones(org_id=self.organizationId).json()
+        return self._router.get_zones(org_id=self.organizationId).json()
 
     def get_zone(self, id=None, name=None):
         """ Get zone object by name or id.
@@ -452,10 +458,10 @@ class Organization(Entity):
         """ Creates role """
         name = name or "autocreated-role"
         from qubell.api.private.role import Role
-        return Role.new(organization=self, name=name, permissions=permissions)
+        return Role.new(self._router, organization=self, name=name, permissions=permissions)
 
     def list_roles_json(self):
-        return router.get_roles(org_id=self.organizationId).json()
+        return self._router.get_roles(org_id=self.organizationId).json()
 
     def get_role(self, id=None, name=None):
         """ Get role object by name or id.
@@ -478,7 +484,7 @@ class Organization(Entity):
 ### USERS
 
     def list_users_json(self):
-        return router.get_users(org_id=self.organizationId).json()
+        return self._router.get_users(org_id=self.organizationId).json()
 
     def get_user(self, id=None, name=None, email=None):
         """ Get user object by email or id.
@@ -486,7 +492,7 @@ class Organization(Entity):
         log.info("Picking user: %s (%s) (%s)" % (name, email, id))
         from qubell.api.private.user import User
         if email:
-            user = User.get_user(organization=self, email=email)
+            user = User.get(self._router, organization=self, email=email)
         else:
             user = self.users[id or name]
         return user
@@ -511,7 +517,7 @@ class Organization(Entity):
                 roles.append('Guest')
             role_ids = list([i.id for i in self.roles if i.name in roles])
 
-        router.invite_user(data=json.dumps({
+        self._router.invite_user(data=json.dumps({
             "organizationId": self.organizationId,
             "email": email,
             "roles": role_ids}))
@@ -520,7 +526,7 @@ class Organization(Entity):
         """
         Mimics wizard's environment preparation
         """
-        router.post_init(org_id=self.organizationId, data='{"initCloudAccount": true}')
+        self._router.post_init(org_id=self.organizationId, data='{"initCloudAccount": true}')
 
     def set_applications_from_meta(self, metadata):
         """
@@ -550,15 +556,15 @@ class Organization(Entity):
         :param metadata: url to meta.yml
         :param category: category
         """
-        upload_json = router.get_upload(params=dict(metadataUrl=metadata)).json()
+        upload_json = self._router.get_upload(params=dict(metadataUrl=metadata)).json()
         manifests = [dict(name=app['name'], manifest=app['url']) for app in upload_json['applications']]
         if not category:
             category = self.categories['Application']
         data = {'categoryId': category.id, 'applications': manifests}
-        router.post_application_kits(org_id=self.organizationId, data=json.dumps(data))
+        self._router.post_application_kits(org_id=self.organizationId, data=json.dumps(data))
 
     def list_category_json(self):
-        return router.get_categories(org_id=self.organizationId).json()
+        return self._router.get_categories(org_id=self.organizationId).json()
 
 
 class OrganizationList(QubellEntityList):
