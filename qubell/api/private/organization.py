@@ -22,7 +22,7 @@ import simplejson as json
 
 from qubell import deprecated
 from qubell.api.private.service import system_application_types
-from qubell.api.tools import lazyproperty
+from qubell.api.tools import lazyproperty, retry
 from qubell.api.private.manifest import Manifest
 from qubell.api.private import exceptions
 from qubell.api.private.instance import InstanceList, DEAD_STATUS, Instance
@@ -103,9 +103,12 @@ class Organization(Entity):
 
     def ready(self):
         env = self.environments[DEFAULT_ENV_NAME()]
-        if env.services[DEFAULT_WORKFLOW_SERVICE()].running() and env.services[DEFAULT_CREDENTIAL_SERVICE()].running():
-            return True
-        return False
+
+        @retry(tries=3, retry_exception=exceptions.NotFoundError)  # org init, takes some times
+        def check_init():
+            return env.services[DEFAULT_WORKFLOW_SERVICE()].running(timeout=1) and \
+                env.services[DEFAULT_CREDENTIAL_SERVICE()].running(timeout=1)
+        return check_init()
 
     def restore(self, config, clean=False, timeout=10):
         config = copy.deepcopy(config)
@@ -323,15 +326,13 @@ class Organization(Entity):
         return router.get_services(org_id=self.organizationId).json()
 
     def service(self, id=None, application=None, revision=None, environment=None, name=None, parameters=None,
-                              type=None, destroyInterval=None, as_service_in=None):
-        def smart_service():
-            try:
-                return self.get_instance(id=id, name=name)
-            except exceptions.NotFoundError:
-                return self.create_service(application, revision, environment, name, parameters, type)
-        serv = smart_service()
-        serv.add_as_service(environments=as_service_in)
-        return serv
+                              type=None, destroyInterval=None):
+        try:
+            instance = self.get_instance(id=id, name=name)
+            instance.environment.add_service(instance)
+            return instance
+        except exceptions.NotFoundError:
+            return self.create_service(application, revision, environment, name, parameters, type)
 
     @deprecated("Use service method")
     def get_or_create_service(self, id=None, application=None, revision=None, environment=None, name=None,

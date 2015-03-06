@@ -57,6 +57,11 @@ class Instance(Entity, ServiceMixin):
         return self.organization.environments[self.environmentId]
 
     @lazyproperty
+    def environments(self):
+        list_environments_json = lambda: self.json()['environments']
+        return EnvironmentList(list_json_method=list_environments_json, organization=self)
+
+    @lazyproperty
     def applicationId(self):
         return self.json()['applicationId']
 
@@ -348,17 +353,17 @@ class Instance(Entity, ServiceMixin):
         return EnvironmentList(lambda: self.json()["environments"], organization=self.organization)
 
     def add_as_service(self, environments=None, environment_ids=None):
-        environment_ids = []
-        if environments:
-            environment_ids = [env.environmentId for env in environments if self not in env.services]
-        elif environment_ids:
-            environment_ids.append(environment_ids)
-        else:
-            # Add as service in executed as environment
-            if self not in self.environment.services:
-                environment_ids.append(self.environmentId)
-        if len(environment_ids):
-            router.post_instance_services(org_id=self.organizationId, instance_id=self.instanceId, data=json.dumps(environment_ids))
+        merged_ids = set()
+        for environment in environments or []:
+            merged_ids.add(environment.environmentId)
+        for environment in self.environments:  # leave existing
+            merged_ids.add(environment.environmentId)
+        for env_id in environment_ids or []:
+            merged_ids.add(env_id)
+        if not (environments or environment_ids):  # as as service in its env, when None-s
+            merged_ids.add(self.environmentId)
+        log.critical("env ids... = \n{}".format(json.dumps(list(merged_ids), indent=4)))
+        router.post_instance_services(org_id=self.organizationId, instance_id=self.instanceId, data=json.dumps(list(merged_ids)))
 
     def remove_as_service(self, environments=None):
         if not environments:
