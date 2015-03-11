@@ -20,7 +20,7 @@ import copy
 import simplejson as json
 
 from qubell.api.globals import ZONE_NAME, DEFAULT_ENV_NAME
-from qubell.api.tools import lazyproperty
+from qubell.api.tools import lazyproperty, retry
 from qubell.api.private import exceptions, operations
 from qubell.api.private.common import QubellEntityList, Entity
 from qubell.api.provider.router import ROUTER as router
@@ -113,11 +113,14 @@ class Environment(Entity):
         # We could get 500 error here, if tests runs in parallel or strategy is not active
         try:
             return router.put_environment(org_id=self.organizationId, env_id=self.environmentId, data=data)
-        except exceptions.ApiError:
+        except exceptions.ApiError:  # #4242
             from random import randint
 
-            time.sleep(randint(1, 10))
-            return router.put_environment(org_id=self.organizationId, env_id=self.environmentId, data=data)
+            @retry(3, 1, 1, exceptions.ApiError)
+            def put_again():
+                time.sleep(randint(1, 10))
+                return router.put_environment(org_id=self.organizationId, env_id=self.environmentId, data=data)
+            return put_again()
 
     # Operations
 
