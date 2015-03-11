@@ -196,7 +196,7 @@ class Instance(Entity, ServiceMixin):
 
         if name:
             conf['instanceName'] = name
-        if destroyInterval:
+        if destroyInterval is not None:
             conf['destroyInterval'] = destroyInterval
         if revision:
             conf['revisionId'] = revision.id
