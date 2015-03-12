@@ -24,7 +24,7 @@ from qubell.api.tools import lazyproperty, retry
 from qubell.api.tools import waitForStatus as waitForStatus
 from qubell.api.private import exceptions
 from qubell.api.private.common import QubellEntityList, Entity
-from qubell.api.provider.router import ROUTER as router
+from qubell.api.provider.router import InstanceRouter
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
@@ -34,7 +34,7 @@ __email__ = "vkhomenko@qubell.com"
 DEAD_STATUS = ['Destroyed']
 
 
-class Instance(Entity, ServiceMixin):
+class Instance(Entity, ServiceMixin, InstanceRouter):
     """
     Base class for application instance. Manifest required.
     """
@@ -59,7 +59,7 @@ class Instance(Entity, ServiceMixin):
     @lazyproperty
     def environments(self):
         list_environments_json = lambda: self.json()['environments']
-        return EnvironmentList(list_json_method=list_environments_json, organization=self)
+        return EnvironmentList(list_json_method=list_environments_json, organization=self).init_router(self._router)
 
     @lazyproperty
     def applicationId(self):
@@ -73,9 +73,9 @@ class Instance(Entity, ServiceMixin):
     def submodules(self):
         # TODO: Public api hack.
         # Private returns 'submodules', public returns 'components'
-        if router.public_api_in_use:
-            return InstanceList(list_json_method=lambda: self.json()['components'], organization=self.organization)
-        return InstanceList(list_json_method=lambda: self.json()['submodules'], organization=self.organization)
+        if self._router.public_api_in_use:
+            return InstanceList(list_json_method=lambda: self.json()['components'], organization=self.organization).init_router(self._router)
+        return InstanceList(list_json_method=lambda: self.json()['submodules'], organization=self.organization).init_router(self._router)
 
     @property
     def status(self):
@@ -100,7 +100,7 @@ class Instance(Entity, ServiceMixin):
         """
         # TODO: Public api hack.
         retvals = self.json()['returnValues']
-        if router.public_api_in_use:
+        if self._router.public_api_in_use:
             return retvals
         return self.__parse(retvals)
 
@@ -120,10 +120,12 @@ class Instance(Entity, ServiceMixin):
 
         """
         if after:
-            log_raw = router.get_instance_activitylog_after(org_id=self.organizationId, instance_id=self.instanceId,
-                                                            params={"after": after}).json()
+            log_raw = self._router.get_instance_activitylog_after(org_id=self.organizationId,
+                                                                  instance_id=self.instanceId,
+                                                                  params={"after": after}).json()
         else:
-            log_raw = router.get_instance_activitylog(org_id=self.organizationId, instance_id=self.instanceId).json()
+            log_raw = self._router.get_instance_activitylog(org_id=self.organizationId,
+                                                            instance_id=self.instanceId).json()
 
         return ActivityLog(log_raw, severity=severity, start=start, end=end)
 
@@ -135,7 +137,7 @@ class Instance(Entity, ServiceMixin):
     def parameters(self):
         # TODO: Public api hack.
         # We do not have 'revision' in public api
-        if router.public_api_in_use:
+        if self._router.public_api_in_use:
             return self.json()['parameters']
         return self.json()['revision']['parameters']
 
@@ -173,11 +175,11 @@ class Instance(Entity, ServiceMixin):
             return self.__cached_json
         # noinspection PyAttributeOutsideInit
         self.__last_read_time = time.time()
-        self.__cached_json = router.get_instance(org_id=self.organizationId, instance_id=self.instanceId).json()
+        self.__cached_json = self._router.get_instance(org_id=self.organizationId, instance_id=self.instanceId).json()
         return self.__cached_json
 
     @staticmethod
-    def new(application, revision=None, environment=None, name=None, parameters=None,
+    def new(router, application, revision=None, environment=None, name=None, parameters=None,
             submodules=None, destroyInterval=None):
 
         if not environment:
@@ -215,13 +217,13 @@ class Instance(Entity, ServiceMixin):
         before_creation = time.gmtime(time.time())
         resp = router.post_organization_instance(org_id=application.organizationId, app_id=application.applicationId,
                                                  data=data)
-        instance = Instance(organization=application.organization, id=resp.json()['id'])
+        instance = Instance(organization=application.organization, id=resp.json()['id']).init_router(router)
         instance._last_workflow_started_time = before_creation
         log.debug("Instance %s (%s) started." % (instance.name, instance.id))
         return instance
 
     @staticmethod
-    def get(organization, name, application=None, environment=None):
+    def get(router, organization, name, application=None, environment=None):
         q_filter = {"query": name, "showDestroyed": "false",
                     "sortBy": "byCreation", "descending": "true",
                     "mode": "short"}
@@ -238,12 +240,12 @@ class Instance(Entity, ServiceMixin):
             instances = [instance for g in resp_json['groups'] for instance in g['records'] if instance['name'] == name]
             if len(instances) is 0:
                 raise instance_not_found_pretty()
-            return Instance(organization=organization, id=instances[0]['id'])
+            return Instance(organization=organization, id=instances[0]['id']).init_router(router)
         else:  # TODO: This is compatibility fix for platform < 37.1
             instances = [instance for instance in resp_json if instance['name'] == name]
             if len(instances) is 0:
                 raise instance_not_found_pretty()
-            return Instance(organization=organization, id=sorted(instances, key=lambda i: i["createdAt"])[-1]['id'])
+            return Instance(organization=organization, id=sorted(instances, key=lambda i: i["createdAt"])[-1]['id']).init_router(router)
 
     def ready(self, timeout=3):  # Shortcut for convinience. Timeout = 3 min (ask timeout*6 times every 10 sec)
         accepted_states = ['Launching', 'Requested', 'Executing', 'Unknown']
@@ -271,12 +273,12 @@ class Instance(Entity, ServiceMixin):
         log.debug("Parameters: %s" % parameters)
         self._last_workflow_started_time = time.gmtime(time.time())
         if component_path:
-            router.post_instance_component_workflow(org_id=self.organizationId, instance_id=self.instanceId,
-                                                    component_path=component_path,
-                                                    wf_name=name, data=json.dumps(parameters))
+            self._router.post_instance_component_workflow(org_id=self.organizationId, instance_id=self.instanceId,
+                                                          component_path=component_path,
+                                                          wf_name=name, data=json.dumps(parameters))
         else:
-            router.post_instance_workflow(org_id=self.organizationId, instance_id=self.instanceId,
-                                          wf_name=name, data=json.dumps(parameters))
+            self._router.post_instance_workflow(org_id=self.organizationId, instance_id=self.instanceId,
+                                                wf_name=name, data=json.dumps(parameters))
         return True
 
     # alias
@@ -288,8 +290,8 @@ class Instance(Entity, ServiceMixin):
         log.info("Scheduling workflow %s on instance %s (%s), timestamp: %s" % (name, self.name, self.id, timestamp))
         log.debug("Parameters: %s" % parameters)
         payload = {'parameters': parameters, 'timestamp': timestamp}
-        router.post_instance_workflow_schedule(org_id=self.organizationId, instance_id=self.instanceId,
-                                               wf_name=name, data=json.dumps(payload))
+        self._router.post_instance_workflow_schedule(org_id=self.organizationId, instance_id=self.instanceId,
+                                                     wf_name=name, data=json.dumps(payload))
         return True
 
     def reschedule_workflow(self, workflow_name=None, workflow_id=None, timestamp=None):
@@ -299,12 +301,12 @@ class Instance(Entity, ServiceMixin):
         log.info("ReScheduling workflow %s on instance %s (%s), timestamp: %s"
                  % (workflow_id, self.name, self.id, timestamp))
         payload = {'timestamp': timestamp}
-        router.post_instance_reschedule(org_id=self.organizationId, instance_id=self.instanceId,
-                                        workflow_id=workflow_id, data=json.dumps(payload))
+        self._router.post_instance_reschedule(org_id=self.organizationId, instance_id=self.instanceId,
+                                              workflow_id=workflow_id, data=json.dumps(payload))
         return True
 
     def get_manifest(self):
-        return router.post_application_refresh(org_id=self.organizationId, app_id=self.applicationId).json()
+        return self._router.post_application_refresh(org_id=self.organizationId, app_id=self.applicationId).json()
 
     def reconfigure(self, revision=None, parameters=None, submodules=None):
         # note: be carefull refactoring this, or you might have unpredictable results
@@ -319,25 +321,28 @@ class Instance(Entity, ServiceMixin):
         if parameters is not None:
             payload['parameters'] = parameters
 
-        resp = router.put_instance_configuration(org_id=self.organizationId, instance_id=self.instanceId,
-                                                 data=json.dumps(payload))
+        resp = self._router.put_instance_configuration(org_id=self.organizationId, instance_id=self.instanceId,
+                                                       data=json.dumps(payload))
         return resp.json()
 
     def rename(self, name):
         payload = json.dumps({'name': name})
-        return router.put_instance_rename(org_id=self.organizationId, instance_id=self.instanceId, data=payload)
+        return self._router.put_instance_rename(org_id=self.organizationId, instance_id=self.instanceId, data=payload)
 
     def force_remove(self):
-        return router.delete_instance_force(org_id=self.organizationId, instance_id=self.instanceId)
+        return self._router.delete_instance_force(org_id=self.organizationId, instance_id=self.instanceId)
 
     def cancel_command(self):
-        return router.post_instance_action(org_id=self.organizationId, instance_id=self.instanceId, action="cancel")
+        return self._router.post_instance_action(org_id=self.organizationId, instance_id=self.instanceId,
+                                                 action="cancel")
 
     def star(self):
-        return router.post_instance_action(org_id=self.organizationId, instance_id=self.instanceId, action="star")
+        return self._router.post_instance_action(org_id=self.organizationId, instance_id=self.instanceId,
+                                                 action="star")
 
     def unstar(self):
-        return router.post_instance_action(org_id=self.organizationId, instance_id=self.instanceId, action="unstar")
+        return self._router.post_instance_action(org_id=self.organizationId, instance_id=self.instanceId,
+                                                 action="unstar")
 
     def delete(self):
         self.destroy()
@@ -363,7 +368,8 @@ class Instance(Entity, ServiceMixin):
         if not (environments or environment_ids):  # as as service in its env, when None-s
             merged_ids.add(self.environmentId)
         log.critical("env ids... = \n{}".format(json.dumps(list(merged_ids), indent=4)))
-        router.post_instance_services(org_id=self.organizationId, instance_id=self.instanceId, data=json.dumps(list(merged_ids)))
+        self._router.post_instance_services(org_id=self.organizationId, instance_id=self.instanceId,
+                                            data=json.dumps(list(merged_ids)))
 
     def remove_as_service(self, environments=None):
         if not environments:
@@ -404,7 +410,7 @@ class Instance(Entity, ServiceMixin):
         :return: bool
         """
         last = self._last_workflow_started_time
-        if not router.public_api_in_use:
+        if not self._router.public_api_in_use:
             most_recent = self.most_recent_update_time
         else:
             most_recent = None

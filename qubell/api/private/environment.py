@@ -23,7 +23,7 @@ from qubell.api.globals import ZONE_NAME, DEFAULT_ENV_NAME
 from qubell.api.tools import lazyproperty, retry
 from qubell.api.private import exceptions, operations
 from qubell.api.private.common import QubellEntityList, Entity
-from qubell.api.provider.router import ROUTER as router
+from qubell.api.provider.router import InstanceRouter
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
@@ -31,7 +31,7 @@ __license__ = "Apache"
 __email__ = "vkhomenko@qubell.com"
 
 
-class Environment(Entity):
+class Environment(Entity, InstanceRouter):
     # noinspection PyShadowingBuiltins
     def __init__(self, organization, id):
         self.organization = organization
@@ -46,7 +46,7 @@ class Environment(Entity):
     def services(self):
         from qubell.api.private.instance import InstanceList
 
-        return InstanceList(list_json_method=self.list_services_json, organization=self)
+        return InstanceList(list_json_method=self.list_services_json, organization=self).init_router(self._router)
 
     @property
     def name(self):
@@ -63,14 +63,14 @@ class Environment(Entity):
         return resp[key] or False
 
     @staticmethod
-    def new(organization, name, zone_id=None, default=False):
+    def new(organization, name, router, zone_id=None, default=False):
         log.info("Creating environment: %s" % name)
         if not zone_id:
             zone_id = organization.zone.zoneId
         data = {'isDefault': default, 'name': name, 'backend': zone_id, 'organizationId': organization.organizationId}
         log.debug(data)
         resp = router.post_organization_environment(org_id=organization.organizationId, data=json.dumps(data)).json()
-        env = Environment(organization, id=resp['id'])
+        env = Environment(organization, id=resp['id']).init_router(router)
         log.info("Environment created: %s (%s)" % (name, env.environmentId))
         return env
 
@@ -93,18 +93,19 @@ class Environment(Entity):
             service.running()
 
     def json(self):
-        return router.get_environment(org_id=self.organizationId, env_id=self.environmentId).json()
+        return self._router.get_environment(org_id=self.organizationId, env_id=self.environmentId).json()
 
     def delete(self):
-        router.delete_environment(org_id=self.organizationId, env_id=self.environmentId)
+        self._router.delete_environment(org_id=self.organizationId, env_id=self.environmentId)
         return True
 
     def set_as_default(self):
         data = json.dumps({'environmentId': self.id})
-        return router.put_organization_default_environment(org_id=self.organizationId, data=data).json()
+        return self._router.put_organization_default_environment(org_id=self.organizationId, data=data).json()
 
     def list_available_services_json(self):
-        return router.get_environment_available_services(org_id=self.organizationId, env_id=self.environmentId).json()
+        return self._router.get_environment_available_services(org_id=self.organizationId,
+                                                               env_id=self.environmentId).json()
 
     def list_services_json(self):
         return self.json()['services']
@@ -112,14 +113,14 @@ class Environment(Entity):
     def _put_environment(self, data):
         # We could get 500 error here, if tests runs in parallel or strategy is not active
         try:
-            return router.put_environment(org_id=self.organizationId, env_id=self.environmentId, data=data)
+            return self._router.put_environment(org_id=self.organizationId, env_id=self.environmentId, data=data)
         except exceptions.ApiError:  # #4242
             from random import randint
 
             @retry(3, 1, 1, exceptions.ApiError)
             def put_again():
                 time.sleep(randint(1, 10))
-                return router.put_environment(org_id=self.organizationId, env_id=self.environmentId, data=data)
+                return self._router.put_environment(org_id=self.organizationId, env_id=self.environmentId, data=data)
             return put_again()
 
     # Operations

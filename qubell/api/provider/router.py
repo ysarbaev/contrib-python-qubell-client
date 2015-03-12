@@ -5,11 +5,12 @@ from requests.auth import HTTPBasicAuth
 
 from qubell.api.private.exceptions import ApiUnauthorizedError
 from qubell.api.provider import route, play_auth, basic_auth
+from qubell.api.globals import QUBELL as qubell_config
 
 
 class Router(object):
-    def __init__(self, base_url, verify_ssl=False, verify_codes=True):
-        self.base_url = base_url
+    def __init__(self, base_url=None, verify_ssl=False, verify_codes=True):
+        self.base_url = base_url or qubell_config['tenant']
         self.verify_ssl = verify_ssl
         self.verify_codes = verify_codes
 
@@ -17,12 +18,17 @@ class Router(object):
         self._auth = None
         self.public_api_in_use = False
 
+        self._creds = None
+
     @property
     def is_connected(self):
         return self._cookies and 'PLAY_SESSION' in self._cookies
 
-    #todo: add integration test for this
-    def connect(self, email, password):
+    def connect(self, email=None, password=None):
+        if not email:
+            email = qubell_config['user']
+        if not password:
+            email = qubell_config['password']
         url = self.base_url + '/signIn'
         data = {
             'email': email,
@@ -35,6 +41,20 @@ class Router(object):
             raise ApiUnauthorizedError("Authentication failed, please check settings")
 
         self._auth = HTTPBasicAuth(email, password)
+
+        self._creds = email, password
+
+
+class InstanceRouter(object):
+    """
+    Router dependency
+    """
+    _router = None
+    def init_router(self, router):
+        assert router, "router cannot be None"
+        self._router = router
+        return self
+
 
 class PrivatePath(Router):
 
