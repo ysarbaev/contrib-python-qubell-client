@@ -209,6 +209,10 @@ class PrivatePath(Router):
     @route("DELETE /organizations/{org_id}/environments/{env_id}{ctype}")
     def delete_environment(self, org_id, env_id, cookies, data="{}", ctype=".json"): pass
 
+    @play_auth
+    @route("POST /organizations/{org_id}/environments/{env_id}/import{ctype}")
+    def post_env_import(self, org_id, env_id, cookies, data="{}", files="{}", ctype=".json"): pass
+
     #Zone
     @play_auth
     @route("GET /organizations/{org_id}/zones{ctype}")

@@ -134,4 +134,12 @@ class EnvironmentClassTest(BaseTestCase):
 
     def test_property_crud(self): pass
 
+    def test_env_import(self):
+        new_environment = self.org.create_environment(name='import-export')
+        new_environment.ready()
+        new_environment.import_yaml(file=os.path.join(os.path.dirname(__file__), './env_prop_pol_import.yml'))
+        assert 'wcs-login' in [x['name'] for x in new_environment.json()['properties']]
+        assert 'markerer' in [x['name'] for x in new_environment.json()['markers']]
+        new_environment.delete()
+
 
