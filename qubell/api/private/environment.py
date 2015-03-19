@@ -16,7 +16,7 @@
 import time
 import logging as log
 import copy
-
+import os
 import simplejson as json
 
 from qubell.api.globals import ZONE_NAME, DEFAULT_ENV_NAME
@@ -92,6 +92,12 @@ class Environment(Entity, InstanceRouter):
         for service in self.services:
             service.running()
 
+    def ready(self, timeout=(20, 10, 1)):
+        @retry(*timeout)  # ask status 20 times every 10 sec.
+        def env_status_waiter():
+            return self.isOnline
+        return env_status_waiter()
+
     def json(self):
         return self._router.get_environment(org_id=self.organizationId, env_id=self.environmentId).json()
 
@@ -163,6 +169,13 @@ class Environment(Entity, InstanceRouter):
     def remove_policy(self, policy_name):
         with self as env:
             env.remove_policy(policy_name)
+
+    def import_yaml(self, file, merge=False):
+        assert os.path.exists(file)
+        data = {"merge": merge}
+        files = {'path': ("filename", open(file))}
+        self._router.post_env_import(org_id=self.organizationId, env_id=self.environmentId, data=data, files=files)
+
 
     def __bulk_update(self, env_operations):
 
