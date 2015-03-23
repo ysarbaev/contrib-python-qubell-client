@@ -36,7 +36,7 @@ def operations():
             def defaults_dict():
                 f_args, varargs, keywords, defaults = inspect.getargspec(func)
                 defaults = defaults or []
-                return dict(zip(f_args[-len(defaults):], defaults))
+                return dict(zip(f_args[-len(defaults)+len(args[1:]):], defaults[len(args[1:]):]))
 
             route_args = dict(defaults_dict().items() + kwargs.items())
 
