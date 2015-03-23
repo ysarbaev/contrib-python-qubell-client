@@ -170,25 +170,28 @@ class Environment(Entity, InstanceRouter):
         with self as env:
             env.remove_policy(policy_name)
 
+    # noinspection PyShadowingBuiltins
     def import_yaml(self, file, merge=False):
         assert os.path.exists(file)
         data = {"merge": merge}
         files = {'path': ("filename", open(file))}
         self._router.post_env_import(org_id=self.organizationId, env_id=self.environmentId, data=data, files=files)
 
-
     def __bulk_update(self, env_operations):
+
+        data = self.json()
+        env_name = data['name']  # speedup
 
         def clean():
             data['serviceIds'] = []
             data['services'] = []
-            log.info("Cleaning environment %s (%s)" % (self.name, self.id))
+            log.info("Cleaning environment %s (%s)" % (env_name, self.id))
 
         # todo: allow add policy via action-parameter-value
         def add_policy(new):
             data['policies'].append(new)
             log.info("Adding policy %s.%s to environment %s (%s)" % (
-                new.get('action'), new.get('parameter'), self.name, self.id))
+                new.get('action'), new.get('parameter'), env_name, self.id))
 
         # noinspection PyUnusedLocal
         def remove_policy(policy_name):
@@ -199,7 +202,7 @@ class Environment(Entity, InstanceRouter):
                 data['serviceIds'].append(service.instanceId)
                 data['services'].append(service.json())
                 log.info("Adding service %s (%s) to environment %s (%s)" %
-                         (service.name, service.id, self.name, self.id))
+                         (service.name, service.id, env_name, self.id))
 
             if service.is_secure_vault:
                 user_data = service.userData
@@ -214,33 +217,39 @@ class Environment(Entity, InstanceRouter):
             data['serviceIds'].remove(service.instanceId)
             data['services'] = [s for s in data['services'] if s['id'] != service.id]
             log.info("Removing service %s (%s) from environment %s (%s)" %
-                     (service.name, service.id, self.name, self.id))
+                     (service.name, service.id, env_name, self.id))
 
         # noinspection PyShadowingBuiltins
-        def add_property(name, type, value):
+        def set_property(name, type, value):
+            if name in [p['name'] for p in data['properties']]:
+                data['properties'].remove([p for p in data['properties'] if p['name'] == name][0])
             data['properties'].append({'name': name, 'type': type, 'value': value})
-            log.info("Adding property %s to environment %s (%s)" % (name, self.name, self.id))
+            log.info("Adding property %s to environment %s (%s)" % (name, env_name, self.id))
 
         def remove_property(name):
             prop = [p for p in data['properties'] if p['name'] == name]
             if len(prop) < 1:
                 log.error('Unable to remove property %s. Not found.' % name)
             data['properties'].remove(prop[0])
-            log.info("Removing property %s from environment %s (%s)" % (name, self.name, self.id))
+            log.info("Removing property %s from environment %s (%s)" % (name, env_name, self.id))
 
         def add_marker(marker):
+            if {'name': marker} in data['markers']:
+                log.info("Marker {} already in environment {} ({})".format(marker, env_name, self.id))
+                return
+
             data['markers'].append({'name': marker})
-            log.info("Adding marker %s to environment %s (%s)" % (marker, self.name, self.id))
+            log.info("Adding marker %s to environment %s (%s)" % (marker, env_name, self.id))
 
         def remove_marker(marker):
             data['markers'].remove({'name': marker})
-            log.info("Removing marker %s from environment %s (%s)" % (marker, self.name, self.id))
+            log.info("Removing marker %s from environment %s (%s)" % (marker, env_name, self.id))
 
         actions = dict(clean=clean, add_policy=add_policy, remove_policy=remove_policy, add_marker=add_marker,
-                       remove_marker=remove_marker, add_property=add_property, remove_property=remove_property,
+                       remove_marker=remove_marker, add_property=set_property, remove_property=remove_property,
                        add_service=add_service, remove_service=remove_service)
 
-        data = self.json()
+
         for operation in env_operations:
             action, args, kwargs = operation
             actions[action](*args, **kwargs)
