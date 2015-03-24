@@ -212,8 +212,8 @@ class Environment(Entity, InstanceRouter):
             if service.instanceId not in data['serviceIds']:
                 data['serviceIds'].append(service.instanceId)
                 data['services'].append(service.json())
-                log.info("Adding service %s (%s) to environment %s (%s)" %
-                         (service.name, service.id, env_name, self.id))
+                log.info("Adding service id=%s to environment %s (%s)" %
+                         (service.id, env_name, self.id))
 
             if service.is_secure_vault:
                 user_data = service.userData
@@ -227,8 +227,8 @@ class Environment(Entity, InstanceRouter):
         def remove_service(service):
             data['serviceIds'].remove(service.instanceId)
             data['services'] = [s for s in data['services'] if s['id'] != service.id]
-            log.info("Removing service %s (%s) from environment %s (%s)" %
-                     (service.name, service.id, env_name, self.id))
+            log.info("Removing service id=%s from environment %s (%s)" %
+                     (service.id, env_name, self.id))
 
         # noinspection PyShadowingBuiltins
         def set_property(name, type, value):
