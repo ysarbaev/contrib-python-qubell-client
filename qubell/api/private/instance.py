@@ -204,13 +204,13 @@ class Instance(Entity, ServiceMixin, InstanceRouter):
             conf['revisionId'] = revision.id
         conf['submodules'] = submodules or {}
         log.info(("Starting instance: %s\n"
-                  "    Application: %s (%s)\n"
-                  "    Environment: %s (%s)\n"
+                  "    Application: id=%s\n"
+                  "    Environment: id=%s\n"
                   "    Submodules: %s\n"
                   "    destroyInterval: %s") %
                  (name,
-                  application.name, application.applicationId,
-                  environment.name, environment.environmentId,
+                  application.applicationId,
+                  environment.environmentId,
                   submodules, destroyInterval))
         log.debug("Instance configuration: %s" % conf)
         data = json.dumps(conf)
@@ -219,7 +219,7 @@ class Instance(Entity, ServiceMixin, InstanceRouter):
                                                  data=data)
         instance = Instance(organization=application.organization, id=resp.json()['id']).init_router(router)
         instance._last_workflow_started_time = before_creation
-        log.debug("Instance %s (%s) started." % (instance.name, instance.id))
+        log.debug("Instance id=%s started." % (instance.id))
         return instance
 
     @staticmethod
@@ -269,7 +269,7 @@ class Instance(Entity, ServiceMixin, InstanceRouter):
     def run_workflow(self, name, component_path=None, parameters=None):
         if not parameters:
             parameters = {}
-        log.info("Running workflow %s on instance %s (%s)" % (name, self.name, self.id))
+        log.info("Running workflow %s on instance id=%s" % (name, self.id))
         log.debug("Parameters: %s" % parameters)
         self._last_workflow_started_time = time.gmtime(time.time())
         if component_path:
@@ -287,7 +287,7 @@ class Instance(Entity, ServiceMixin, InstanceRouter):
     def schedule_workflow(self, name, timestamp, parameters=None):
         if not parameters:
             parameters = {}
-        log.info("Scheduling workflow %s on instance %s (%s), timestamp: %s" % (name, self.name, self.id, timestamp))
+        log.info("Scheduling workflow %s on instance id=%s, timestamp: %s" % (name, self.id, timestamp))
         log.debug("Parameters: %s" % parameters)
         payload = {'parameters': parameters, 'timestamp': timestamp}
         self._router.post_instance_workflow_schedule(org_id=self.organizationId, instance_id=self.instanceId,
@@ -298,8 +298,8 @@ class Instance(Entity, ServiceMixin, InstanceRouter):
         if workflow_name:
             workflow_id = [x['id'] for x in self.scheduledWorkflows if x['name'] == workflow_name][0]
 
-        log.info("ReScheduling workflow %s on instance %s (%s), timestamp: %s"
-                 % (workflow_id, self.name, self.id, timestamp))
+        log.info("ReScheduling workflow %s on instance id=%s, timestamp: %s"
+                 % (workflow_id, self.id, timestamp))
         payload = {'timestamp': timestamp}
         self._router.post_instance_reschedule(org_id=self.organizationId, instance_id=self.instanceId,
                                               workflow_id=workflow_id, data=json.dumps(payload))
@@ -350,7 +350,7 @@ class Instance(Entity, ServiceMixin, InstanceRouter):
         return True
 
     def destroy(self):
-        log.info("Destroying instance %s (%s)" % (self.name, self.id))
+        log.info("Destroying instance id=%s" % (self.id))
         return self.run_workflow("destroy")
 
     @property

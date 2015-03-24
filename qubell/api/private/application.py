@@ -80,14 +80,14 @@ class Application(Entity, InstanceRouter):
         return app
 
     def delete(self):
-        log.info("Removing application: %s (%s)" % (self.name, self.applicationId))
+        log.info("Removing application: id=%s" % (self.applicationId))
         self._router.delete_application(org_id=self.organizationId, app_id=self.applicationId)
         return True
 
     def update(self, **kwargs):
         if kwargs.get('manifest'):
             self.upload(kwargs.pop('manifest'))
-        log.info("Updating application: %s (%s)" % (self.name, self.applicationId))
+        log.info("Updating application: id=%s" % (self.applicationId))
 
         data = json.dumps(kwargs)
         resp = self._router.put_application(org_id=self.organizationId, app_id=self.applicationId, data=data)
@@ -95,7 +95,7 @@ class Application(Entity, InstanceRouter):
 
     def clean(self, timeout=[7, 1, 1.5]):
         instances = self.instances
-        log.info("Cleaning application %s (%s)" % (self.name, self.applicationId))
+        log.info("Cleaning application: id=%s" % (self.applicationId))
         for ins in instances:
             if ins.status not in ['Destroyed', 'Destroying']:
                 ins.destroy()
@@ -165,7 +165,7 @@ class Application(Entity, InstanceRouter):
         return self._router.post_application_refresh(org_id=self.organizationId, app_id=self.applicationId).json()
 
     def upload(self, manifest):
-        log.info("Uploading manifest: %s to application: %s (%s)" % (manifest.source, self.name, self.applicationId))
+        log.info("Uploading manifest: %s to application: id=%s" % (manifest.source, self.applicationId))
         self.manifest = manifest
         if self._router.public_api_in_use:
             return self._router.post_application_manifest(org_id=self.organizationId, app_id=self.applicationId,
