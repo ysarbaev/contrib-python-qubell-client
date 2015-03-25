@@ -25,10 +25,8 @@ class Router(object):
         return self._cookies and 'PLAY_SESSION' in self._cookies
 
     def connect(self, email=None, password=None):
-        if not email:
-            email = qubell_config['user']
-        if not password:
-            email = qubell_config['password']
+        email = email or qubell_config['user']
+        password = password or qubell_config['password']
         url = self.base_url + '/signIn'
         data = {
             'email': email,
