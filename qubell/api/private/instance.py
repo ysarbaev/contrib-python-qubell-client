@@ -135,11 +135,15 @@ class Instance(Entity, ServiceMixin, InstanceRouter):
 
     @property
     def parameters(self):
-        # TODO: Public api hack.
-        # We do not have 'revision' in public api
-        if self._router.public_api_in_use:
+        # todo: Public api hack.
+        if self._router.public_api_in_use:  # We do not have 'revision' in public api
             return self.json()['parameters']
-        return self.json()['revision']['parameters']
+
+        parameters = self.json()['revision']['parameters']
+        if type(parameters) == list:  # v39+ - list of dicts: id, title, value
+            return self.__parse(parameters)
+        else:  # <v39 - dict  todo: remove when 39+ is wide in production
+            return parameters
 
     def __getattr__(self, key):
         if key in ['instanceId', ]:
