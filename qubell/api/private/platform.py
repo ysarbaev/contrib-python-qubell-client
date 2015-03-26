@@ -39,15 +39,15 @@ class QubellPlatform(InstanceRouter):
         assert not (auth or context), "support of auth and context parameters is removed"
 
     @staticmethod
-    def connect(tenant, user, password, is_public=False):
+    def connect(tenant=None, user=None, password=None, is_public=False):
         """
         Authenticates user and returns new platform to user.
         This is an entry point to start working with Qubell Api.
         :rtype: QubellPlatform
-        :param tenant: url to tenant
-        :param user: user email
-        :param password: user password
-        :param is_public: either to use public or private api (public is not fully supported use with caution)
+        :param str tenant: url to tenant, default taken from 'QUBELL_TENANT'
+        :param str user: user email, default taken from 'QUBELL_USER'
+        :param str password: user password, default taken from 'QUBELL_PASSWORD'
+        :param bool is_public: either to use public or private api (public is not fully supported use with caution)
         :return: New Platform instance
         """
         if not is_public:
@@ -62,9 +62,9 @@ class QubellPlatform(InstanceRouter):
         """
         Authenticates user with the same tenant as current platform using and returns new platform to user.
         :rtype: QubellPlatform
-        :param user: user email
-        :param password: user password
-        :param is_public: either to use public or private api (public is not fully supported use with caution)
+        :param str user: user email
+        :param str password: user password
+        :param bool is_public: either to use public or private api (public is not fully supported use with caution)
         :return: New Platform instance
         """
         return QubellPlatform.connect(self._router.base_url, user, password, is_public)
@@ -75,19 +75,34 @@ class QubellPlatform(InstanceRouter):
 
     @lazyproperty
     def organizations(self):
+        """
+        Lists platform organizations, accessible to the user
+        :rtype: OrganizationList
+        """
         return OrganizationList(list_json_method=self.list_organizations_json).init_router(self._router)
 
     def create_organization(self, name):
+        """
+        Creates new organization
+        :rtype: Organization
+        """
         org = Organization.new(name, self._router)
-        assert org.ready()
+        assert org.ready(), "Organization {} hasn't got ready after creation".format(name)
         return org
 
     def get_organization(self, id=None, name=None):
+        """
+        Gets existing and accessible organization
+        :rtype: Organization
+        """
         log.info("Picking organization: %s (%s)" % (name, id))
         return self.organizations[id or name]
 
     def get_or_create_organization(self, id=None, name=None):
-        """ Smart object. Will create organization, modify or pick one"""
+        """
+        Gets existing or creates new organization
+        :rtype: Organization
+        """
         if id:
             return self.get_organization(id)
         else:

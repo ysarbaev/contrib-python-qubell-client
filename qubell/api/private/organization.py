@@ -107,12 +107,17 @@ class Organization(Entity, InstanceRouter):
         return self._router.get_organization(org_id=self.organizationId).json()
 
     def ready(self):
-        env = self.environments[DEFAULT_ENV_NAME()]
+        """
+        Checks if organization properly created.
+        Note: Cannot use DEFAULT_ENV_NAME and services, since it checks services in default zone without prefixes
+        :rtype: bool
+        """
+        env = self.environments['default']
 
         @retry(tries=3, retry_exception=exceptions.NotFoundError)  # org init, takes some times
         def check_init():
-            return env.services[DEFAULT_WORKFLOW_SERVICE()].running(timeout=1) and \
-                env.services[DEFAULT_CREDENTIAL_SERVICE()].running(timeout=1)
+            return env.services['Default workflow service'].running(timeout=1) and \
+                env.services['Default credentials service'].running(timeout=1)
         return check_init()
 
     def restore(self, config, clean=False, timeout=10):
