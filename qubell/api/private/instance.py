@@ -120,9 +120,9 @@ class Instance(Entity, ServiceMixin, InstanceRouter):
 
         """
         if after:
-            log_raw = self._router.get_instance_activitylog_after(org_id=self.organizationId,
-                                                                  instance_id=self.instanceId,
-                                                                  params={"after": after}).json()
+            log_raw = self._router.get_instance_activitylog(org_id=self.organizationId,
+                                                            instance_id=self.instanceId,
+                                                            params={"after": after}).json()
         else:
             log_raw = self._router.get_instance_activitylog(org_id=self.organizationId,
                                                             instance_id=self.instanceId).json()
