@@ -89,6 +89,8 @@ class Environment(Entity, InstanceRouter):
             for service in config.pop('services', []):
                 instance = self.organization.get_instance(id=service.pop('id', None), name=service.pop('name'))
                 env.add_service(instance)
+            for component_policy in config.pop('componentPolicies', []):
+                env.set_component_policy(**component_policy)
         for service in self.services:
             service.running()
 
@@ -170,6 +172,14 @@ class Environment(Entity, InstanceRouter):
         with self as env:
             env.remove_policy(policy_name)
 
+    def set_component_policy(self, matchers, actions):
+        with self as env:
+            env.set_component_policy(matchers, actions)
+
+    def remove_component_policy(self, matchers, actions):
+        with self as env:
+            env.set_component_policy(matchers, actions)
+
     # noinspection PyShadowingBuiltins
     def import_yaml(self, file, merge=False):
         assert os.path.exists(file)
@@ -207,6 +217,20 @@ class Environment(Entity, InstanceRouter):
                 return
             data['policies'].remove(policy[0])
             log.info("Removing policy %s from environment %s (%s)" % (name, env_name, self.id))
+
+        def set_component_policy(matchers=list(), actions=list()):
+            if len([p for p in data['componentPolicies'] if p['matchers'] == matchers]):
+                data['componentPolicies'].remove([p for p in data['componentPolicies'] if p['matchers'] == matchers][0])
+            data['componentPolicies'].append({'matchers': matchers, 'actions': actions})
+            log.info("Adding component policy {} to environment {} ({})".format(matchers, env_name, self.id))
+
+        def remove_component_policy(matchers):
+            policy = [p for p in data['componentPolicies'] if p['matchers'] == matchers]
+            if len(policy) == 0:
+                log.warn('Unable to remove policy %s. Not found.' % matchers)
+                return
+            data['componentPolicies'].remove(policy[0])
+            log.info("Removing policy %s from environment %s (%s)" % (matchers, env_name, self.id))
 
         def add_service(service):
             if service.instanceId not in data['serviceIds']:
@@ -263,7 +287,8 @@ class Environment(Entity, InstanceRouter):
 
         actions = dict(clean=clean, add_policy=set_policy, remove_policy=remove_policy, add_marker=add_marker,
                        remove_marker=remove_marker, add_property=set_property, remove_property=remove_property,
-                       add_service=add_service, remove_service=remove_service)
+                       add_service=add_service, remove_service=remove_service,
+                       set_component_policy=set_component_policy, remove_component_policy=remove_component_policy)
 
 
         for operation in env_operations:
@@ -318,6 +343,12 @@ class EnvironmentOperations(object):
         pass
 
     def remove_policy(self, policy_name):
+        pass
+
+    def set_component_policy(self, matchers, actions):
+        pass
+
+    def remove_component_policy(self, matchers):
         pass
 
     def add_marker(self, marker):
