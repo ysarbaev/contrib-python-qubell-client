@@ -1,6 +1,9 @@
 import os
 
-__author__ = 'dmakhno'
+__all__ = ['ZONE_NAME', 'DEFAULT_ENV_NAME',
+           'DEFAULT_CLOUD_ACCOUNT_SERVICE', 'DEFAULT_WORKFLOW_SERVICE',
+           'DEFAULT_SHARED_INSTANCE_CATALOG_SERVICE', 'DEFAULT_CREDENTIAL_SERVICE',
+           'QUBELL', 'PROVIDER', 'PROVIDER_CONFIG']
 
 # Global Zone
 ZONE_NAME = os.getenv('QUBELL_ZONE')
@@ -45,4 +48,13 @@ PROVIDER = {
     'provider_credential': os.getenv('PROVIDER_CREDENTIAL', 'FAKE'),
     'provider_region': os.getenv('PROVIDER_REGION', 'us-east-1'),
     'provider_security_group': os.getenv('PROVIDER_SECURITY_GROUP', '')
+}
+
+PROVIDER_CONFIG = {
+    'configuration.provider': PROVIDER['provider_type'],
+    'configuration.legacy-regions': PROVIDER['provider_region'],
+    'configuration.endpoint-url': '',
+    'configuration.legacy-security-group': '',
+    'configuration.identity': PROVIDER['provider_identity'],
+    'configuration.credential': PROVIDER['provider_credential']
 }
