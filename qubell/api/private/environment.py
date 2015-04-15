@@ -105,6 +105,10 @@ class Environment(Entity, InstanceRouter):
         self._router.delete_environment(org_id=self.organizationId, env_id=self.environmentId)
         return True
 
+    def get_default_private_key(self):
+        return self._router.get_environment_default_private_key(org_id=self.organizationId,
+                                                                env_id=self.environmentId).text
+
     def set_as_default(self):
         data = json.dumps({'environmentId': self.id})
         return self._router.put_organization_default_environment(org_id=self.organizationId, data=data).json()
