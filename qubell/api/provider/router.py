@@ -130,6 +130,10 @@ class PrivatePath(Router):
     def get_revision(self, org_id, app_id, rev_id, cookies, ctype=".json"): pass
 
     @play_auth
+    @route("GET /organizations/{org_id}/applications/{app_id}/revisions{ctype}")
+    def get_revisions(self, org_id, app_id, cookies, ctype=".json"): pass
+
+    @play_auth
     @route("DELETE /organizations/{org_id}/applications/{app_id}/revisions/{rev_id}{ctype}")
     def delete_revision(self, org_id, app_id, rev_id, cookies, data="{}", ctype=".json"): pass
 
