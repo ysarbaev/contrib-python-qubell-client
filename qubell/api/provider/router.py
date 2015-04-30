@@ -20,6 +20,8 @@ class Router(object):
 
         self._creds = None
 
+        self._session = requests.Session()
+
     @property
     def is_connected(self):
         return self._cookies and 'PLAY_SESSION' in self._cookies
@@ -31,9 +33,9 @@ class Router(object):
         data = {
             'email': email,
             'password': password}
-        with requests.session() as session:
-            session.post(url=url, data=data, verify=self.verify_ssl)
-            self._cookies = session.cookies
+
+        self._session.post(url=url, data=data, verify=self.verify_ssl)
+        self._cookies = self._session.cookies
 
         if not self.is_connected:
             raise ApiUnauthorizedError("Authentication failed, please check settings")
