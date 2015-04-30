@@ -286,11 +286,23 @@ class PrivatePath(Router):
     def invite_user(self, cookies, data="{}", ctype=".json"): pass
 
     @route("POST /quickSignUp")
-    def post_quick_sign_up(self, data=None, files=None): pass
+    def post_quick_sign_up(self, data=None, params=None, files=None): pass
 
     @play_auth
     @route("POST /organizations/{org_id}/init.json")
     def post_init(self, org_id, data, cookies): pass
+
+    @play_auth
+    @route("POST /organizations/{org_id}/initCustomCloudAccount.json")
+    def post_init_custom_cloud_account(self, org_id, data, cookies): pass
+
+    @play_auth
+    @route("GET /organizations/{org_id}/welcomeWizardComponents.json")
+    def get_welcome_wizard_components(self, org_id, cookies): pass
+
+    @play_auth
+    @route("POST /organizations/{org_id}/initDockerService.json")
+    def post_init_docker_service(self, org_id, cookies, data="{}"): pass
 
     @play_auth
     @route("GET /applications/upload{ctype}")
