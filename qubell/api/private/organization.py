@@ -124,7 +124,7 @@ class Organization(Entity, InstanceRouter):
         config = copy.deepcopy(config)
 
         for app in config.pop('applications'):
-            manifest_param = {k: v for k, v in app.iteritems() if k in ["content", "url", "file"]}
+            manifest_param = dict([(k, v) for k, v in app.iteritems() if k in ["content", "url", "file"]])
             if manifest_param:
                 manifest = Manifest(**manifest_param)
             else:

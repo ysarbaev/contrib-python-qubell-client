@@ -107,7 +107,7 @@ class Instance(Entity, ServiceMixin, InstanceRouter):
 
     @staticmethod
     def __parse(values):
-        return {val['id']: val['value'] for val in values}
+        return dict([(val['id'], val['value']) for val in values])
 
     @property
     def return_values(self):

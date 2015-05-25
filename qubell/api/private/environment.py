@@ -352,7 +352,7 @@ class Environment(Entity, InstanceRouter):
         self.__bulk_update(self.__bulk.operations)
 
     def get_backend_version(self):
-        versions = {x['name']: x['version'] for x in self.json()['backends']}
+        versions = dict([(x['name'], x['version']) for x in self.json()['backends']])
         if ZONE_NAME:
             return versions[ZONE_NAME]
         else:
