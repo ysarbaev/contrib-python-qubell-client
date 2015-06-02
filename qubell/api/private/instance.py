@@ -120,7 +120,7 @@ class Instance(Entity, ServiceMixin, InstanceRouter):
         old_api_value = j.get('returnValues')
         new_api_value = j.get('endpoints')
 
-        retvals = new_api_value or old_api_value
+        retvals = new_api_value or old_api_value or []
         # TODO: Public api hack.
         if self._router.public_api_in_use:
             return retvals
@@ -176,6 +176,14 @@ class Instance(Entity, ServiceMixin, InstanceRouter):
         else:  # <v39 - dict  todo: remove when 39+ is wide in production
             return parameters
 
+    @lazyproperty
+    def currentWorkflow(self):
+        j = self.json()
+        #TODO: FIXME: get rid of old API when its support will be removed
+        old_api_value = j.get('currentWorkflow')
+        new_api_value = j.get('workflowsInfo', {}).get('currentWorkflow')
+        return new_api_value or old_api_value
+
     def __getattr__(self, key):
         if key in ['instanceId', ]:
             raise exceptions.NotFoundError('Unable to get instance property: %s' % key)
@@ -183,12 +191,12 @@ class Instance(Entity, ServiceMixin, InstanceRouter):
             log.debug('Checking instance status')
             return self.ready()
         #TODO: FIXME: old API support: remove when its support will be removed on server
-        elif key in ['currentWorkflow', 'workflowHistory', 'scheduledWorkflows', 'availableWorkflows']:
+        elif key in ['workflowHistory', 'scheduledWorkflows', 'availableWorkflows']:
             log.debug('Getting instance workflow attribute: %s' % key)
             j = self.json()
             old_api_value = j.get(key)
             new_api_value = j.get('workflowsInfo', {}).get(key, False)
-            atr = new_api_value or old_api_value
+            atr = new_api_value or old_api_value or []
             log.debug(atr)
             return atr
         else:
