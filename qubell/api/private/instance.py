@@ -176,7 +176,7 @@ class Instance(Entity, ServiceMixin, InstanceRouter):
         else:  # <v39 - dict  todo: remove when 39+ is wide in production
             return parameters
 
-    @lazyproperty
+    @property
     def currentWorkflow(self):
         j = self.json()
         #TODO: FIXME: get rid of old API when its support will be removed
