@@ -267,13 +267,19 @@ class Organization(Entity, InstanceRouter):
             return Instance(id=id, organization=self).init_router(self._router)
         return Instance.get(self._router, self, name)
 
-    def list_instances_json(self, application=None):
+    def list_instances_json(self, application=None, show_only_destroyed=False):
         """ Get list of instances in json format converted to list"""
         # todo: application should not be parameter here. Application should do its own list, just in sake of code reuse
-        q_filter = {"showDestroyed": "false",
-                  "sortBy": "byCreation", "descending": "true",
-                  "mode": "short",
-                  "from": "0", "to": "10000"}
+        q_filter = {'sortBy': 'byCreation', 'descending': 'true',
+                    'mode': 'short',
+                    'from': '0', 'to': '10000'}
+        if not show_only_destroyed:
+            q_filter['showDestroyed'] = 'false'
+        else:
+            q_filter['showDestroyed'] = 'true'
+            q_filter['showRunning'] = 'false'
+            q_filter['showError'] = 'false'
+            q_filter['showLaunching'] = 'false'
         if application:
             q_filter["applicationFilterId"] = application.applicationId
         resp_json = self._router.get_instances(org_id=self.organizationId, params=q_filter).json()
@@ -282,7 +288,7 @@ class Organization(Entity, InstanceRouter):
         else:  # TODO: This is compatibility fix for platform < 37.1
             instances = resp_json
 
-        return [ins for ins in instances if ins['status'] not in DEAD_STATUS]
+        return instances
 
     def get_or_create_instance(self, id=None, application=None, revision=None, environment=None, name=None, parameters=None, submodules=None,
                                destroyInterval=None):
