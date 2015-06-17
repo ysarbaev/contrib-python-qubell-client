@@ -137,6 +137,10 @@ class PrivatePath(Router):
     @route("DELETE /organizations/{org_id}/applications/{app_id}/revisions/{rev_id}{ctype}")
     def delete_revision(self, org_id, app_id, rev_id, cookies, data="{}", ctype=".json"): pass
 
+    @play_auth
+    @route("DELETE /organizations/{org_id}/applications/{app_id}/destroyedInstances{ctype}")
+    def delete_destroyed_instances(self, org_id, app_id, cookies, data="{}", ctype=".json"): pass
+
     #Instance
     @play_auth
     @route("GET /organizations/{org_id}/dashboard{ctype}")
