@@ -368,7 +368,7 @@ class Instance(Entity, ServiceMixin, InstanceRouter):
     def get_manifest(self):
         return self._router.post_application_refresh(org_id=self.organizationId, app_id=self.applicationId).json()
 
-    def reconfigure(self, revision=None, parameters=None, submodules=None):
+    def reconfigure(self, revision=None, parameters=None, submodules=None, manifestVersion=None):
         # note: be carefull refactoring this, or you might have unpredictable results
         # todo: private api seems requires at least presence of submodule names if exist
         payload = {'parameters': self.parameters}
@@ -380,6 +380,8 @@ class Instance(Entity, ServiceMixin, InstanceRouter):
             payload['submodules'] = submodules
         if parameters is not None:
             payload['parameters'] = parameters
+        if manifestVersion:
+            payload['manifestVersion'] = manifestVersion
 
         resp = self._router.put_instance_configuration(org_id=self.organizationId, instance_id=self.instanceId,
                                                        data=json.dumps(payload))
