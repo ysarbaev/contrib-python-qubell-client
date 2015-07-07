@@ -371,7 +371,14 @@ class SandBox(object):
     def __init__(self, platform, sandbox):
         self.sandbox = sandbox
         self.platform = platform
-        self.organization = self.platform.organization(name=self.sandbox["organization"]["name"])
+        self.organization_name = sandbox["organization"]["name"]
+        if self.organization_name not in self.platform.organizations:
+            import time
+            import random
+            pause = random.randint(1, 10)
+            time.sleep(pause*15)
+
+        self.organization = self.platform.organization(name=self.organization_name)
         self.sandbox['instances'] = sandbox.get('instances', [])
 
 
