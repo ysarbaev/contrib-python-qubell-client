@@ -327,6 +327,10 @@ class Organization(Entity, InstanceRouter):
 
         return instance
 
+### COMPONENTS
+
+    def component_details(self, instance, component):
+        return self._router.get_component_details(org_id=self.organizationId, instance_id=instance, component_id=component).json()
 
 ### SERVICE
     def create_service(self, application=None, revision=None, environment=None, name=None, parameters=None, type=None):
