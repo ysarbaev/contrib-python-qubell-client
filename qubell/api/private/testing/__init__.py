@@ -342,14 +342,16 @@ class BaseTestCase(unittest.TestCase):
     def check_instances(cls, instances):
         for instance in instances:
             if not instance.running(timeout=cls.timeout()):
-                error = instance.error.strip()
+                if instance.error: # If error message exists - status should be error, else instance faced timeout
+                    error = instance.error.strip()
+                else:
+                    error = 'Instance status: %s after timeout %s' % (instances.status, cls.timeout())
 
                 # TODO: if instance fails to start during tests, add proper unittest log
                 if os.getenv("QUBELL_DEBUG", None) and not('false' in os.getenv("QUBELL_DEBUG", None)):
                     pass
 
-                assert not error, "Instance %s didn't launch properly and has error '%s'" % (instance.instanceId, error)
-                assert False, "Instance %s is not ready after %s minutes and stop on timeout" % (instance.instanceId, cls.timeout())
+                assert False, "Instance %s (%s): %s" % (instance.name, instance.instanceId, error)
 
     @classmethod
     def destroy_instances(cls, instances):

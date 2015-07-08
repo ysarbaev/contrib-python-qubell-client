@@ -109,15 +109,16 @@ class Organization(Entity, InstanceRouter):
     def ready(self):
         """
         Checks if organization properly created.
-        Note: Cannot use DEFAULT_ENV_NAME and services, since it checks services in default zone without prefixes
+        Note: New organization must have 'default' environment and two default services
+        running there. Cannot use DEFAULT_ENV_NAME, because zone could be added there.
         :rtype: bool
         """
-        env = self.environments['default']
 
-        @retry(tries=3, retry_exception=exceptions.NotFoundError)  # org init, takes some times
+        @retry(tries=1, retry_exception=exceptions.NotFoundError)  # org init, takes some times
         def check_init():
+            env = self.environments['default']
             return env.services['Default workflow service'].running(timeout=1) and \
-                env.services['Default credentials service'].running(timeout=1)
+                   env.services['Default credentials service'].running(timeout=1)
         return check_init()
 
     def restore(self, config, clean=False, timeout=10):
