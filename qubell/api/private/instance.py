@@ -452,14 +452,17 @@ class Instance(Entity, ServiceMixin, InstanceRouter):
         - if currentWorkflow exists, its startedAt time is most recent update.
         - else max of workflowHistory startedAt is most recent update.
         """
-        parse_time = lambda t: time.gmtime(t/1000)
+        def parse_time(t):
+            if t:
+                return time.gmtime(t/1000)
+            return None
         try:
             if self.currentWorkflow:
-                cw_started_at = self.currentWorkflow['startedAt']
+                cw_started_at = self.currentWorkflow.get('startedAt')
                 if cw_started_at:
                     return parse_time(cw_started_at)
 
-            max_wf_started_at = max([i['startedAt'] for i in self.workflowHistory])
+            max_wf_started_at = max([i.get('startedAt') for i in self.workflowHistory])
             return parse_time(max_wf_started_at)
         except ValueError:
             return None
