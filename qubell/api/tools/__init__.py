@@ -108,15 +108,13 @@ def waitForStatus(instance, final='Active', accepted=None, timeout=(20, 10, 1)):
     elif cur_status in ['Error']:
         log.error("\n\n\nInstance didn't get one of {0} statuses, current status :'{1}'. \n\n"
                   "Instance: {2} ({3})\n"
-                  "Application: {4} ({5})\n"
-                  "Organization: {6} ({7})\n"
-                  "Timeout: {8} sec\n"
+                  "Organization: {4} ({5})\n"
+                  "Timeout: {6} sec\n"
                   "---------------- Error Text ---------------------\n"
                   "{9}"
                   "\n-------------- Error Text End -----------------\n".format(
             final, cur_status,
             instance.name, instance.id,
-            instance.application.name, instance.application.id,
             instance.organization.name, instance.organization.id,
             timeout[0]*timeout[1]*timeout[2],
             instance.error))
@@ -128,12 +126,10 @@ def waitForStatus(instance, final='Active', accepted=None, timeout=(20, 10, 1)):
     else:
         log.error("\n\n\nInstance didn't get one of {0} statuses, current status :'{1}'. \n\n"
                   "Instance: {2} ({3})\n"
-                  "Application: {4} ({5})\n"
-                  "Organization: {6} ({7})\n"
-                  "Timeout: {8} sec\n\n".format(
+                  "Organization: {4} ({5})\n"
+                  "Timeout: {6} sec\n\n".format(
             final, cur_status,
             instance.name, instance.id,
-            instance.application.name, instance.application.id,
             instance.organization.name, instance.organization.id,
             timeout[0]*timeout[1]*timeout[2]))
         log.debug(instance.get_activitylog(severity=['ERROR', 'INFO']))
