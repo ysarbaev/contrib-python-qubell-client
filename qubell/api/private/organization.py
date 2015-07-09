@@ -114,7 +114,7 @@ class Organization(Entity, InstanceRouter):
         :rtype: bool
         """
 
-        @retry(tries=1, retry_exception=exceptions.NotFoundError)  # org init, takes some times
+        @retry(tries=3, retry_exception=exceptions.NotFoundError)  # org init, takes some times
         def check_init():
             env = self.environments['default']
             return env.services['Default workflow service'].running(timeout=1) and \
