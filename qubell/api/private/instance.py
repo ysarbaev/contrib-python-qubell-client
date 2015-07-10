@@ -180,9 +180,13 @@ class Instance(Entity, ServiceMixin, InstanceRouter):
     def currentWorkflow(self):
         j = self.json()
         #TODO: FIXME: get rid of old API when its support will be removed
-        old_api_value = j.get('currentWorkflow', {})
-        new_api_value = j.get('workflowsInfo', {}).get('currentWorkflow', {})
-        return new_api_value or old_api_value
+        # We could get {} or None for both together. Dependant code expects dict(), so, returning dict.
+        if j.get('currentWorkflow', {}):
+            return j.get('currentWorkflow', {})
+        elif j.get('workflowsInfo', {}).get('currentWorkflow', {}):
+            return j.get('workflowsInfo', {}).get('currentWorkflow', {})
+        else:
+            return {}
 
     def __getattr__(self, key):
         if key in ['instanceId', ]:
