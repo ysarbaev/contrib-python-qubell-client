@@ -317,7 +317,7 @@ class Instance(Entity, ServiceMixin, InstanceRouter):
         if self.status in ['Active', 'Running']:
             log.debug("Instance {} is Active right now".format(self.id))
             return True
-        mrut = self.most_recent_update_time
+        mrut = self.get_most_recent_update_time()
         if mrut:
             self._last_workflow_started_time = time.gmtime(time.mktime(mrut) - 1)  # skips projection check
         return self.ready(timeout)
@@ -444,9 +444,7 @@ class Instance(Entity, ServiceMixin, InstanceRouter):
     def serviceId(self):
         raise AttributeError("Service is instance reference now, use instanceId")
 
-    @property
-    def most_recent_update_time(self):
-
+    def get_most_recent_update_time(self):
         """
         Indicated most recent update of the instance, assumption based on:
         - if currentWorkflow exists, its startedAt time is most recent update.
@@ -475,7 +473,7 @@ class Instance(Entity, ServiceMixin, InstanceRouter):
         """
         last = self._last_workflow_started_time
         if not self._router.public_api_in_use:
-            most_recent = self.most_recent_update_time
+            most_recent = self.get_most_recent_update_time()
         else:
             most_recent = None
         if last and most_recent:
