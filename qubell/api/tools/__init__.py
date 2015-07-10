@@ -111,7 +111,7 @@ def waitForStatus(instance, final='Active', accepted=None, timeout=(20, 10, 1)):
                   "Organization: {4} ({5})\n"
                   "Timeout: {6} sec\n"
                   "---------------- Error Text ---------------------\n"
-                  "{9}"
+                  "{7}"
                   "\n-------------- Error Text End -----------------\n".format(
             final, cur_status,
             instance.name, instance.id,
