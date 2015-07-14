@@ -345,7 +345,7 @@ class BaseTestCase(unittest.TestCase):
                 if instance.error: # If error message exists - status should be error, else instance faced timeout
                     error = instance.error.strip()
                 else:
-                    error = 'Instance status: %s after timeout %s' % (instances.status, cls.timeout())
+                    error = 'Instance status: %s after timeout %s' % (instance.status, cls.timeout())
 
                 # TODO: if instance fails to start during tests, add proper unittest log
                 if os.getenv("QUBELL_DEBUG", None) and not('false' in os.getenv("QUBELL_DEBUG", None)):
@@ -361,7 +361,10 @@ class BaseTestCase(unittest.TestCase):
             for instance in instances:
                 instance.destroy()
                 if not instance.destroyed(cls.timeout()):
-                    log.error("Instance was not destroyed properly {0}: {1}", instance.id, instance.name)
+                    log.error("Instance {0} ({1}) was not destroyed properly. Org: {2}, App: {3} ".format(instance.id,
+                                                                                                          instance.name,
+                                                                                                          instance.organizationId,
+                                                                                                          instance.applicationId))
 
     def find_by_application_name(self, name):
         for inst in self.regular_instances+self.service_instances:
