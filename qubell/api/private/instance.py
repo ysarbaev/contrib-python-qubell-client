@@ -209,6 +209,14 @@ class Instance(Entity, ServiceMixin, InstanceRouter):
             log.debug(atr)
             return atr
 
+    # TODO: make such behaviour default
+    @property
+    @retry(3, 1, 3, retry_exception=(KeyError, AssertionError))
+    def technicalInfo(self): # This property is not always there. Waiting to appear
+        ret = self.json()['technicalInfo']
+        assert isinstance(ret, dict)
+        return ret
+
     def _cache_free(self):
         """Frees cache"""
         self.__cached_json = None

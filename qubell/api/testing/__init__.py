@@ -4,7 +4,7 @@ import logging as log
 from qubell.api.private.platform import QubellPlatform
 from qubell.api.private.testing import BaseTestCase as SandBoxTestCase, applications, environment, environments, instance, values, workflow
 from qubell.api.globals import QUBELL as qubell_config, PROVIDER as cloud_config
-from qubell.api.tools import retry
+from qubell.api.tools import retry, rand
 import nose.plugins.attrib
 import testtools
 
@@ -14,7 +14,8 @@ try:
 except:
     pass
 # Define what users import by *
-__all__ = ['BaseComponentTestCase', 'applications', 'environment', 'environments', 'instance', 'values', 'workflow', 'eventually', 'attr']
+__all__ = ['BaseComponentTestCase', 'applications', 'environment', 'environments', 'instance', 'values', 'workflow', 'eventually', 'attr', 'unique']
+
 
 class Qubell(object):
     """
@@ -67,3 +68,11 @@ def attr(*args, **kwargs):
             return nose.plugins.attrib.attr(*args, **kwargs)(f)
         # TODO: Should do something if test is skipped
     return decorator
+
+def unique(name):
+    """
+    Makes name unique. Used mainly if you do not want to pick old component, if exists.
+    :param name: name of components
+    :return: unique name
+    """
+    return '{0} - {1}'.format(name, rand())
