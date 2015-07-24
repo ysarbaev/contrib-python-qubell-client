@@ -328,6 +328,19 @@ class Organization(Entity, InstanceRouter):
 
         return instance
 
+### COMPONENTS
+    #full components id, starts with instance id.
+    def component_details(self, component):
+        return self._router.get_component_details(org_id=self.organizationId, component_id=component).json()
+
+    def list_components_json(self, application=None):
+
+        q_filter = {'sortBy': 'byCreation','descending': 'true',
+                    'from': '0', 'to': '10000'}
+        if application:
+            q_filter["applicationFilterId"] = application.applicationId
+
+        return self._router.get_components(org_id=self.organizationId, params=q_filter).json()
 
 ### SERVICE
     def create_service(self, application=None, revision=None, environment=None, name=None, parameters=None, type=None):
