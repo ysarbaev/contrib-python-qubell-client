@@ -23,7 +23,7 @@ from qubell.api.private.platform import QubellPlatform
 from qubell.api.private.common import Auth
 
 from qubell.api.private.manifest import Manifest
-from qubell.api.private.testing import SetupOnce
+from qubell.api.private.testing.setup_once import SetupOnce
 from qubell.api.tools import retry
 from qubell.api.private.service import COBALT_SECURE_STORE_TYPE, WORKFLOW_SERVICE_TYPE, SHARED_INSTANCE_CATALOG_TYPE
 

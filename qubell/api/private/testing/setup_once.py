@@ -1,5 +1,17 @@
-import logging
-
+# Copyright (c) 2013 Qubell Inc., http://qubell.com
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 class SetupOnce(object):
     """
@@ -25,24 +37,8 @@ class SetupOnce(object):
         Has instance scope.
         """
 
-    # todo: fixme
-    def addcleanup_once(self, function, *args, **kwargs):
-        """
-        Add a function, with arguments, to be called when the test is
-        completed. Functions added are called on a LIFO basis and are
-        called after tearDown on test failure or success.
-
-        Should be used only within setup_once or teardown_once scopes.
-
-        If setUp() fails, meaning that tearDown() is not called,
-        then any cleanup functions added will still be called.
-        """
-        if self.__counter == 1:  # counter already increased by one
-            self.addCleanUp(function, *args, **kwargs)
-
     def setUp(self):
         super(SetupOnce, self).setUp()
-        logging.info(self.__counter)
         if self.__counter == 0:
             self.__counter += 1
             try:
@@ -54,11 +50,7 @@ class SetupOnce(object):
         if self.setup_error:
             raise self.setup_error[1], None, self.setup_error[2]
 
-
-
     def tearDown(self):
-
-
         if self.__counter > 1:
             self.__counter -= 1
         else:

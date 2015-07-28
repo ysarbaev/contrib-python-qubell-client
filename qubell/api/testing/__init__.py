@@ -2,7 +2,8 @@
 import logging as log
 
 from qubell.api.private.platform import QubellPlatform
-from qubell.api.private.testing import BaseTestCase as SandBoxTestCase, applications, environment, environments, instance, values, workflow
+from qubell.api.private.testing import applications, environment, environments, instance, values, workflow
+from qubell.api.private.testing.sandbox_testcase import BaseTestCase as SandBoxTestCase
 from qubell.api.globals import QUBELL as qubell_config, PROVIDER as cloud_config
 from qubell.api.tools import retry, rand
 import nose.plugins.attrib
