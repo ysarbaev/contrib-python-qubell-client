@@ -17,6 +17,7 @@ import logging as log
 import os
 import re
 import unittest
+import time
 from qubell.api.globals import *
 from qubell.api.private.exceptions import NotFoundError
 from qubell.api.private.service import *
@@ -85,6 +86,10 @@ class SandBoxTestCase(SetupOnce, unittest.TestCase):
             org = self.parameters.get('organization') or getattr(self, 'source_name', False) or self.__class__.__name__
 
             self.sandbox = SandBox(self.platform, self.environment(org))
+            if hasattr(self, '_wait_for_prev'):
+                # in case of simultaneous run spreads preparation on timeline
+                SPREAD_IN_TIME_MULTIPLIER = 3
+                time.sleep(self._wait_for_prev * SPREAD_IN_TIME_MULTIPLIER)
             self.organization = self.sandbox.make()
 
             if self.__dict__.get('platform_version'):

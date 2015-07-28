@@ -101,9 +101,12 @@ def workflow(name, parameters=None, timeout=10):
             func(*args, **kwargs)
         return wrapped_func
     return wrapper
-def _parameterize(source_case, cases, tests):
+
+
+def _parameterize(source_case, cases):
         '''This generates the classes (in the sense that it's a generator.)
         '''
+
         def clean_class(source):
             import types
             test_methods = [method.__name__ for _, method in source.__dict__.items()
@@ -113,10 +116,6 @@ def _parameterize(source_case, cases, tests):
             for test in test_methods:
                 delattr(source_case, test)
 
-        # Add tests to class if we got tests param
-        for test_name, test_method in tests.items():
-            setattr(source_case, test_name, test_method)
-
         # Multiply classes per environment
         if len(cases):
             case_mod = sys.modules[source_case.__module__]
@@ -124,11 +123,15 @@ def _parameterize(source_case, cases, tests):
             attrs = dict(source_case.__dict__)
             clean_class(source_case)
 
-            for env in cases.keys():
+            for i, env in enumerate(cases.keys()):
                 env_name = norm(env)
                 updated_case = type('{0}_{1}'.format(case_name, env_name), (source_case,), attrs)
                 setattr(updated_case, 'className', env_name)
                 setattr(case_mod, updated_case.__name__, updated_case)
+                if i > 0:
+                    # this attribute helps to spread in time environment setup
+                    updated_case._wait_for_prev = i
+                # fixme: this attribute should endswith _name
                 updated_case.current_environment = env_name
                 updated_case.source_name = case_name
                 yield updated_case
@@ -136,8 +139,8 @@ def _parameterize(source_case, cases, tests):
             yield source_case
 
 
-def parameterize(source_case, cases={}, tests={}):
-    return list(_parameterize(source_case, cases, tests))
+def parameterize(source_case, cases={}):
+    return list(_parameterize(source_case, cases))
 
 def environment(params):
     def wraps_class(clazz):
