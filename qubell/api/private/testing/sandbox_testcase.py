@@ -23,7 +23,7 @@ from qubell.api.private.service import *
 from qubell.api.private.testing import SandBox
 from qubell.api.private.testing.setup_once import SetupOnce
 
-class BaseTestCase(SetupOnce, unittest.TestCase):
+class SandBoxTestCase(SetupOnce, unittest.TestCase):
     platform = None
     parameters = None
     sandbox = None
@@ -75,72 +75,72 @@ class BaseTestCase(SetupOnce, unittest.TestCase):
     def timeout(cls):
         return 15
 
-    def setup_once(cls):
-        super(BaseTestCase, cls).setup_once()
+    def setup_once(self):
+        super(SandBoxTestCase, self).setup_once()
 
         log.info("\n\n\n---------------  Preparing sandbox...  ---------------")
         try:
-            cls.service_instances = []
-            cls.regular_instances = []
-            org = cls.parameters.get('organization') or getattr(cls, 'source_name', False) or cls.__class__.__name__
+            self.service_instances = []
+            self.regular_instances = []
+            org = self.parameters.get('organization') or getattr(self, 'source_name', False) or self.__class__.__name__
 
-            cls.sandbox = SandBox(cls.platform, cls.environment(org))
-            cls.organization = cls.sandbox.make()
+            self.sandbox = SandBox(self.platform, self.environment(org))
+            self.organization = self.sandbox.make()
 
-            if cls.__dict__.get('platform_version'):
-                ver = cls.organization.get_default_environment().get_backend_version()
+            if self.__dict__.get('platform_version'):
+                ver = self.organization.get_default_environment().get_backend_version()
                 try:
                     current_version = float(ver)
                 except ValueError:
                     # dev version: '41.0.148.g5ef3b00 2015-05-14 14:49:36'
                     # universe version: 'v. v41.0.171.g8230c89'
                     current_version = float(re.findall(r'\d+', ver)[0]+'.'+re.findall(r'\d+', ver)[1])
-                required_version = float(cls.platform_version)
+                required_version = float(self.platform_version)
                 if current_version < required_version:
-                    cls.setup_skip = 'Platform version %s required, got %s' % (required_version, current_version)
+                    self.setup_skip = 'Platform version %s required, got %s' % (required_version, current_version)
 
             ### Start ###
 
-            if cls.setup_error or cls.setup_skip:
+            if self.setup_error or self.setup_skip:
                 pass # go to exit
             else:
                 # If 'meta' in sandbox, restore applications that comes in meta before.
-                if cls.__dict__.get('meta'):
-                    cls.upload_metadata_applications(cls.__dict__.get('meta'))
+                if self.__dict__.get('meta'):
+                    self.upload_metadata_applications(self.__dict__.get('meta'))
 
-                services_to_start = [x for x in cls.sandbox['applications'] if x.get('add_as_service', False)]
-                instances_to_start = [x for x in cls.sandbox['applications'] if x.get('launch', True) and not x.get('add_as_service', False)]
+                services_to_start = [x for x in self.sandbox['applications'] if x.get('add_as_service', False)]
+                instances_to_start = [x for x in self.sandbox['applications'] if x.get('launch', True) and not x.get('add_as_service', False)]
 
                 for appdata in services_to_start:
-                    ins = cls.launch_instance(appdata)
-                    cls.service_instances.append(ins)
-                    cls.organization.environments[cls.current_environment].add_service(ins)
-                cls.check_instances(cls.service_instances)
+                    ins = self.launch_instance(appdata)
+                    self.service_instances.append(ins)
+                    self.organization.environments[self.current_environment].add_service(ins)
+                self.check_instances(self.service_instances)
 
                 for appdata in instances_to_start:
-                    cls.regular_instances.append(cls.launch_instance(appdata))
-                cls.check_instances(cls.regular_instances)
+                    self.regular_instances.append(self.launch_instance(appdata))
+                self.check_instances(self.regular_instances)
 
         except BaseException as e:
             import traceback
-            cls.setup_error_trace = traceback.format_exc()
+            self.setup_error_trace = traceback.format_exc()
             log.critical(e)
-            log.critical(cls.setup_error_trace)
+            log.critical(self.setup_error_trace)
         log.info("\n---------------  Sandbox prepared  ---------------\n\n")
 
-    def teardown_once(cls):
+    def teardown_once(self):
         log.info("\n---------------  Cleaning sandbox  ---------------")
 
-        cls.destroy_instances(cls.regular_instances)
-        cls.destroy_instances(cls.service_instances)
-        cls.regular_instances = []
-        cls.service_instances = []
+        self.destroy_instances(self.regular_instances)
+        self.destroy_instances(self.service_instances)
+        self.regular_instances = []
+        self.service_instances = []
 
         log.info("\n---------------  Sandbox cleaned  ---------------\n")
-        super(BaseTestCase, cls).tearDownClass()
+        super(SandBoxTestCase, self).teardown_once()
 
     def setUp(self):
-        super(BaseTestCase, self).setUp()
+        super(SandBoxTestCase, self).setUp()
         if self.setup_skip:
             raise self.skipTest(self.setup_skip)
 

@@ -220,4 +220,5 @@ class SandBox(object):
         else:
             return None
 
-from sandbox_testcase import BaseTestCase
+from sandbox_testcase import SandBoxTestCase
+BaseTestCase = SandBoxTestCase  # for compatibility
