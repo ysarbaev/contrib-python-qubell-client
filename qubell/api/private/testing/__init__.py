@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+from qubell.api.private.testing.prepare_once import SetupOnce
 
 __author__ = "Anton Panasenko"
 __copyright__ = "Copyright 2013, Qubell.com"
@@ -197,7 +198,7 @@ def instance(byApplication):
     return wrapper
 
 
-class BaseTestCase(unittest.TestCase):
+class BaseTestCase(SetupOnce, unittest.TestCase):
     platform = None
     parameters = None
     sandbox = None
@@ -249,15 +250,14 @@ class BaseTestCase(unittest.TestCase):
     def timeout(cls):
         return 15
 
-    @classmethod
-    def setUpClass(cls):
-        super(BaseTestCase, cls).setUpClass()
+    def setup_once(cls):
+        super(BaseTestCase, cls).setup_once()
 
         log.info("\n\n\n---------------  Preparing sandbox...  ---------------")
         try:
             cls.service_instances = []
             cls.regular_instances = []
-            org = cls.parameters.get('organization') or getattr(cls, 'source_name', False) or cls.__name__
+            org = cls.parameters.get('organization') or getattr(cls, 'source_name', False) or cls.__class__.__name__
 
             cls.sandbox = SandBox(cls.platform, cls.environment(org))
             cls.organization = cls.sandbox.make()
@@ -297,17 +297,13 @@ class BaseTestCase(unittest.TestCase):
                 cls.check_instances(cls.regular_instances)
 
         except BaseException as e:
-            import sys
-            cls.setup_error = sys.exc_info()
-
             import traceback
             cls.setup_error_trace = traceback.format_exc()
             log.critical(e)
             log.critical(cls.setup_error_trace)
         log.info("\n---------------  Sandbox prepared  ---------------\n\n")
 
-    @classmethod
-    def tearDownClass(cls):
+    def teardown_once(cls):
         log.info("\n---------------  Cleaning sandbox  ---------------")
 
         cls.destroy_instances(cls.regular_instances)
@@ -319,16 +315,15 @@ class BaseTestCase(unittest.TestCase):
         super(BaseTestCase, cls).tearDownClass()
 
     def setUp(self):
-        if self.setup_error:
-            raise self.setup_error[1], None, self.setup_error[2]
-        elif self.setup_skip:
+        super(BaseTestCase).setUp()
+        if self.setup_skip:
             raise self.skipTest(self.setup_skip)
+
 
     @classmethod
     def upload_metadata_applications(cls, metadata):
         cls.organization.set_applications_from_meta(metadata)
 
-    @classmethod
     def launch_instance(cls, appdata):
         application = cls.organization.applications[appdata['name']]
         environment = cls.organization.environments[cls.current_environment]

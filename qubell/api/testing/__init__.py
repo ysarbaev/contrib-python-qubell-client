@@ -45,10 +45,9 @@ class BaseComponentTestCase(SandBoxTestCase):
         base_env['applications'] = cls.apps or cls.applications
         return base_env
 
-    @classmethod
-    def setUpClass(cls):
-        cls.platform = Qubell.platform()
-        super(BaseComponentTestCase, cls).setUpClass()
+    def setup_once(self):
+        self.platform = Qubell.platform()
+        super(BaseComponentTestCase, self).setup_once()
 
 def eventually(*exceptions):
     """

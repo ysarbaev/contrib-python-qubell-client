@@ -27,18 +27,16 @@ from testtools.testcase import MismatchError
 
 class InstanceClassTest(BaseTestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        super(InstanceClassTest, cls).setUpClass()
-        cls.org = cls.organization
-        cls.app = cls.org.application(manifest=cls.manifest, name='Self-InstanceClassTest')
-        cls.ins = cls.org.create_instance(application=cls.app, name='Self-InstanceClassTest-Instance')
-        assert cls.ins.ready()
+    def setup_once(self):
+        super(InstanceClassTest, self).setup_once()
+        self.org = self.organization
+        self.app = self.org.application(manifest=self.manifest, name='Self-InstanceClassTest')
+        self.ins = self.org.create_instance(application=self.app, name='Self-InstanceClassTest-Instance')
+        assert self.ins.ready()
 
-    @classmethod
-    def tearDownClass(cls):
-        cls.ins.delete()
-        super(InstanceClassTest, cls).tearDownClass()
+    def teardown_once(self):
+        self.ins.delete()
+        super(InstanceClassTest, self).teardown_once()
 
     def test_instances_sugar(self):
         org = self.org
@@ -156,7 +154,6 @@ class InstanceClassTest(BaseTestCase):
         # It's not constant
         #self.assertEqual(len(all_logs), 14)
         #self.assertEqual(len(info_logs), 5)
-
 
         for log in info_logs:
             assert log['severity'] == 'INFO'

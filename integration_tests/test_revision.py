@@ -19,15 +19,13 @@ from qubell.api.private import exceptions
 
 class RevisionClassTest(BaseTestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        super(RevisionClassTest, cls).setUpClass()
-        cls.app = cls.organization.create_application(manifest=cls.manifest, name='Self-RevisionClassTest')
+    def setup_once(self):
+        super(RevisionClassTest, self).setup_once()
+        self.app = self.organization.create_application(manifest=self.manifest, name='Self-RevisionClassTest')
 
-    @classmethod
-    def tearDownClass(cls):
-        cls.app.delete()
-        super(RevisionClassTest, cls).tearDownClass()
+    def teardown_once(self):
+        self.app.delete()
+        super(RevisionClassTest, self).teardown_once()
 
     def test_revision_crud(self):
         revision_name = 'test-crud-revision'
@@ -39,7 +37,7 @@ class RevisionClassTest(BaseTestCase):
         assert instance.ready(), 'Failed to launch instance.'
 
         # Check that instance associated with revision
-        rev_instances = [x for x in self.app.json()['revisions'] if x['instancesIds'][0] == instance.id]
+        rev_instances = [r for r in self.app.revisions if r.json()['instancesIds'][0] == instance.id]
         assert len(rev_instances), "Instance doesn't have revision"
         # assert rev.id in instance.json()['revision']['id'], there is an issue
         assert rev.id == self.app.revisions[revision_name].id, "Different revision Ids"
@@ -48,5 +46,5 @@ class RevisionClassTest(BaseTestCase):
         assert instance.destroyed(), "Instance with revision, cannot be destroyed"
 
         self.app.revisions[rev.id].delete()
-        rev_instances = [x for x in self.app.json()['revisions'] if x['instancesIds'][0] == instance.id]
+        rev_instances = [r for r in self.app.revisions if r.json()['instancesIds'][0] == instance.id]
         assert len(rev_instances) == 0, "Revision was not deleted"

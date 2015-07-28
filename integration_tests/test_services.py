@@ -26,17 +26,15 @@ from qubell.api.private.instance import Instance
 
 class ServiceClassTest(BaseTestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        super(ServiceClassTest, cls).setUpClass()
-        cls.org = cls.organization
-        cls.env = cls.org.create_environment(name='Self-ServiceClassTest-Env')
-        cls.app = cls.org.application(manifest=cls.manifest, name='Self-ServiceClassTest')
+    def setup_once(self):
+        super(ServiceClassTest, self).setup_once()
+        self.org = self.organization
+        self.env = self.org.create_environment(name='Self-ServiceClassTest-Env')
+        self.app = self.org.application(manifest=self.manifest, name='Self-ServiceClassTest')
 
-    @classmethod
-    def tearDownClass(cls):
-        cls.env.delete()
-        super(ServiceClassTest, cls).tearDownClass()
+    def teardown_once(self):
+        self.env.delete()
+        super(ServiceClassTest, self).teardown_once()
 
 
     def test_create_service_method(self):

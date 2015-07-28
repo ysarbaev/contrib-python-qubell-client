@@ -27,17 +27,14 @@ from qubell.api.private.manifest import Manifest
 
 class ApplicationClassTest(BaseTestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        super(ApplicationClassTest, cls).setUpClass()
-        cls.org = cls.organization
-        cls.app = cls.org.create_application(manifest=cls.manifest, name='Self-ApplicationClassTest')
+    def setup_once(self):
+        super(ApplicationClassTest, self).setup_once()
+        self.org = self.organization
+        self.app = self.org.create_application(manifest=self.manifest, name='Self-ApplicationClassTest')
 
-    @classmethod
-    def tearDownClass(cls):
-        cls.app.delete()
-        super(ApplicationClassTest, cls).tearDownClass()
-
+    def teardown_once(self):
+        self.app.delete()
+        super(ApplicationClassTest, self).teardown_once()
 
     def test_applications_sugar(self):
         org = self.org

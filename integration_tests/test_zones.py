@@ -27,21 +27,15 @@ from qubell.api.private.manifest import Manifest
 
 class ZonesClassTest(BaseTestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        super(ZonesClassTest, cls).setUpClass()
-        cls.org = cls.organization
-        cls.zone = cls.org.get_default_zone()
-
-    @classmethod
-    def tearDownClass(cls):
-        super(ZonesClassTest, cls).tearDownClass()
+    def setup_once(self):
+        super(ZonesClassTest, self).setup_once()
+        self.org = self.organization
+        self.zone = self.org.get_default_zone()
 
     def test_get_default_zone(self):
         zn = self.org.get_default_zone()
         self.assertTrue(zn in self.org.zones)
         self.assertEqual(self.org.zone.zoneId, zn.zoneId)
-
 
     def test_zones_sugar(self):
         org = self.org
