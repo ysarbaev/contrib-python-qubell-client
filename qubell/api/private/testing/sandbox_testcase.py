@@ -196,3 +196,9 @@ class SandBoxTestCase(SetupOnce, unittest.TestCase):
             if inst.application.name == name:
                 return inst
         raise NotFoundError
+
+    def shortDescription(self):
+        """
+        http://www.saltycrane.com/blog/2012/07/how-prevent-nose-unittest-using-docstring-when-verbosity-2/
+        """
+        return None
