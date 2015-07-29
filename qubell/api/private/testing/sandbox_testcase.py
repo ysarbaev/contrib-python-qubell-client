@@ -147,7 +147,7 @@ class SandBoxTestCase(SetupOnce, unittest.TestCase):
     def setUp(self):
         super(SandBoxTestCase, self).setUp()
         if self.setup_skip:
-            raise self.skipTest(self.setup_skip)
+            self.skipTest(self.setup_skip)
 
 
     @classmethod
@@ -191,11 +191,14 @@ class SandBoxTestCase(SetupOnce, unittest.TestCase):
                                                                                                           instance.organizationId,
                                                                                                           instance.applicationId))
 
+    # todo: method is used in decarator only, would be nice to refactor
     def find_by_application_name(self, name):
-        for inst in self.regular_instances+self.service_instances:
+        instances = self.regular_instances+self.service_instances
+        for inst in instances:
             if inst.application.name == name:
                 return inst
-        raise NotFoundError
+        raise NotFoundError("Instance of '{}' application is not found among: {}.".
+                            format(name, ", ".join([i.name for i in instances])))
 
     def shortDescription(self):
         """
