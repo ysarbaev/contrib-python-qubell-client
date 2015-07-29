@@ -179,6 +179,9 @@ class Application(Entity, InstanceRouter):
     def get_manifest(self):
         return self._router.post_application_refresh(org_id=self.organizationId, app_id=self.applicationId).json()
 
+    def get_manifest_latest(self):
+        return self._router.get_application_manifests_latest(org_id=self.organizationId, app_id=self.applicationId).json()
+
     def upload(self, manifest):
         log.info("Uploading manifest: %s to application: id=%s" % (manifest.source, self.applicationId))
         # noinspection PyAttributeOutsideInit
