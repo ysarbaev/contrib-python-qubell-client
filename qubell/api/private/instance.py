@@ -155,6 +155,10 @@ class Instance(Entity, ServiceMixin, InstanceRouter):
     returnValues = return_values
     errorMessage = error
 
+    def get_configuration(self):
+        return self._router.get_instance_configuration(org_id=self.organizationId,
+                                                       instance_id=self.instanceId).json()
+
     @property
     def parameters(self):
         # todo: Public api hack.
