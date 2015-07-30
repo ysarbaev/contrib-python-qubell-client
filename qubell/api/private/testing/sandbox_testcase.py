@@ -83,6 +83,10 @@ class SandBoxTestCase(SetupOnce, unittest.TestCase):
         try:
             self.service_instances = []
             self.regular_instances = []
+
+            #todo: refactor, reading `_ or _ or _` is unclear final result
+            if os.getenv("QUBELL_IT_LOCAL"):
+                self.parameters['organization'] = None
             org = self.parameters.get('organization') or getattr(self, 'source_name', False) or self.__class__.__name__
 
             self.sandbox = SandBox(self.platform, self.environment(org))
