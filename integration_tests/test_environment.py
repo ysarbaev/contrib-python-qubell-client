@@ -89,13 +89,6 @@ class EnvironmentClassTest(BaseTestCase):
         self.assertEqual(base_env, org.environment(id=base_env.id))
         self.assertEqual(base_env, org.environment(id=base_env.id, name='Self-smart_environment_method'))
 
-        """ TODO: check all variants
-        # Modify environment
-        new_name_env = org.environment(id=base_env.id, name='Self-smart_environment_method-new-name')
-        self.assertEqual(base_env, new_name_env)
-        self.assertEqual('Self-smart_environment_method-new-name', new_name_env.name)
-        """
-
         # Create environment
         new_environment = org.environment(name='Self-smart_environment_method-create')
         self.assertEqual('Self-smart_environment_method-create', new_environment.name)
@@ -208,6 +201,7 @@ class EnvironmentClassTest(BaseTestCase):
         return False
 
     def policy_exists(self, data, name, value=None):
+        # noinspection PyShadowingNames
         policy_name = lambda p: "{}.{}".format(p.get('action'), p.get('parameter'))
         pol = [p for p in data['policies'] if policy_name(p) == name]
         if len(pol) == 0:

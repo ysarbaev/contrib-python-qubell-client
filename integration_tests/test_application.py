@@ -59,7 +59,6 @@ class ApplicationClassTest(BaseTestCase):
 
         self.assertTrue(my_app.delete())
 
-
     def test_get_or_create_application_method(self):
         app = self.app
         org = self.org
@@ -73,7 +72,6 @@ class ApplicationClassTest(BaseTestCase):
         self.assertTrue(new_app.id)
         self.assertEqual(new_app.name, 'Self-get_or_create_application-test')
         self.assertTrue(new_app.delete())
-
 
     def test_smart_application_method(self):
         org = self.org
@@ -104,7 +102,6 @@ class ApplicationClassTest(BaseTestCase):
 
         # Clean
         self.assertTrue(base_app.delete())
-
 
     def test_revision_create(self):
         app = self.app

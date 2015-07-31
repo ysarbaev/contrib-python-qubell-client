@@ -14,7 +14,6 @@
 # limitations under the License.
 
 from base import BaseTestCase
-from qubell.api.private import exceptions
 
 
 class RevisionClassTest(BaseTestCase):
@@ -39,7 +38,6 @@ class RevisionClassTest(BaseTestCase):
         # Check that instance associated with revision
         rev_instances = [r for r in self.app.revisions if r.json()['instancesIds'][0] == instance.id]
         assert len(rev_instances), "Instance doesn't have revision"
-        # assert rev.id in instance.json()['revision']['id'], there is an issue
         assert rev.id == self.app.revisions[revision_name].id, "Different revision Ids"
 
         instance.destroy()

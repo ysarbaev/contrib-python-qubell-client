@@ -14,10 +14,8 @@
 # limitations under the License.
 import unittest
 import os
-import logging as log
 
 from qubell.api.private.platform import QubellPlatform
-from qubell.api.private.common import Auth
 
 from qubell.api.private.manifest import Manifest
 from qubell.api.private.testing.setup_once import SetupOnce
