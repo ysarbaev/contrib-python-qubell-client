@@ -20,7 +20,8 @@ __version__ = "1.0.1"
 __email__ = "vkhomenko@qubell.com"
 
 
-from base import BaseTestCase, eventually
+from base import BaseTestCase
+from qubell.api.testing import eventually
 from qubell.api.private.instance import Instance
 from testtools.testcase import MismatchError
 
@@ -160,6 +161,7 @@ class InstanceClassTest(BaseTestCase):
 
         assert 'Active' in info_logs
         self.assertRegexpMatches(all_logs[0], 'command started: launch \(.*\) by .*')
+
         @eventually(AssertionError, MismatchError)
         def assert_eventually():
             # Last line could be one og this.

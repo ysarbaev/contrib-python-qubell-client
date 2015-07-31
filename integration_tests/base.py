@@ -16,41 +16,21 @@ import unittest
 import os
 import logging as log
 
-import testtools
-import nose.plugins.attrib
-
 from qubell.api.private.platform import QubellPlatform
 from qubell.api.private.common import Auth
 
 from qubell.api.private.manifest import Manifest
 from qubell.api.private.testing.setup_once import SetupOnce
-from qubell.api.tools import retry
 from qubell.api.private.service import COBALT_SECURE_STORE_TYPE, WORKFLOW_SERVICE_TYPE, SHARED_INSTANCE_CATALOG_TYPE
+
+# this is required for used imports
+# noinspection PyUnresolvedReferences
+from qubell.api.testing import eventually, attr
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
 __license__ = "Apache"
 __email__ = "vkhomenko@qubell.com"
-
-def attr(*args, **kwargs):
-    """A decorator which applies the nose and testtools attr decorator
-    """
-    def decorator(f):
-        f = testtools.testcase.attr(args)(f)
-        if not 'skip' in args:
-            return nose.plugins.attrib.attr(*args, **kwargs)(f)
-        # TODO: Should do something if test is skipped
-    return decorator
-
-def eventually(*exceptions):
-    """
-    Method decorator, that waits when something inside eventually happens
-    Note: 'sum([delay*backoff**i for i in range(tries)])' ~= 580 seconds ~= 10 minutes
-    :param exceptions: same as except parameter, if not specified, valid return indicated success
-    :return:
-    """
-    return retry(tries=50, delay=0.5, backoff=1.1, retry_exception=exceptions)
-
 
 parameters = {
     'organization': os.getenv('QUBELL_ORGANIZATION', "selfcheck_organization_name"),
