@@ -92,7 +92,8 @@ class SandBoxTestCase(SetupOnce, unittest.TestCase):
             self.sandbox = SandBox(self.platform, self.environment(org))
             if hasattr(self, '_wait_for_prev'):
                 # in case of simultaneous run spreads preparation on timeline
-                SPREAD_IN_TIME_MULTIPLIER = 3
+                # todo: it seems sometimes later test is executed earlier and still race may occur
+                SPREAD_IN_TIME_MULTIPLIER = 5
                 time.sleep(self._wait_for_prev * SPREAD_IN_TIME_MULTIPLIER)
             self.organization = self.sandbox.make()
 
