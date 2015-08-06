@@ -37,4 +37,8 @@ class EnvironmentDecoratorTests(unittest.TestCase):
         assert globals()['DummyTests_b_b'].current_environment == 'b_b'
         assert globals()['DummyTests'].current_environment == 'default'
 
+        assert not hasattr(globals()['DummyTests_a'], '_wait_for_prev')
+        assert globals()['DummyTests_b_b']._wait_for_prev == 1
+        assert globals()['DummyTests_default']._wait_for_prev == 2
+
 

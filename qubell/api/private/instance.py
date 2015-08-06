@@ -88,7 +88,7 @@ class Instance(Entity, ServiceMixin, InstanceRouter):
             return InstanceList(list_json_method=lambda: self.json()['components'], organization=self.organization).init_router(self._router)
         return InstanceList(list_json_method=lambda: self.json()['submodules'], organization=self.organization).init_router(self._router)
 
-    @lazyproperty
+    @property
     def destroyAt(self):
         j = self.json()
         return j.get('destroyAt', False)

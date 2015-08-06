@@ -28,19 +28,17 @@ class EnvironmentClassTest(BaseTestCase):
     name = 'Self-EnvironmentClassTest'
 
     # noinspection PyUnresolvedReferences
-    @classmethod
-    def setUpClass(cls):
-        super(EnvironmentClassTest, cls).setUpClass()
-        cls.org = cls.organization
-        cls.app = cls.org.create_application(manifest=cls.manifest, name=cls.name)
-        cls.env = cls.org.create_environment(name=cls.name)
+    def setup_once(self):
+        super(EnvironmentClassTest, self).setup_once()
+        self.org = self.organization
+        self.app = self.org.create_application(manifest=self.manifest, name=self.name)
+        self.env = self.org.create_environment(name=self.name)
 
     # noinspection PyUnresolvedReferences
-    @classmethod
-    def tearDownClass(cls):
-        cls.env.delete()
-        cls.app.delete()
-        super(EnvironmentClassTest, cls).tearDownClass()
+    def teardown_once(self):
+        self.env.delete()
+        self.app.delete()
+        super(EnvironmentClassTest, self).teardown_once()
 
     def test_environments_sugar(self):
         org = self.org
@@ -90,13 +88,6 @@ class EnvironmentClassTest(BaseTestCase):
         self.assertEqual(base_env, org.environment(name='Self-smart_environment_method'))
         self.assertEqual(base_env, org.environment(id=base_env.id))
         self.assertEqual(base_env, org.environment(id=base_env.id, name='Self-smart_environment_method'))
-
-        """ TODO: check all variants
-        # Modify environment
-        new_name_env = org.environment(id=base_env.id, name='Self-smart_environment_method-new-name')
-        self.assertEqual(base_env, new_name_env)
-        self.assertEqual('Self-smart_environment_method-new-name', new_name_env.name)
-        """
 
         # Create environment
         new_environment = org.environment(name='Self-smart_environment_method-create')
@@ -210,6 +201,7 @@ class EnvironmentClassTest(BaseTestCase):
         return False
 
     def policy_exists(self, data, name, value=None):
+        # noinspection PyShadowingNames
         policy_name = lambda p: "{}.{}".format(p.get('action'), p.get('parameter'))
         pol = [p for p in data['policies'] if policy_name(p) == name]
         if len(pol) == 0:

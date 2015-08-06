@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import re
+import functools
 
 __author__ = "Vasyl Khomenko"
 __copyright__ = "Copyright 2013, Qubell.com"
@@ -42,6 +43,7 @@ def retry(tries=10, delay=1, backoff=2, retry_exception=None):
     catching_mode = bool(retry_exception)
 
     def deco_retry(f):
+        @functools.wraps(f)
         def f_retry(*args, **kwargs):
             mtries, mdelay = tries, delay
 
