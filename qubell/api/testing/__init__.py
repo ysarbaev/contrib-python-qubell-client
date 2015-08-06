@@ -85,9 +85,9 @@ def attr(*args, **kwargs):
             return bug(bug_num)(f)
 
         else:
-            tt_dec = testtools.testcase.attr(args)(f)
+            tt_dec = testtools.testcase.attr(*args)(f)
             nose_dec = nose.plugins.attrib.attr(*args, **kwargs)(tt_dec)
-            return functools.wraps(f)(nose_dec)
+            return nose_dec
 
     return decorator
 
