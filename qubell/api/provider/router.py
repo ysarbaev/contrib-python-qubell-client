@@ -337,6 +337,15 @@ class PrivatePath(Router):
     @route("POST /organizations/{org_id}/application-kits.json")
     def post_application_kits(self, org_id, data, cookies): pass
 
+    # yes it uses public api but this is only convenient way to call command and get json results
+    @basic_auth
+    @route("POST /api/1/services/{instance_id}/{command_name}")
+    def post_service_command(self, org_id, instance_id, command_name, auth, data="{}"):
+        """
+        :param org_id: not yet used but added for compatibility with future private api
+        """
+        pass
+
 
 class PublicPath(PrivatePath):
 # TODO: Public api hack.
