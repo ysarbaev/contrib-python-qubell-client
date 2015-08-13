@@ -534,7 +534,7 @@ class Organization(Entity, InstanceRouter):
         :return:
         """
         if roles is None:
-            role_ids = list(self.roles['Guest'].roleId)
+            role_ids = [self.roles['Guest'].roleId]
         elif roles == "ALL":
             role_ids = list([i.id for i in self.roles])
         else:
