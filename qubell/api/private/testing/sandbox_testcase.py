@@ -33,8 +33,6 @@ class SandBoxTestCase(SetupOnce, unittest.TestCase):
     instances = []
     current_environment = DEFAULT_ENV_NAME()
 
-    setup_error = None
-    setup_error_trace = None
     setup_skip = None
 
     @classmethod
@@ -80,62 +78,56 @@ class SandBoxTestCase(SetupOnce, unittest.TestCase):
         super(SandBoxTestCase, self).setup_once()
 
         log.info("\n\n\n---------------  Preparing sandbox...  ---------------")
-        try:
-            self.service_instances = []
-            self.regular_instances = []
+        self.service_instances = []
+        self.regular_instances = []
 
-            #todo: refactor, reading `_ or _ or _` is unclear final result
-            if os.getenv("QUBELL_IT_LOCAL"):
-                self.parameters['organization'] = None
-            org = self.parameters.get('organization') or getattr(self, 'source_name', False) or self.__class__.__name__
+        #todo: refactor, reading `_ or _ or _` is unclear final result
+        if os.getenv("QUBELL_IT_LOCAL"):
+            self.parameters['organization'] = None
+        org = self.parameters.get('organization') or getattr(self, 'source_name', False) or self.__class__.__name__
 
-            self.sandbox = SandBox(self.platform, self.environment(org))
-            if hasattr(self, '_wait_for_prev'):
-                # in case of simultaneous run spreads preparation on timeline
-                # todo: it seems sometimes later test is executed earlier and still race may occur
-                SPREAD_IN_TIME_MULTIPLIER = 5
-                time.sleep(self._wait_for_prev * SPREAD_IN_TIME_MULTIPLIER)
-            self.organization = self.sandbox.make()
+        self.sandbox = SandBox(self.platform, self.environment(org))
+        if hasattr(self, '_wait_for_prev'):
+            # in case of simultaneous run spreads preparation on timeline
+            # todo: it seems sometimes later test is executed earlier and still race may occur
+            SPREAD_IN_TIME_MULTIPLIER = 5
+            time.sleep(self._wait_for_prev * SPREAD_IN_TIME_MULTIPLIER)
+        self.organization = self.sandbox.make()
 
-            if self.__dict__.get('platform_version'):
-                ver = self.organization.get_default_environment().get_backend_version()
-                try:
-                    current_version = float(ver)
-                except ValueError:
-                    # dev version: '41.0.148.g5ef3b00 2015-05-14 14:49:36'
-                    # universe version: 'v. v41.0.171.g8230c89'
-                    current_version = float(re.findall(r'\d+', ver)[0]+'.'+re.findall(r'\d+', ver)[1])
-                required_version = float(self.platform_version)
-                if current_version < required_version:
-                    self.setup_skip = 'Platform version %s required, got %s' % (required_version, current_version)
+        if self.__dict__.get('platform_version'):
+            ver = self.organization.get_default_environment().get_backend_version()
+            try:
+                current_version = float(ver)
+            except ValueError:
+                # dev version: '41.0.148.g5ef3b00 2015-05-14 14:49:36'
+                # universe version: 'v. v41.0.171.g8230c89'
+                current_version = float(re.findall(r'\d+', ver)[0]+'.'+re.findall(r'\d+', ver)[1])
+            required_version = float(self.platform_version)
+            if current_version < required_version:
+                self.setup_skip = 'Platform version %s required, got %s' % (required_version, current_version)
 
-            ### Start ###
+        ### Start ###
 
-            if self.setup_error or self.setup_skip:
-                pass # go to exit
-            else:
-                # If 'meta' in sandbox, restore applications that comes in meta before.
-                if self.__dict__.get('meta'):
-                    self.upload_metadata_applications(self.__dict__.get('meta'))
+        if self.setup_skip:
+            pass # go to exit
+        else:
+            # If 'meta' in sandbox, restore applications that comes in meta before.
+            if self.__dict__.get('meta'):
+                self.upload_metadata_applications(self.__dict__.get('meta'))
 
-                services_to_start = [x for x in self.sandbox['applications'] if x.get('add_as_service', False)]
-                instances_to_start = [x for x in self.sandbox['applications'] if x.get('launch', True) and not x.get('add_as_service', False)]
+            services_to_start = [x for x in self.sandbox['applications'] if x.get('add_as_service', False)]
+            instances_to_start = [x for x in self.sandbox['applications'] if x.get('launch', True) and not x.get('add_as_service', False)]
 
-                for appdata in services_to_start:
-                    ins = self.launch_instance(appdata)
-                    self.service_instances.append(ins)
-                    self.organization.environments[self.current_environment].add_service(ins)
-                self.check_instances(self.service_instances)
+            for appdata in services_to_start:
+                ins = self.launch_instance(appdata)
+                self.service_instances.append(ins)
+                self.organization.environments[self.current_environment].add_service(ins)
+            self.check_instances(self.service_instances)
 
-                for appdata in instances_to_start:
-                    self.regular_instances.append(self.launch_instance(appdata))
-                self.check_instances(self.regular_instances)
+            for appdata in instances_to_start:
+                self.regular_instances.append(self.launch_instance(appdata))
+            self.check_instances(self.regular_instances)
 
-        except BaseException as e:
-            import traceback
-            self.setup_error_trace = traceback.format_exc()
-            log.critical(e)
-            log.critical(self.setup_error_trace)
         log.info("\n---------------  Sandbox prepared  ---------------\n\n")
 
     def teardown_once(self):
