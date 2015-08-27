@@ -23,6 +23,7 @@ from functools import wraps
 import logging
 
 from nose.plugins.skip import SkipTest
+from qubell.api.globals import ZoneConstants
 
 logging.getLogger("requests.packages.urllib3.connectionpool").setLevel(logging.ERROR)
 
@@ -124,15 +125,17 @@ def _parameterize(source_case, cases):
             clean_class(source_case)
 
             for i, env in enumerate(cases.keys()):
-                env_name = norm(env)
-                updated_case = type('{0}_{1}'.format(case_name, env_name), (source_case,), attrs)
-                setattr(updated_case, 'className', env_name)
+                env_suffix = norm(env)
+                updated_case = type('{0}_{1}'.format(case_name, env_suffix), (source_case,), attrs)
+                setattr(updated_case, 'className', env_suffix)
                 setattr(case_mod, updated_case.__name__, updated_case)
                 if i > 0:
                     # this attribute helps to spread in time environment setup
                     updated_case._wait_for_prev = i
+
+                # If ZONE_NAME set we should change env names to corresponding. So, new would be created in zone or cached by existing by name
                 # fixme: this attribute should endswith _name
-                updated_case.current_environment = env_name
+                updated_case.current_environment = env + ZoneConstants.zone_suffix()
                 updated_case.source_name = case_name
                 yield updated_case
         else:
@@ -144,15 +147,8 @@ def parameterize(source_case, cases={}):
 
 def environment(params):
     def wraps_class(clazz):
-        # If QUBELL_ZONE set we should change env names to corresponding. So, new would be created in zone or cached by existing by name
-        zone = os.getenv('QUBELL_ZONE')
         parameterize(source_case=clazz, cases=params)
-        if zone:
-            for key, value in params.items():
-                name = '{0} at {1}'.format(key, zone)
-                params[name] = params.pop(key)
         clazz.environments = format_as_api(params)
-
         return clazz
     return wraps_class
 environments = environment
