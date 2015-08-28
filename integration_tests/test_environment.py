@@ -118,6 +118,21 @@ class EnvironmentClassTest(BaseTestCase):
         assert service.destroyed()
         assert len(env.services) == 1  # WF still there.
 
+    def test_replace_service_of_same_app(self):
+        wf = self.org.get_instance(name="Default workflow service")
+        self.env.add_service(wf)
+
+        service = self.org.create_service(self.app, environment=self.env)
+        assert service in self.env.services
+
+        service2 = self.org.create_service(self.app, environment=self.env)
+
+        assert service2 in self.env.services
+        assert service not in self.env.services
+
+        service.destroy()
+        service2.destroy()
+
     def test_marker_crud(self):
         marker = "crud_test"
         self.env.add_marker(marker)

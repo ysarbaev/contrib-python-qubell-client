@@ -241,8 +241,23 @@ class Environment(Entity, InstanceRouter):
             log.info("Removing policy %s from environment %s (%s)" % (matchers, env_name, self.id))
 
         def add_service(service):
-            if service.instanceId not in data['serviceIds']:
-                data['serviceIds'].append(service.instanceId)
+            # remove service of the same applicationId if already in env
+            app_id = service.applicationId
+            services_json = [s for s in data['services'] if 'applicationId' in s and s['applicationId'] == app_id]
+            if len(services_json) > 0 \
+                    and app_id == services_json[0]['applicationId'] \
+                    and service.id != services_json[0]['id']:
+                from collections import namedtuple
+                FakeInstance = namedtuple("Instance", "id")  # Fake type that can be passed to remove_service
+                service_json = services_json[0]
+                wrong_service = FakeInstance(id=service_json['id'])
+                log.warn("'{}' service  from the same '{}' application found in environment and will be removed".
+                         format(service_json['name'], service_json['applicationName']))
+                # noinspection PyTypeChecker
+                remove_service(wrong_service)
+
+            if service.id not in data['serviceIds']:
+                data['serviceIds'].append(service.id)
                 data['services'].append(service.json())
                 log.info("Adding service id=%s to environment %s (%s)" %
                          (service.id, env_name, self.id))
@@ -257,7 +272,7 @@ class Environment(Entity, InstanceRouter):
                 set_policy({"action": "provisionVms", "parameter": "publicKeyId", "value": key})
 
         def remove_service(service):
-            data['serviceIds'].remove(service.instanceId)
+            data['serviceIds'].remove(service.id)
             data['services'] = [s for s in data['services'] if s['id'] != service.id]
             log.info("Removing service id=%s from environment %s (%s)" %
                      (service.id, env_name, self.id))
