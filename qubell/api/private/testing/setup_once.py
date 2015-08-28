@@ -15,6 +15,7 @@
 import sys
 import unittest
 
+
 class SetupOnceError(Exception):
     def __init__(self, cause):
         super(SetupOnceError, self).__init__('caused by ' + repr(cause))
@@ -38,6 +39,9 @@ class SetupOnce(object):
     _counter = 0
     _test_count = 0
 
+    _tear_down_called = False
+    __self = None
+
     setup_error = None
 
     @classmethod
@@ -45,6 +49,7 @@ class SetupOnce(object):
         super(SetupOnce, cls).setUpClass()
         # noinspection PyProtectedMember
         tests = unittest.TestLoader().loadTestsFromTestCase(cls)._tests
+
         cls._test_count = len(tests)
 
         # parse skip decorator, unittest has special logic for this avoiding running setUp or tearDown
@@ -55,6 +60,15 @@ class SetupOnce(object):
             if hasattr(a, '__unittest_skip__') and a.__unittest_skip__:
                 unitest_skip_count += 1
         cls._test_count -= unitest_skip_count
+
+    @classmethod
+    def tearDownClass(cls):
+        if not cls._tear_down_called:
+            try:
+                cls.__self.__wrapped_tearDown()
+            finally:
+                cls.__self = None  # release pointer
+        super(SetupOnce, cls).setUpClass()
 
     def setup_once(self):
         """
@@ -70,6 +84,11 @@ class SetupOnce(object):
 
     def setUp(self):
         super(SetupOnce, self).setUp()
+        if not self.__class__.__self:
+            # When attributes are used, it is impossible to calculate number of tests
+            # In this case tearDownClass will call teardown_once for sure, if it wasn't called.
+            # Due to nature per one suite - one instance, this shouldn't be a memory issue
+            self.__class__.__self = self  # hack, to call tearDown in class method.
         self.__class__._counter += 1
         if self.__class__._counter == 1:
             try:
@@ -90,19 +109,25 @@ class SetupOnce(object):
             else:
                 raise SetupOnceError(self.__class__.setup_error[1]), None, self.__class__.setup_error[2]
 
+    def __wrapped_tearDown(self):
+        try:
+            self.__class__._tear_down_called = True
+            self.teardown_once()
+            self.__class__.__self = None
+        except BaseException:
+            teardown_error = sys.exc_info()
+            raise TeardownOnceError(teardown_error[1]), None, teardown_error[2]
+
     def tearDown(self):
         if self.__class__._counter == self._test_count:
-            try:
-                self.teardown_once()
-            except BaseException:
-                teardown_error = sys.exc_info()
-                raise TeardownOnceError(teardown_error[1]), None, teardown_error[2]
+            self.__wrapped_tearDown()
+
         super(SetupOnce, self).tearDown()
 
 
 
 if __name__ == '__main__':
-    # this block for testing purposes
+# this block for testing purposes
 
     import logging
 
@@ -260,3 +285,21 @@ if __name__ == '__main__':
 
         def test_pass2(self):
             pass
+
+    from nose.plugins.attrib import attr
+
+    class TearDownOnceAttrTest(TestFullBase):
+        def teardown_once(self):
+            assert False, "this is good if with tag we've reached here"
+            super(TearDownOnceAttrTest, self).teardown_once()
+
+        @attr("pass")
+        def test_pass(self):
+            pass
+
+        @attr("pass")
+        def test_pass2(self):
+            pass
+
+        def test_fail(self):
+            assert False
