@@ -91,7 +91,7 @@ class Environment(Entity, InstanceRouter):
                 env.add_property(**prop)
             for service in config.pop('services', []):
                 instance = self.organization.get_instance(id=service.pop('id', None), name=service.pop('name'))
-                env.add_service(instance, force=True)
+                env.add_service(instance)
             for component_policy in config.pop('componentPolicies', []):
                 env.set_component_policy(**component_policy)
         for service in self.services:
