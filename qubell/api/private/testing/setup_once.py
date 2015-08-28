@@ -65,7 +65,8 @@ class SetupOnce(object):
     def tearDownClass(cls):
         if not cls._tear_down_called:
             try:
-                cls.__self.__wrapped_tearDown()
+                if cls.__self:
+                    cls.__self.__wrapped_tearDown()
             finally:
                 cls.__self = None  # release pointer
         super(SetupOnce, cls).setUpClass()
