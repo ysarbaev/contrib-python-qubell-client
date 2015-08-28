@@ -121,7 +121,7 @@ class SandBoxTestCase(SetupOnce, unittest.TestCase):
             for appdata in services_to_start:
                 ins = self.launch_instance(appdata)
                 self.service_instances.append(ins)
-                self.organization.environments[self.current_environment].add_service(ins)
+                self.organization.environments[self.current_environment].add_service(ins, force=True)
             self.check_instances(self.service_instances)
 
             for appdata in instances_to_start:
