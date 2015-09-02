@@ -84,3 +84,8 @@ class EnvironmentDecoratorTests(unittest.TestCase):
             assert globals()['ZoneDummyTests_a'].current_environment == 'a' + zone_suffix
             assert globals()['ZoneDummyTests_default'].current_environment == 'default' + zone_suffix
             assert globals()['ZoneDummyTests_b_b'].current_environment == 'b - b' + zone_suffix
+
+            # environments are filtered
+            assert globals()['ZoneDummyTests_a'].environments == [{"A": "AA", "name": 'a' + zone_suffix}]
+            assert globals()['ZoneDummyTests_default'].environments == [{"C": "CC", "name": 'default' + zone_suffix}]
+            assert globals()['ZoneDummyTests_b_b'].environments == [{"B": "BB", "name": 'b - b' + zone_suffix}]
