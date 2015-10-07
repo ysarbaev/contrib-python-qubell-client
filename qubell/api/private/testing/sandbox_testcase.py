@@ -112,8 +112,8 @@ class SandBoxTestCase(SetupOnce, unittest.TestCase):
             pass # go to exit
         else:
             # If 'meta' in sandbox, restore applications that comes in meta before.
-            if self.__dict__.get('meta'):
-                self.upload_metadata_applications(self.__dict__.get('meta'))
+            if hasattr(self, 'meta'):
+                self.upload_metadata_applications(self.meta)
 
             services_to_start = [x for x in self.sandbox['applications'] if x.get('add_as_service', False)]
             instances_to_start = [x for x in self.sandbox['applications'] if x.get('launch', True) and not x.get('add_as_service', False)]
