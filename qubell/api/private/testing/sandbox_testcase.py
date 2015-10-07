@@ -146,10 +146,8 @@ class SandBoxTestCase(SetupOnce, unittest.TestCase):
         if self.setup_skip:
             self.skipTest(self.setup_skip)
 
-
-    @classmethod
-    def upload_metadata_applications(cls, metadata):
-        cls.organization.set_applications_from_meta(metadata)
+    def upload_metadata_applications(self, metadata):
+        self.organization.set_applications_from_meta(metadata)
 
     def launch_instance(cls, appdata):
         application = cls.organization.applications[appdata['name']]
