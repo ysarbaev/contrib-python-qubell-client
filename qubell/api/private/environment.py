@@ -352,6 +352,7 @@ class Environment(Entity, InstanceRouter):
                                                           environment=self,
                                                           parameters=PROVIDER_CONFIG)
         assert cloud_account_service.running()
+        time.sleep(3) # Imidiate adding to env cause CA not to drop destroy interval. Known issue.
         with self as env:
             env.add_service(wf_service, force=True)
             env.add_service(key_service, force=True)
