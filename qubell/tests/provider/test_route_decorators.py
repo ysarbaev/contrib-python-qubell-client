@@ -1,8 +1,5 @@
 import unittest
 
-@basic_auth
-@route("DELETE /auth")
-def delete_something_publicly(self, auth): pass
 from mock import patch
 
 from qubell.api.private.exceptions import ApiUnauthorizedError, ApiAuthenticationError, ApiNotFoundError, ApiError
