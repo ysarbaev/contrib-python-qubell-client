@@ -347,6 +347,9 @@ class PrivatePath(Router):
         pass
 
 
+# TODO: We shouldn't use subclassing to substitute private API for public API. Instead we should
+# TODO: use a flag inside the client to distinguish between APIs and select the approprate methods to call
+# TODO: inside the client itself.
 class PublicPath(PrivatePath):
 # TODO: Public api hack.
 # We replace private routes with public ones. Fixing response reaction in code.
@@ -398,6 +401,114 @@ class PublicPath(PrivatePath):
     @basic_auth
     @route("GET /api/1/organizations/{org_id}/environments")
     def get_environments(self, org_id, auth): pass
+
+    # Above methods are kept for backwards compatibility; when/if the client is refactored,
+    # they should go away, as well as the extension of `PrivatePath`.
+
+    # Applications
+
+    @basic_auth
+    @route("POST /api/1/applications/{app_id}/launch")
+    def api1_application_launch(self, app_id, json, auth): pass
+
+    @basic_auth
+    @route("PUT /api/1/applications/{app_id}/manifest")
+    def api1_application_put_manifest(self, app_id, data, auth, content_type="yaml"): pass
+
+    @basic_auth
+    @route("GET /api/1/applications/{app_id}/revisions")
+    def api1_application_list_revisions(self, app_id, auth): pass
+
+    # Instances
+
+    @basic_auth
+    @route("GET /api/1/instances/{instance_id}")
+    def api1_instance_details(self, instance_id, auth): pass
+
+    @basic_auth
+    @route("DELETE /api/1/instances/{instance_id}")
+    def api1_instance_delete(self, instance_id, auth, params): pass
+
+    @basic_auth
+    @route("POST /api/1/instances/{instance_id}/destroy")
+    def api1_instance_run_destroy(self, instance_id, auth, json): pass
+
+    @basic_auth
+    @route("POST /api/1/instances/{instance_id}/{workflow}")
+    def api1_instance_run_workflow(self, instance_id, workflow, auth, json): pass
+
+    @basic_auth
+    @route("PUT /api/1/instances/{instance_id}/userData")
+    def api1_instance_set_user_data(self, instance_id, json, auth): pass
+
+    # Environments
+
+    @basic_auth
+    @route("GET /api/1/environments/{env_id}")
+    def api1_environment_export(self, env_id, auth): pass
+
+    @basic_auth
+    @route("PUT /api/1/environments/{env_id}")
+    def api1_environment_import(self, env_id, json, auth): pass
+
+    @basic_auth
+    @route("GET /api/1/environments/{env_id}/instances")
+    def api1_environment_list_instances(self, env_id, auth): pass
+
+    @basic_auth
+    @route("GET /api/1/environments/{env_id}/markers")
+    def api1_environment_list_markers(self, env_id, auth): pass
+
+    @basic_auth
+    @route("PUT /api/1/environments/{env_id}/properties")
+    def api1_environment_update_markers(self, env_id, json, auth): pass
+
+    @basic_auth
+    @route("GET /api/1/environments/{env_id}/properties")
+    def api1_environment_list_properties(self, env_id, auth): pass
+
+    @basic_auth
+    @route("PUT /api/1/environments/{env_id}/properties")
+    def api1_environment_update_properties(self, env_id, json, auth): pass
+
+    # Organizations
+
+    @basic_auth
+    @route("POST /api/1/organizations/{org_id}/serviceTypes")
+    def api1_organization_create_service_type(self, org_id, json, auth): pass
+
+    @basic_auth
+    @route("GET /api/1/organizations/{org_id}/applications")
+    def api1_organization_list_applications(self, org_id, auth): pass
+
+    @basic_auth
+    @route("GET /api/1/organizations/{org_id}/environments")
+    def api1_organization_list_environments(self, org_id, auth): pass
+
+    @basic_auth
+    @route("GET /api/1/organizations")
+    def api1_organization_list(self, auth): pass
+
+    # Revisions
+
+    @basic_auth
+    @route("GET /api/1/revisions/{rev_id}/instances")
+    def api1_revision_list_instances(self, rev_id, auth): pass
+
+    # Services
+
+    @basic_auth
+    @route("GET /api/1/services/{service_id}")
+    def api1_service_get(self, service_id, auth): pass
+
+    @basic_auth
+    @route("PUT /api/1/services/{service_id}")
+    def api1_service_update(self, service_id, json, auth): pass
+
+    @basic_auth
+    @route("POST /api/1/services/{service_id}/{command}")
+    def api1_service_execute(self, service_id, command, json, auth): pass
+
 
 # TODO: Public api hack.
 # To use public api routes, set QUBELL_USE_PUBLIC env to not None
