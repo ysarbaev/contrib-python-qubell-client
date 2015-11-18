@@ -61,8 +61,10 @@ class Revision(Entity, InstanceRouter):
     def json(self):
         return self._router.get_revision(org_id=self.organizationId, app_id=self.applicationId, rev_id=self.id).json()
 
-    def delete(self, force=True):
-        self._router.delete_revision(org_id=self.organizationId, app_id=self.applicationId, rev_id=self.id, force=force)
+    def delete(self):
+        self._router.delete_revision(org_id=self.organizationId, app_id=self.applicationId, rev_id=self.id)
+        return True
+
 
 class RevisionList(EntityList, InstanceRouter):
 
