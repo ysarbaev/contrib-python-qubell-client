@@ -78,7 +78,12 @@ def route(route_str):  # decorator param
                 bypass_args['headers'] = {'Content-Type': 'application/x-yaml'}
 
             start = time.time()
-            response = self._session.request(method, destination_url, verify=self.verify_ssl, **bypass_args)
+            try:
+                response = self._session.request(method, destination_url, verify=self.verify_ssl, **bypass_args)
+            except requests.ConnectionError:
+                log.info('ConnectionError caught. Trying again')
+                time.sleep(2)
+                response = self._session.request(method, destination_url, verify=self.verify_ssl, **bypass_args)
             end = time.time()
             elapsed = int((end - start) * 1000.0)
             ilog(elapsed)
