@@ -28,3 +28,8 @@ class RouterTests(unittest.TestCase):
         with self.assertRaises(ApiUnauthorizedError) as context, patch("requests.session"):
             self.router.connect("any@where", "**wrong**")
         assert str(context.exception) == "Authentication failed, please check settings"
+    
+    def test_url_trim(self):
+        url = "http://router.org"
+        router = Router(url + "/")
+        assert self.router.base_url == url
