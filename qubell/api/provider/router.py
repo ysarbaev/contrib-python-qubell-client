@@ -11,6 +11,8 @@ from qubell.api.globals import QUBELL as qubell_config
 class Router(object):
     def __init__(self, base_url=None, verify_ssl=False, verify_codes=True):
         self.base_url = base_url or qubell_config['tenant']
+        if self.base_url.endswith("/"):
+            self.base_url = self.base_url[:-1]
         self.verify_ssl = verify_ssl
         self.verify_codes = verify_codes
 
